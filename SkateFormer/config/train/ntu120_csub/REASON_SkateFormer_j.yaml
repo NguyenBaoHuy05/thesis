@@ -1,0 +1,96 @@
+seed: 1
+num_worker: 4
+work_dir: ./work_dir/ntu120/csub/REASON_SkateFormer_j/
+
+phase: train
+
+# The concept CSV is shared with the REASON project in this workspace.
+# Its 74 raw columns are filtered to the same 72 concepts used by REASON.
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  remove_null_concept: True
+  split: train
+  debug: False
+  window_size: 64
+  p_interval: [0.5, 1]
+  aug_method: a123489
+  intra_p: 0.5
+  inter_p: 0.2
+  thres: 64
+  uniform: True
+  partition: True
+
+test_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  remove_null_concept: True
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  thres: 64
+  uniform: True
+  partition: True
+  debug: False
+
+# REASON-SkateFormer: SkateFormer -> 52 spatial + 20 temporal concepts -> KG logic.
+model: model.reason_skateformer.REASON_SkateFormer
+model_args:
+  num_classes: 120
+  num_concepts: 72
+  spatial_concepts: 52
+  temporal_concepts: 20
+  num_people: 2
+  num_points: 24
+  num_frames: 64
+  # Pretrained SkateFormer NTU120 CSub joint checkpoint.
+  backbone_weights: /content/ntu120_CSub/SkateFormer_j.pt
+  num_heads: 32
+  attn_drop: 0.5
+  head_drop: 0.0
+  rel: True
+  drop_path: 0.2
+  type_1_size: [8, 8]
+  type_2_size: [8, 12]
+  type_3_size: [8, 8]
+  type_4_size: [8, 12]
+  mlp_ratio: 4.0
+  index_t: True
+  l1_dim: 128
+  l2_dim: 128
+  kg_init_mode: kg_primed
+  kg_prior_strength: 1.0
+  kg_loss_weight: 0.01
+  part_diversity_weight: 0.01
+  concept_loss_weight: 1.0
+  return_aux: True
+  kg_prior_map:
+    require:
+      - [arm_raise, arm_extend]
+      - [leg_step, foot_step]
+      - [hand_wave, arm_raise]
+    alongside:
+      - [arm_raise, hand_wave]
+      - [leg_step, foot_step]
+    excludes:
+      - [arm_raise, hip_sit]
+      - [leg_step, hip_squat]
+
+optimizer: AdamW
+weight_decay: 0.05
+lr_scheduler: cosine
+base_lr: 0.0001
+min_lr: 0.000001
+warmup_lr: 0.000001
+warmup_prefix: False
+warm_up_epoch: 10
+
+device: [0]
+batch_size: 32
+test_batch_size: 32
+num_epoch: 150
+nesterov: True
+grad_clip: True
+grad_max: 1.0
+loss_type: LSCE

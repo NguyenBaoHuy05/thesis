@@ -1,0 +1,42 @@
+# ST-GCN Baseline Joint-Motion Modality + Joint Spatial-Temporal Concept Bottleneck & Symbolic Compatibility
+phase: joint
+backbone: stgcn
+pretrained_checkpoint: ./pretrained/ntu_cs/stgcn_jm.pt
+checkpoint: ./pretrained/ntu_cs/stgcn_jm.pt
+data: ./data/ntu/NTU60_CS.npz
+work_dir: ./work_dir/ntu_cs/stgcn_jm_symbolic
+
+data_type: jm
+num_class: 60
+num_points: 25
+num_people: 2
+window_size: 64
+
+# Neuro-Symbolic & Concept Bottleneck Parameters
+concept_loss_weight: 0.20
+concept_negative_weight: 0.10
+concept_checkpoint: null
+kg_s_weight: 0.02
+kg_c_weight: 0.01
+symbolic_temperature: 0.70
+symbolic_margin: 0.15
+symbolic_weight: 0.50
+symbolic_start_weight: 0.10
+symbolic_mid_weight: 0.30
+symbolic_final_weight: 0.50
+symbolic_mid_start: 6
+symbolic_final_start: 21
+fusion_start_alpha: 0.10
+fusion_mid_alpha: 0.30
+fusion_final_alpha: 0.50
+
+epochs: 30
+lr: 0.001
+weight_decay: 0.0001
+batch_size: 64
+num_workers: 4
+device: 0
+seed: 42
+explain_every: 5
+n_explain_actions: 10
+save_score: true

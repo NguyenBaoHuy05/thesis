@@ -1,0 +1,53 @@
+work_dir: ./work_dir/anubis/ctrgcn
+
+# feeder
+feeder: feeder_anubis.Feeder
+train_feeder_args:
+  data_path: dataset/anubis/trn_data_all_action_front.npy  
+  label_path: dataset/anubis/trn_label_all_action_front.pkl
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  normalization: False
+  random_rot: True
+  p_interval: [0.5, 1.0]
+  vel: False
+  bone: False
+  use_mmap: True
+
+test_feeder_args:
+  data_path: dataset/anubis/val_data_all_action_back.npy
+  label_path: dataset/anubis/val_label_all_action_back.pkl
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+  use_mmap: True
+
+# model
+model: model_dcln.DCLN
+model_args:
+  num_class: 102
+  num_point: 32
+  num_person: 2
+  graph: graph_anubis.Graph
+  graph_args:
+    labeling_mode: 'spatial'
+
+# optim
+weight_decay: 0.0004
+base_lr: 0.1
+lr_decay_rate: 0.1
+step: [35, 55]
+warm_up_epoch: 5
+
+# training
+device: [0]
+batch_size: 128
+test_batch_size: 128
+num_epoch: 65
+eval_interval: 1
+nesterov: True
