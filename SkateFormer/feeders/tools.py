@@ -11,26 +11,27 @@ def valid_crop_resize(data_numpy, valid_frame_num, p_interval, window, thres):
     # input: C,T,V,M
     C, T, V, M = data_numpy.shape
     begin = 0
-    end = valid_frame_num
-    valid_size = end - begin
+    end = valid_frame_num if valid_frame_num > 0 else T
+    valid_size = max(1, end - begin)
 
     # crop
     if len(p_interval) == 1:
         p = p_interval[0]
         bias = int((1 - p) * valid_size / 2)
-        data = data_numpy[:, begin + bias:end - bias, :, :]  # center_crop
+        c_b = min(begin + bias, T - 1)
+        c_e = max(c_b + 1, min(end - bias, T))
+        data = data_numpy[:, c_b:c_e, :, :]  # center_crop
         cropped_length = data.shape[1]
-        c_b = begin + bias
-        c_e = end - bias
     else:
         p = np.random.rand(1) * (p_interval[1] - p_interval[0]) + p_interval[0]
         cropped_length = np.minimum(np.maximum(int(np.floor(valid_size * p)), thres), valid_size)  # constraint cropped_length lower bound as thres
-        bias = np.random.randint(0, valid_size - cropped_length + 1)
-        data = data_numpy[:, begin + bias:begin + bias + cropped_length, :, :]
+        max_bias = max(0, valid_size - cropped_length)
+        bias = np.random.randint(0, max_bias + 1) if max_bias > 0 else 0
+        c_b = begin + bias
+        c_e = min(begin + bias + cropped_length, T)
+        data = data_numpy[:, c_b:c_e, :, :]
         if data.shape[1] == 0:
             print(cropped_length, bias, valid_size)
-        c_b = begin + bias
-        c_e = begin + bias + cropped_length
 
     # resize
     data = torch.tensor(data, dtype=torch.float)  # C, crop_t, V, M
@@ -47,14 +48,15 @@ def valid_crop_uniform(data_numpy, valid_frame_num, p_interval, window, thres):
     # input: C,T,V,M
     C, T, V, M = data_numpy.shape
     begin = 0
-    end = valid_frame_num
-    valid_size = end - begin
+    end = valid_frame_num if valid_frame_num > 0 else T
+    valid_size = max(1, end - begin)
 
     # crop
     if len(p_interval) == 1:
         p = p_interval[0]
         cropped_length = np.minimum(np.maximum(int(np.floor(valid_size * p)), thres), valid_size)
         bias = int((1 - p) * valid_size / 2)
+        bias = min(bias, max(0, valid_size - cropped_length))
 
         if cropped_length < window:
             inds = np.arange(cropped_length)
@@ -65,13 +67,15 @@ def valid_crop_uniform(data_numpy, valid_frame_num, p_interval, window, thres):
             inds = bst
 
         inds = inds + bias
+        inds = np.clip(inds, 0, T - 1)
         data = data_numpy[:, inds, :, :]
 
     else:
         p = np.random.rand(1) * (p_interval[1] - p_interval[0]) + p_interval[0]
         cropped_length = np.minimum(np.maximum(int(np.floor(valid_size * p)), thres),
                                     valid_size)  # constraint cropped_length lower bound as 64
-        bias = np.random.randint(0, valid_size - cropped_length + 1)
+        max_bias = max(0, valid_size - cropped_length)
+        bias = np.random.randint(0, max_bias + 1) if max_bias > 0 else 0
 
         if cropped_length < window:
             inds = np.arange(cropped_length)
@@ -90,6 +94,7 @@ def valid_crop_uniform(data_numpy, valid_frame_num, p_interval, window, thres):
             inds = bst + offset
 
         inds = inds + bias
+        inds = np.clip(inds, 0, T - 1)
         data = data_numpy[:, inds, :, :]
         if data.shape[1] == 0:
             print(cropped_length, bias, valid_size)

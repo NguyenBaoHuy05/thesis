@@ -8,7 +8,7 @@ phase: train
 # Its 74 raw columns are filtered to the same 72 concepts used by REASON.
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
-  data_path: ./data/ntu/NTU60_CS.npz
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
   concepts_csv: ./concepts/ntu_rgbd_60_120.csv
   remove_null_concept: True
   split: train
@@ -23,7 +23,7 @@ train_feeder_args:
   partition: True
 
 test_feeder_args:
-  data_path: ./data/ntu/NTU60_CS.npz
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
   concepts_csv: ./concepts/ntu_rgbd_60_120.csv
   remove_null_concept: True
   split: test
@@ -45,7 +45,7 @@ model_args:
   num_points: 24
   num_frames: 64
   # Pretrained SkateFormer NTU60 CS joint checkpoint (cập nhật lại đường dẫn nếu chạy Colab/Drive)
-  backbone_weights: ./checkpoint/ntu_cs/SkateFormer_j.pt
+  backbone_weights: /content/ntu60_inter_CSub/SkateFormer_j.pt
   num_heads: 32
   attn_drop: 0.5
   head_drop: 0.0
@@ -84,7 +84,7 @@ base_lr: 0.0001
 min_lr: 0.000001
 warmup_lr: 0.000001
 warmup_prefix: False
-warm_up_epoch: 10
+warm_up_epoch: 2
 
 device: [0]
 batch_size: 32

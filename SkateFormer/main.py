@@ -183,14 +183,6 @@ class Processor():
         if getattr(concept_dataset, 'concept_names', None) is not None:
             self.arg.model_args['concept_names'] = list(concept_dataset.concept_names)
         self.load_model()
-
-        if self.arg.phase == 'train':
-            self.load_optimizer()
-            self.load_scheduler(len(self.data_loader['train']))
-
-        self.lr = self.arg.base_lr
-        self.best_acc = 0
-        self.best_acc_epoch = 0
         self.model = self.model.cuda(self.output_device)
 
         if type(self.arg.device) is list:
@@ -199,6 +191,14 @@ class Processor():
                     self.model,
                     device_ids=self.arg.device,
                     output_device=self.output_device)
+
+        if self.arg.phase == 'train':
+            self.load_optimizer()
+            self.load_scheduler(len(self.data_loader['train']))
+
+        self.lr = self.arg.base_lr
+        self.best_acc = 0
+        self.best_acc_epoch = 0
 
     def load_data(self):
         Feeder = import_class(self.arg.feeder)
@@ -290,6 +290,10 @@ class Processor():
         if getattr(self, 'checkpoint', None) is not None and 'optimizer' in self.checkpoint and self.checkpoint['optimizer'] is not None:
             try:
                 self.optimizer.load_state_dict(self.checkpoint['optimizer'])
+                for state in self.optimizer.state.values():
+                    for k, v in state.items():
+                        if isinstance(v, torch.Tensor):
+                            state[k] = v.cuda(self.output_device)
                 self.print_log('Successfully loaded optimizer state from checkpoint.')
             except Exception as e:
                 self.print_log(f'Could not load optimizer state: {e}')
