@@ -98,3 +98,9 @@ Nên chia làm **2 đến 3 hình vẽ chuẩn khoa học**:
   2. *Interpretability Evaluation:* Có mục trích xuất luật tường minh (Rule Extraction) và phân tích định tính từng Case Study.
   3. *Toàn diện về Ablation Study:* Bóc tách chi tiết tác dụng của KG-Priming, Dual Pooling, từng thành phần Loss ($\mathcal{L}_{KG}, \mathcal{L}_{part}, \mathcal{L}_{concept}$), và cấu trúc Hierarchical vs Flat.
   4. *Robustness / Generalization:* Đánh giá khả năng chống chịu khi thiếu dữ liệu (Few-shot) hoặc nhiễu che khuất khớp (Occlusion).
+
+---
+
+## Đề xuất chiến lược
+
+Toàn bộ đề xuất cải tiến đã được tách sang [RESEARCH_PROPOSAL.md](D:/Thesis/RESEARCH_PROPOSAL.md).

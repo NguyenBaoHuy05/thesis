@@ -182,6 +182,10 @@ class Processor():
         concept_dataset = self.data_loader.get('train', self.data_loader.get('test')).dataset
         if getattr(concept_dataset, 'concept_names', None) is not None:
             self.arg.model_args['concept_names'] = list(concept_dataset.concept_names)
+        if getattr(concept_dataset, 'concept_matrix', None) is not None:
+            # Prototype-constrained reasoning needs the same class x concept
+            # ordering as the feeder. Passing it here prevents CSV/model drift.
+            self.arg.model_args['action_prototypes'] = concept_dataset.concept_matrix.tolist()
         self.load_model()
         self.model = self.model.cuda(self.output_device)
 

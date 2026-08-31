@@ -60,10 +60,17 @@ model_args:
   l1_dim: 128
   l2_dim: 128
   kg_init_mode: kg_primed
+  action_mode: prototype
+  prototype_and_weight: 0.35
   kg_prior_strength: 1.0
   kg_loss_weight: 0.01
+  prior_retention_weight: 0.01
+  rule_sparsity_weight: 0.001
   part_diversity_weight: 0.01
   concept_loss_weight: 1.0
+  concept_negative_weight: 0.15
+  concept_positive_weight: 1.0
+  asymmetric_gamma_neg: 2.0
   return_aux: True
   kg_prior_map:
     require:

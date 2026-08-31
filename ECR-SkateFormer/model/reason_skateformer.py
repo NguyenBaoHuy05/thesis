@@ -36,6 +36,8 @@ class KGUnionLayer(nn.Module):
             prior = torch.full((input_dim, output_dim), 0.05)
             prior[torch.arange(min(input_dim, output_dim)),
                   torch.arange(min(input_dim, output_dim))] = 0.9
+        prior = prior.float().clamp(1e-4, 1.0 - 1e-4)
+        self.register_buffer("prior", prior.clone())
         noise = 0.02 * torch.randn_like(prior)
         self.and_weight = nn.Parameter(_logit((prior + noise).clamp(1e-4, 1 - 1e-4)))
         self.or_weight = nn.Parameter(_logit((prior + noise).clamp(1e-4, 1 - 1e-4)))
@@ -53,6 +55,23 @@ class KGUnionLayer(nn.Module):
             1.0 - or_weight.unsqueeze(0) * x.unsqueeze(-1), dim=1
         )
         return torch.cat([conjunction, disjunction], dim=1)
+
+    def weights(self):
+        """Return the bounded AND/OR rule weights."""
+        return torch.sigmoid(self.and_weight), torch.sigmoid(self.or_weight)
+
+    def prior_retention_loss(self):
+        """Discourage learned rules from forgetting their KG initialization."""
+        and_weight, or_weight = self.weights()
+        return (
+            (and_weight - self.prior).abs().mean()
+            + (or_weight - self.prior).abs().mean()
+        ) * 0.5
+
+    def sparsity_loss(self):
+        """Penalize unnecessary active edges while preserving seeded edges."""
+        and_weight, or_weight = self.weights()
+        return 0.5 * (and_weight.mean() + or_weight.mean())
 
 
 class KGPrimedReasoner(nn.Module):
@@ -73,6 +92,9 @@ class KGPrimedReasoner(nn.Module):
         kg_init_mode="kg_primed",
         kg_prior_map=None,
         kg_prior_strength=1.0,
+        action_mode="linear",
+        action_prototypes=None,
+        prototype_and_weight=0.35,
     ):
         super().__init__()
         self.n_concepts = int(n_concepts)
@@ -85,14 +107,36 @@ class KGPrimedReasoner(nn.Module):
         self.kg_init_mode = str(kg_init_mode).lower()
         self.kg_prior_map = kg_prior_map or {"require": [], "alongside": [], "excludes": []}
         self.kg_prior_strength = float(kg_prior_strength)
+        self.action_mode = str(action_mode).lower()
+        self.prototype_and_weight = float(prototype_and_weight)
 
-        first_prior = None
-        if self.kg_init_mode == "kg_primed":
-            first_prior = self._build_first_layer_prior(2 * self.n_concepts, l1_dim)
+        if self.action_mode == "prototype":
+            if action_prototypes is None:
+                raise ValueError(
+                    "action_prototypes are required when action_mode='prototype'"
+                )
+            prototypes = torch.as_tensor(action_prototypes, dtype=torch.float32)
+            if prototypes.shape[0] > self.n_actions:
+                prototypes = prototypes[:self.n_actions]
+            if prototypes.shape != (self.n_actions, self.n_concepts):
+                raise ValueError(
+                    "action_prototypes must have shape "
+                    f"({self.n_actions}, {self.n_concepts}), got {tuple(prototypes.shape)}"
+                )
+            prototypes = (prototypes >= 0.5).float()
+            self.register_buffer("action_prototypes", prototypes)
+            action_prior = self._build_action_prior(prototypes)
+            self.action_rule = KGUnionLayer(
+                2 * self.n_concepts, self.n_actions, prior=action_prior
+            )
+        else:
+            first_prior = None
+            if self.kg_init_mode == "kg_primed":
+                first_prior = self._build_first_layer_prior(2 * self.n_concepts, l1_dim)
 
-        self.first = KGUnionLayer(2 * self.n_concepts, l1_dim, prior=first_prior)
-        self.second = KGUnionLayer(2 * l1_dim, l2_dim)
-        self.action = nn.Linear(2 * l2_dim, n_actions)
+            self.first = KGUnionLayer(2 * self.n_concepts, l1_dim, prior=first_prior)
+            self.second = KGUnionLayer(2 * l1_dim, l2_dim)
+            self.action = nn.Linear(2 * l2_dim, n_actions)
 
     def _resolve(self, name):
         if isinstance(name, int):
@@ -137,6 +181,56 @@ class KGPrimedReasoner(nn.Module):
                         prior[a, rule_index] = value
         return prior
 
+    def _build_action_prior(self, prototypes):
+        """Build one interpretable action rule per class.
+
+        Positive prototype concepts seed the positive literal half. Explicit
+        ``require`` and ``alongside`` edges can add positive evidence, while
+        ``excludes`` edges seed the corresponding NOT literal. Unlisted zero
+        cells remain almost neutral rather than becoming hard negatives.
+        """
+        prior = torch.full(
+            (2 * self.n_concepts, self.n_actions), 1e-4, dtype=prototypes.dtype
+        )
+        prior[: self.n_concepts] = prototypes.t() * 0.95
+        for action_index in range(self.n_actions):
+            positive = set(torch.nonzero(prototypes[action_index] > 0.5).flatten().tolist())
+            for relation_name, pairs in self.kg_prior_map.items():
+                if relation_name not in {"require", "alongside", "excludes"}:
+                    continue
+                relation_value = {
+                    "require": 0.90,
+                    "alongside": 0.70,
+                    "excludes": 0.90,
+                }[relation_name] * self.kg_prior_strength
+                relation_value = max(0.01, min(0.98, relation_value))
+                for pair in pairs:
+                    if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+                        continue
+                    a = self._resolve(pair[0])
+                    b = self._resolve(pair[1])
+                    if a is None or b is None:
+                        continue
+                    # In the current KG convention, b requires a.
+                    if relation_name == "require":
+                        if b in positive:
+                            prior[a, action_index] = max(prior[a, action_index], relation_value)
+                    elif relation_name == "alongside":
+                        if a in positive:
+                            prior[b, action_index] = max(prior[b, action_index], relation_value)
+                        if b in positive:
+                            prior[a, action_index] = max(prior[a, action_index], relation_value)
+                    else:
+                        if a in positive:
+                            prior[self.n_concepts + b, action_index] = max(
+                                prior[self.n_concepts + b, action_index], relation_value
+                            )
+                        if b in positive:
+                            prior[self.n_concepts + a, action_index] = max(
+                                prior[self.n_concepts + a, action_index], relation_value
+                            )
+        return prior.clamp(1e-4, 0.98)
+
     def kg_loss(self, concept_logits):
         """Optional soft consistency penalty for the configured KG edges."""
         probabilities = torch.sigmoid(concept_logits)
@@ -161,14 +255,42 @@ class KGPrimedReasoner(nn.Module):
             return concept_logits.new_zeros(())
         return torch.stack([penalty.mean() for penalty in penalties]).mean()
 
-    def forward(self, concept_logits):
+    def rule_prior_loss(self):
+        if self.action_mode == "prototype":
+            return self.action_rule.prior_retention_loss()
+        return 0.5 * (self.first.prior_retention_loss() + self.second.prior_retention_loss())
+
+    def rule_sparsity_loss(self):
+        if self.action_mode == "prototype":
+            return self.action_rule.sparsity_loss()
+        return 0.5 * (self.first.sparsity_loss() + self.second.sparsity_loss())
+
+    def forward(self, concept_logits, return_trace=False):
         # The binary representation exposes both the concept and its NOT
         # literal to the first logical layer, as in the original REASON CRL.
         concepts = torch.sigmoid(concept_logits)
         literals = torch.cat([concepts, 1.0 - concepts], dim=1)
-        hidden_1 = self.first(literals)
-        hidden_2 = self.second(hidden_1)
-        return self.action(hidden_2)
+        if self.action_mode == "prototype":
+            rule_output = self.action_rule(literals)
+            and_score, or_score = rule_output.chunk(2, dim=1)
+            evidence = (
+                self.prototype_and_weight * and_score
+                + (1.0 - self.prototype_and_weight) * or_score
+            ).clamp(1e-4, 1.0 - 1e-4)
+            action_logits = _logit(evidence)
+            trace = {
+                "and_score": and_score,
+                "or_score": or_score,
+                "evidence": evidence,
+            }
+        else:
+            hidden_1 = self.first(literals)
+            hidden_2 = self.second(hidden_1)
+            action_logits = self.action(hidden_2)
+            trace = {"hidden_1": hidden_1, "hidden_2": hidden_2}
+        if return_trace:
+            return action_logits, trace
+        return action_logits
 
 
 class ReasonSkateFormer(nn.Module):
@@ -190,8 +312,16 @@ class ReasonSkateFormer(nn.Module):
         kg_init_mode="kg_primed",
         kg_prior_map=None,
         kg_prior_strength=1.0,
+        action_mode="linear",
+        action_prototypes=None,
+        prototype_and_weight=0.35,
         concept_loss_weight=1.0,
         kg_loss_weight=0.01,
+        prior_retention_weight=0.01,
+        rule_sparsity_weight=0.001,
+        concept_negative_weight=0.15,
+        concept_positive_weight=1.0,
+        asymmetric_gamma_neg=2.0,
         part_diversity_weight=0.01,
         return_aux=True,
         **kwargs,
@@ -204,6 +334,11 @@ class ReasonSkateFormer(nn.Module):
         self.temporal_concepts = int(temporal_concepts)
         self.concept_loss_weight = float(concept_loss_weight)
         self.kg_loss_weight = float(kg_loss_weight)
+        self.prior_retention_weight = float(prior_retention_weight)
+        self.rule_sparsity_weight = float(rule_sparsity_weight)
+        self.concept_negative_weight = float(concept_negative_weight)
+        self.concept_positive_weight = float(concept_positive_weight)
+        self.asymmetric_gamma_neg = float(asymmetric_gamma_neg)
         self.part_diversity_weight = float(part_diversity_weight)
         self.return_aux = bool(return_aux)
         self.accepts_concepts = True
@@ -248,6 +383,9 @@ class ReasonSkateFormer(nn.Module):
             kg_init_mode=kg_init_mode,
             kg_prior_map=kg_prior_map,
             kg_prior_strength=kg_prior_strength,
+            action_mode=action_mode,
+            action_prototypes=action_prototypes,
+            prototype_and_weight=prototype_and_weight,
         )
 
     def _load_backbone_weights(self, checkpoint_path):
@@ -314,13 +452,42 @@ class ReasonSkateFormer(nn.Module):
         eye = torch.eye(gram.shape[-1], device=gram.device, dtype=gram.dtype)
         return ((gram - eye) ** 2).mean()
 
-    def forward(self, input, index_t=None, concept_targets=None):
+    def _concept_loss(self, logits, targets, target_mask=None, target_confidence=None):
+        """Asymmetric, confidence-aware loss for weak class-level concepts."""
+        targets = targets.float().clamp(0.0, 1.0)
+        probabilities = torch.sigmoid(logits)
+        positive_loss = F.softplus(-logits) * targets
+        negative_loss = F.softplus(logits) * (1.0 - probabilities).pow(
+            self.asymmetric_gamma_neg
+        ) * (1.0 - targets)
+        weights = (
+            targets * self.concept_positive_weight
+            + (1.0 - targets) * self.concept_negative_weight
+        )
+        if target_mask is not None:
+            weights = weights * target_mask.float().to(weights.device)
+        if target_confidence is not None:
+            weights = weights * target_confidence.float().to(weights.device)
+        loss = positive_loss + negative_loss
+        denominator = weights.sum().clamp_min(1.0)
+        return (loss * weights).sum() / denominator
+
+    def forward(
+        self,
+        input,
+        index_t=None,
+        concept_targets=None,
+        concept_target_mask=None,
+        concept_target_confidence=None,
+    ):
         feature_map = self.backbone.forward_features_from_input(input, index_t=index_t)
         spatial_feat, temporal_feat = self._pool_features(feature_map)
         spatial_logits = self.spatial_head(spatial_feat)
         temporal_logits = self.temporal_head(temporal_feat)
         concept_logits = torch.cat([spatial_logits, temporal_logits], dim=1)
-        action_logits = self.reasoner(concept_logits)
+        action_logits, reasoning_trace = self.reasoner(
+            concept_logits, return_trace=True
+        )
 
         if not self.return_aux and concept_targets is None:
             return action_logits
@@ -332,20 +499,28 @@ class ReasonSkateFormer(nn.Module):
             "temporal_logits": temporal_logits,
             "fused_feature": self.fusion(torch.cat([spatial_feat, temporal_feat], dim=1)),
             "kg_loss": self.reasoner.kg_loss(concept_logits),
+            "prior_retention_loss": self.reasoner.rule_prior_loss(),
+            "rule_sparsity_loss": self.reasoner.rule_sparsity_loss(),
             "part_diversity_loss": self._part_diversity_loss(feature_map),
         }
+        output["reasoning_trace"] = reasoning_trace
         if concept_targets is not None:
             targets = concept_targets.float().to(concept_logits.device)
             if targets.shape[-1] != self.num_concepts:
                 raise ValueError(
                     f"Expected concept targets with {self.num_concepts} labels, got {targets.shape[-1]}"
                 )
-            output["concept_loss"] = F.binary_cross_entropy_with_logits(
-                concept_logits, targets
+            output["concept_loss"] = self._concept_loss(
+                concept_logits,
+                targets,
+                target_mask=concept_target_mask,
+                target_confidence=concept_target_confidence,
             )
             output["aux_loss"] = (
                 self.concept_loss_weight * output["concept_loss"]
                 + self.kg_loss_weight * output["kg_loss"]
+                + self.prior_retention_weight * output["prior_retention_loss"]
+                + self.rule_sparsity_weight * output["rule_sparsity_loss"]
                 + self.part_diversity_weight * output["part_diversity_loss"]
             )
         return output

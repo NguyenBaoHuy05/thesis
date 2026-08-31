@@ -1,6 +1,6 @@
 seed: 1
 num_worker: 4
-work_dir: ./work_dir/ntu/cv/REASON_SkateFormer_j/
+work_dir: ./work_dir/ntu120/csub/REASON_SkateFormer_j/
 
 phase: train
 
@@ -8,7 +8,7 @@ phase: train
 # Its 74 raw columns are filtered to the same 72 concepts used by REASON.
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
-  data_path: ./data/ntu/NTU60_CV.npz
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
   concepts_csv: ./concepts/ntu_rgbd_60_120.csv
   remove_null_concept: True
   split: train
@@ -23,7 +23,7 @@ train_feeder_args:
   partition: True
 
 test_feeder_args:
-  data_path: ./data/ntu/NTU60_CV.npz
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
   concepts_csv: ./concepts/ntu_rgbd_60_120.csv
   remove_null_concept: True
   split: test
@@ -37,15 +37,15 @@ test_feeder_args:
 # REASON-SkateFormer: SkateFormer -> 52 spatial + 20 temporal concepts -> KG logic.
 model: model.reason_skateformer.REASON_SkateFormer
 model_args:
-  num_classes: 60
+  num_classes: 120
   num_concepts: 72
   spatial_concepts: 52
   temporal_concepts: 20
   num_people: 2
   num_points: 24
   num_frames: 64
-  # Pretrained SkateFormer NTU60 CV joint checkpoint (cập nhật lại đường dẫn nếu chạy Colab/Drive)
-  backbone_weights: ./checkpoint/ntu_cv/SkateFormer_j.pt
+  # Pretrained SkateFormer NTU120 CSub joint checkpoint.
+  backbone_weights: /content/ntu120_CSub/SkateFormer_j.pt
   num_heads: 32
   attn_drop: 0.5
   head_drop: 0.0
@@ -60,10 +60,20 @@ model_args:
   l1_dim: 128
   l2_dim: 128
   kg_init_mode: kg_primed
+  # Prototype mode removes the free Linear(hidden, action) decision path.
+  # The action x concept prototype is injected from the feeder CSV by main.py.
+  action_mode: prototype
+  prototype_and_weight: 0.35
   kg_prior_strength: 1.0
   kg_loss_weight: 0.01
+  prior_retention_weight: 0.01
+  rule_sparsity_weight: 0.001
   part_diversity_weight: 0.01
   concept_loss_weight: 1.0
+  # Class-level zeroes are weak negatives because a video may omit a class concept.
+  concept_negative_weight: 0.15
+  concept_positive_weight: 1.0
+  asymmetric_gamma_neg: 2.0
   return_aux: True
   kg_prior_map:
     require:
