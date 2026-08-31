@@ -3,19 +3,11 @@ Joint Spatial-Temporal Concept Bottleneck with Symbolic Action Compatibility
 ============================================================================
 A Neuro-Symbolic Human Action Recognition Framework.
 
-Compatible with any skeleton neural backbone:
-  - SkateFormer (Transformer)
-  - CTR-GCN (Channel-Topology Refinement Graph Conv)
-  - ST-GCN / Baseline (Spatial-Temporal Graph Conv)
-  - Hyper-GCN (Hypergraph Neural Network)
-  - SK-GCN (Symbolic-Knowledge Graph Conv)
-  - Custom user backbones implementing BaseBackboneAdapter
-
 Architecture
 ------------
-Input (B, C, T, V, M) -> Neural Backbone -> Feature (B, feat_dim)
+Input (B, C, T, V, M) -> SkateFormer Backbone -> Feature (B, feat_dim)
     |
-    +---> 9 Concept Group Heads (Head, Hand, Arm, Hip, Leg, Foot, Temp...) -> Concept Probs (B, 9 groups)
+    +---> 9 Concept Group Heads (Head, Hand, Arm, Hip, Leg, Foot, Temporal...) -> Concept Probs
     |         |
     |         +---> Joint Symbolic Action Compatibility Scorer -> symbolic_logits (B, num_class)
     |
@@ -34,9 +26,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from model.backbones.base_adapter import BaseBackboneAdapter
-from model.backbones import build_backbone
-from skateformer_cbm import GenericCBM
+from model.backbones.skateformer_adapter import SkateFormerAdapter, DEFAULT_SKATEFORMER_CFG
+from knowledge_graph import (
+    load_concept_matrix,
+    build_semantic_similarity_from_concepts,
+    build_concept_coactivation_static,
+)
 
+CONCEPTS_CSV = os.path.join(os.path.dirname(__file__), "concepts", "ntu_rgbd_60_120.csv")
 
 GROUP_SPECS = [
     ("head", ("head_",)),
@@ -208,10 +205,10 @@ class JointSymbolicActionCompatibility(nn.Module):
         return out
 
 
-class JointSpatialTemporalCBM(GenericCBM):
+class JointSpatialTemporalCBM(nn.Module):
     """
     Joint Spatial-Temporal Concept Bottleneck + Symbolic Compatibility Model.
-    Supports any neural backbone adapter.
+    Uses SkateFormer as the default neural backbone.
     """
 
     def __init__(
@@ -226,30 +223,59 @@ class JointSpatialTemporalCBM(GenericCBM):
         fusion_alpha: float = 0.30,
         symbolic_temperature: float = 0.7,
         symbolic_margin: float = 0.15,
+        concepts_csv: Optional[str] = None,
         **kwargs,
     ):
+        super().__init__()
         if isinstance(backbone, str):
-            adapter = build_backbone(backbone, backbone_cfg, num_class=num_class)
+            cfg = dict(backbone_cfg or {})
+            cfg["num_classes"] = num_class
+            self.backbone_adapter = SkateFormerAdapter(**cfg)
         elif isinstance(backbone, (BaseBackboneAdapter, nn.Module)):
-            adapter = backbone
-        elif isinstance(backbone_cfg, dict):
-            # Backward compatibility: if backbone was passed as backbone_cfg
-            adapter = build_backbone("skateformer", backbone_cfg, num_class=num_class)
+            self.backbone_adapter = backbone
         else:
             raise ValueError(f"Invalid backbone parameter: {backbone}")
 
-        super().__init__(
-            backbone=adapter,
-            num_class=num_class,
-            concept_loss_weight=concept_loss_weight,
-        )
+        if hasattr(self.backbone_adapter, "backbone"):
+            self.backbone = self.backbone_adapter.backbone
+        else:
+            self.backbone = self.backbone_adapter
 
+        if hasattr(self.backbone_adapter, "feat_dim"):
+            self.feat_dim: int = self.backbone_adapter.feat_dim
+        else:
+            self.feat_dim: int = 192
+
+        self.num_class = num_class
+        self.concept_loss_weight = float(concept_loss_weight)
+        self.concept_negative_weight = float(concept_negative_weight)
+        self.kg_s_weight = float(kg_s_weight)
+        self.kg_c_weight = float(kg_c_weight)
+        self.fusion_alpha = float(fusion_alpha)
+
+        # Load knowledge graph buffers from CSV
+        csv_file = concepts_csv or CONCEPTS_CSV
+        concept_matrix, concept_names = load_concept_matrix(csv_file, num_class)
+        self.register_buffer("concept_matrix", concept_matrix)
+        self.concept_names: List[str] = concept_names
+        self.num_concepts: int = concept_matrix.shape[1]
+
+        S_KG = build_semantic_similarity_from_concepts(concept_matrix)
+        C_KG = build_concept_coactivation_static(concept_matrix)
+        self.register_buffer("S_KG_static", S_KG)
+        self.register_buffer("C_KG_static", C_KG)
+
+        concept_pos = concept_matrix.float().sum(dim=0)
+        concept_neg = float(num_class) - concept_pos
+        pos_weight = (concept_neg / concept_pos.clamp_min(1.0)).clamp(1.0, 20.0)
+        self.register_buffer("concept_pos_weight", pos_weight)
+
+        # 9 Concept Groups
         self.group_order = [name for name, _ in GROUP_SPECS]
         self.concept_groups = build_concept_groups(self.concept_names)
         self.group_hidden_dim = 64
         self.group_heads = nn.ModuleDict()
 
-        # Build 9 concept heads dynamically matching feat_dim
         for name in self.group_order:
             n = len(self.concept_groups[name])
             self.group_heads[name] = nn.Sequential(
@@ -266,16 +292,12 @@ class JointSpatialTemporalCBM(GenericCBM):
             margin=symbolic_margin,
         )
 
-        self.concept_negative_weight = float(concept_negative_weight)
-        self.kg_s_weight = float(kg_s_weight)
-        self.kg_c_weight = float(kg_c_weight)
-        self.fusion_alpha = float(fusion_alpha)
         self.direct_action = nn.Linear(self.feat_dim, num_class)
 
-        # Clear per-concept bank from GenericCBM to avoid unused parameter warnings
-        self.concept_mlps = nn.ModuleList()
-        self.concept_truth_heads = nn.ModuleList()
-        self.concept_embedding_heads = nn.ModuleList()
+    def extract_feat(self, x: torch.Tensor, index_t: Optional[torch.Tensor] = None) -> torch.Tensor:
+        if hasattr(self.backbone_adapter, "extract_feat"):
+            return self.backbone_adapter.extract_feat(x, index_t)
+        return self.backbone_adapter(x, index_t)
 
     def encode_group_concepts(self, feat: torch.Tensor):
         logits, probs = [], []
@@ -284,6 +306,24 @@ class JointSpatialTemporalCBM(GenericCBM):
             logits.append(z)
             probs.append(torch.sigmoid(z))
         return logits, probs
+
+    def freeze_backbone(self) -> Tuple[int, int]:
+        """Freezes all backbone parameters."""
+        frozen, trainable = 0, 0
+        target = getattr(self.backbone_adapter, "backbone", self.backbone_adapter)
+        for p in target.parameters():
+            p.requires_grad = False
+            frozen += p.numel()
+        return frozen, trainable
+
+    def unfreeze_backbone(self) -> Tuple[int, int]:
+        """Unfreezes all backbone parameters for end-to-end training."""
+        frozen, trainable = 0, 0
+        target = getattr(self.backbone_adapter, "backbone", self.backbone_adapter)
+        for p in target.parameters():
+            p.requires_grad = True
+            trainable += p.numel()
+        return frozen, trainable
 
     def forward(
         self,
@@ -374,6 +414,30 @@ class JointSpatialTemporalCBM(GenericCBM):
         return self.symbolic_action.explain(probs, 0, action_idx, self.concept_names)
 
 
+def freeze_backbone(model: nn.Module) -> Tuple[int, int]:
+    """Helper to freeze backbone parameters."""
+    if hasattr(model, "freeze_backbone"):
+        return model.freeze_backbone()
+    frozen, trainable = 0, 0
+    target = getattr(model, "backbone", model)
+    for p in target.parameters():
+        p.requires_grad = False
+        frozen += p.numel()
+    return frozen, trainable
+
+
+def unfreeze_backbone(model: nn.Module) -> Tuple[int, int]:
+    """Helper to unfreeze backbone parameters."""
+    if hasattr(model, "unfreeze_backbone"):
+        return model.unfreeze_backbone()
+    frozen, trainable = 0, 0
+    target = getattr(model, "backbone", model)
+    for p in target.parameters():
+        p.requires_grad = True
+        trainable += p.numel()
+    return frozen, trainable
+
+
 def build_joint_model(
     checkpoint_path: Optional[str] = None,
     backbone_name: str = "skateformer",
@@ -390,9 +454,8 @@ def build_joint_model(
     fusion_alpha: float = 0.30,
 ) -> JointSpatialTemporalCBM:
     """
-    Factory to construct JointSpatialTemporalCBM with any backbone and load pretrained weights.
+    Factory to construct JointSpatialTemporalCBM with SkateFormer and load pretrained weights.
     """
-    # Detect num_class and backbone architecture parameters from checkpoint if available
     backbone_cfg = dict(backbone_cfg or {})
     if checkpoint_path and os.path.exists(checkpoint_path):
         try:
@@ -400,22 +463,12 @@ def build_joint_model(
             state = raw.get("state_dict", raw) if isinstance(raw, dict) else raw
             state = {k.replace("module.", ""): v for k, v in state.items()}
 
-            # 1. Detect num_class
             for key in ["head.weight", "backbone.head.weight", "fc.weight", "backbone.fc.weight", "direct_action.weight"]:
                 if key in state:
                     detected = state[key].shape[0]
                     if detected != num_class:
                         print(f"[JOINT] Auto-detected num_class={detected} from checkpoint (was {num_class})")
                         num_class = detected
-                    break
-
-            # 2. Detect HyperGCN / GCN embedding channels if present
-            for key in ["to_joint_embedding.weight", "backbone.to_joint_embedding.weight", "pos_embedding", "backbone.pos_embedding"]:
-                if key in state:
-                    c_embed = state[key].shape[0] if "weight" in key else state[key].shape[-1]
-                    if backbone_cfg.get("embedding_channels") != c_embed:
-                        print(f"[JOINT] Auto-detected embedding_channels={c_embed} from checkpoint (was {backbone_cfg.get('embedding_channels', 64)})")
-                        backbone_cfg["embedding_channels"] = c_embed
                     break
         except Exception as e:
             print(f"[JOINT][WARN] Could not inspect checkpoint for configuration: {e}")
@@ -435,43 +488,24 @@ def build_joint_model(
 
     # 1. Load Pretrained Backbone
     if checkpoint_path and os.path.exists(checkpoint_path):
-        missing, unexpected = model.backbone_adapter.load_pretrained(checkpoint_path, device="cpu")
-        print(f"[JOINT] Backbone '{backbone_name}' loaded <- {checkpoint_path}; missing={len(missing)}, unexpected={len(unexpected)}")
+        if hasattr(model.backbone_adapter, "load_pretrained"):
+            missing, unexpected = model.backbone_adapter.load_pretrained(checkpoint_path, device=device)
+            print(f"[JOINT] Backbone loaded <- {checkpoint_path}; missing={len(missing)}, unexpected={len(unexpected)}")
 
-        # Warm-start direct_action from backbone classification head if matching shape
-        cls_weights = model.backbone_adapter.get_classifier_weights()
-        if cls_weights is not None:
-            w, b = cls_weights
-            if w is not None and w.shape == model.direct_action.weight.shape:
-                with torch.no_grad():
-                    model.direct_action.weight.copy_(w)
-                    if b is not None and model.direct_action.bias is not None:
-                        model.direct_action.bias.copy_(b)
-                print(f"[JOINT] Successfully warm-started direct_action classifier weights from backbone head.")
+            # Warm-start direct_action from backbone classification head if matching shape
+            cls_weights = model.backbone_adapter.get_classifier_weights()
+            if cls_weights is not None:
+                w, b = cls_weights
+                if w is not None and w.shape == model.direct_action.weight.shape:
+                    with torch.no_grad():
+                        model.direct_action.weight.copy_(w)
+                        if b is not None and model.direct_action.bias is not None:
+                            model.direct_action.bias.copy_(b)
+                    print(f"[JOINT] Successfully warm-started direct_action classifier weights from backbone head.")
     else:
         if checkpoint_path:
             print(f"[JOINT][WARN] Checkpoint path not found: {checkpoint_path}. Initializing backbone from scratch.")
         else:
-            print(f"[JOINT] No pretrained checkpoint specified; initializing backbone '{backbone_name}' from scratch.")
-
-    # 2. Transfer Concept Checkpoint if provided
-    if concept_checkpoint_path and os.path.exists(concept_checkpoint_path):
-        raw_c = torch.load(concept_checkpoint_path, map_location="cpu")
-        concept_state = {k.replace("module.", ""): v for k, v in raw_c.items()}
-        copied = 0
-        with torch.no_grad():
-            for gi, name in enumerate(model.group_order):
-                for row, concept_idx in enumerate(model.concept_groups[name]):
-                    old_mlp = f"concept_mlps.{concept_idx}.0"
-                    old_truth = f"concept_truth_heads.{concept_idx}"
-                    if old_mlp + ".weight" in concept_state:
-                        # Check feature dimension compatibility
-                        if concept_state[old_mlp + ".weight"].shape == model.group_heads[name][0].weight.shape:
-                            model.group_heads[name][0].weight.copy_(concept_state[old_mlp + ".weight"])
-                            model.group_heads[name][0].bias.copy_(concept_state[old_mlp + ".bias"])
-                            model.group_heads[name][2].weight[row].copy_(concept_state[old_truth + ".weight"].squeeze(0))
-                            model.group_heads[name][2].bias[row].copy_(concept_state[old_truth + ".bias"].squeeze(0))
-                            copied += 1
-        print(f"[JOINT] Concept heads transferred from {concept_checkpoint_path}; matched={copied} concepts")
+            print(f"[JOINT] Initializing backbone from scratch.")
 
     return model.to(device)

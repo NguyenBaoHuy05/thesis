@@ -1,6 +1,6 @@
 """
-Unified End-to-End Trainer for Thesis Neurosymbolic Framework
-=============================================================
+Unified End-to-End Trainer for GRAFT-SAR Framework
+==================================================
 Supports:
 - End-to-end training from Epoch 1 with Soft Temperature Annealing
 - Joint multi-objective loss optimization (Action CE, Concept BCE, CLIP alignment, KG prior, Logic Sparsity)
@@ -26,11 +26,11 @@ from torch.optim.lr_scheduler import MultiStepLR
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from feeders.feeder_ntu import NTUFeeder, custom_collate_fn
-from model.thesis_model import ThesisNeurosymbolicModel
+from model.graft_sar import GRAFTSAR
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Train Thesis Neurosymbolic Model")
+    parser = argparse.ArgumentParser(description="Train GRAFT-SAR Model")
     parser.add_argument(
         "--config",
         default="config/ntu60_skateformer_logic.yaml",
@@ -375,7 +375,7 @@ def main():
         cfg["model_args"]["freeze_backbone"] = True
 
     # Model
-    model = ThesisNeurosymbolicModel(
+    model = GRAFTSAR(
         **cfg["model_args"],
         device=device,
     ).to(device)

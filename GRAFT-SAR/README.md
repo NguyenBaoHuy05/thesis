@@ -1,4 +1,4 @@
-# Unified Neurosymbolic Framework for Skeleton-Based Action Recognition (`ThesisModel`)
+# GRAFT-SAR: Group-aware Residual Adaptive Fusion with Temperature-Annealed Logic for Skeleton Action Recognition
 
 Bộ khung Neurosymbolic hoàn chỉnh kết hợp ưu điểm của **First-Order Logic vi phân (Differentiable FOL Reasoning)**, **Semantic Concept Grounding với LoRA CLIP**, **Knowledge Graph Ontological Priors ($S_{KG}, C_{KG}, A_{KG}$)** và **Spatio-Temporal Backbones (SkateFormer Transformer & GCNs)**.
 
@@ -46,7 +46,7 @@ y_neural        + Knowledge Graph      → L1 Conjunctions (∧)
 ## 📁 Cấu trúc Thư mục
 
 ```
-d:\Thesis\ThesisModel\
+d:\Thesis\GRAFT-SAR\
 ├── concepts\
 │   ├── ntu_rgbd_60_120.csv           # Nhãn 74 concepts chuẩn hóa cho 60/120 classes
 │   └── concept_utils.py              # Parsing, 9-group mapping, CLIP prompt builder
@@ -70,7 +70,7 @@ d:\Thesis\ThesisModel\
 │   ├── loralib\                      # LoRA layers & utilities
 │   ├── clip\                         # CLIP text encoder & tokenizer
 │   ├── clip_alignment.py             # MultiPositiveClipLoss & LoRA Text Encoder
-│   ├── thesis_model.py               # Core Unified Neurosymbolic Model
+│   ├── graft_sar.py                  # Core Unified Neurosymbolic Model (GRAFT-SAR)
 │   └── __init__.py
 ├── config\
 │   ├── ntu60_skateformer_logic.yaml  # Config huấn luyện SkateFormer Backbone

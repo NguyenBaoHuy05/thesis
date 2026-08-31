@@ -49,8 +49,12 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from skateformer_cbm import freeze_backbone, unfreeze_backbone
-from joint_symbolic_model import build_joint_model, JointSpatialTemporalCBM
+from joint_symbolic_model import (
+    build_joint_model,
+    JointSpatialTemporalCBM,
+    freeze_backbone,
+    unfreeze_backbone,
+)
 from model.backbones import BACKBONE_REGISTRY
 from feeders.feeder_ntu import Feeder
 

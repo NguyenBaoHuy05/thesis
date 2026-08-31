@@ -84,7 +84,7 @@ $$\text{Bias}_{\text{attn}} = \text{Softmax}\left(\frac{Q K^T}{\sqrt{d}}\right) 
 - Khởi tạo 32-64 truy vấn học được (Learnable Query Embeddings).
 - Áp dụng cơ chế Cross-Attention giữa các Query Embeddings và đặc trưng khung xương $F_{\text{mature}}$ để giải mã đồng thời **74 thuộc tính hành động** (53 Spatial + 21 Temporal):
   $$\hat{c}_{\text{late}} = \text{ML-Decoder}(F_{\text{mature}}) \in \mathbb{R}^{B \times 74}$$
-- Khả năng mô hình hóa sự đồng xuất hiện (Co-occurrence) giữa các nhãn khái niệm vượt trội so với các lớp Linear độc lập.
+- Khả năng mô hình hóa sự đồng xuất hiện (Co-occurrence) giữa các nhãn khái niệm thông qua nhiều query và cross-attention.
 
 ---
 
@@ -120,11 +120,11 @@ Trong đó:
 ### 3.2. Nhược Điểm (Cons)
 - **Liên kết cứng với cấu trúc CTR-GCN (Tight Architectural Coupling):** Can thiệp trực tiếp vào giữa khối $l_7$ và $l_8$ của CTR-GCN khiến DCLN rất khó thay thế bằng các backbone khác như SkateFormer, ST-GCN hay Transformer một cách tổng quát.
 - **Tăng chi phí tham số và tính toán:** Việc chạy cả TemporalGraphPRN và ML-Decoder khiến số lượng tham số và thời gian huấn luyện tăng khoảng $30-40\%$ so với CTR-GCN gốc.
-- **Độ nhạy cảm số học cao:** Phép tính Product T-norm trong CRL đòi hỏi phải vô hiệu hóa Mixed Precision (ép chạy FP32), làm giảm tốc độ huấn luyện trên các dòng GPU Tensor Core mới.
+- **Độ nhạy cảm số học:** Phép tính Product T-norm trong CRL cần có cơ chế kiểm soát dtype và miền giá trị khi chạy cùng Mixed Precision.
 - **Không có căn chỉnh ngôn ngữ tự nhiên:** Hoàn toàn dựa vào nhãn nhị phân trong ma trận concept CSV, chưa khai thác được tri thức ngôn ngữ phong phú từ các mô hình nền tảng như CLIP hoặc LLM.
 
 ---
 
 ## 4. Kết Luận
 
-DCLN là một bước tiến quan trọng trong việc đưa các thuộc tính ngữ nghĩa vào cấu trúc sâu của mạng đồ thị xương (GCN). Ý tưởng can thiệp Attention Bias ở tầng giữa đặt nền móng cho các cơ chế Group-aware Attention ở những mô hình kế tiếp.
+DCLN là kiến trúc đưa thuộc tính ngữ nghĩa vào giữa backbone GCN thông qua PRN và Attention Bias, sau đó sử dụng một decoder riêng cho concept ở tầng cuối. Cách phân tách early feedback và late reasoning là nền tảng cho các cơ chế group-aware concept decoding ở những mô hình kế tiếp.

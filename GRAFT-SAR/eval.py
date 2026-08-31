@@ -1,6 +1,6 @@
 """
-Benchmark Evaluation and Metric Reporting for Thesis Neurosymbolic Framework
-============================================================================
+Benchmark Evaluation and Metric Reporting for GRAFT-SAR Framework
+==================================================================
 Evaluates:
 1. Top-1 & Top-5 Classification Accuracy (Final, Neural, Logic)
 2. Mean Concept Precision, Recall, and F1-Score
@@ -22,11 +22,11 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from feeders.feeder_ntu import NTUFeeder, custom_collate_fn
-from model.thesis_model import ThesisNeurosymbolicModel
+from model.graft_sar import GRAFTSAR
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Evaluate Thesis Neurosymbolic Model")
+    parser = argparse.ArgumentParser(description="Evaluate GRAFT-SAR Model")
     parser.add_argument("--config", default="config/ntu60_skateformer_logic.yaml", help="Path to config")
     parser.add_argument("--checkpoint", default=None, help="Path to model weights checkpoint (.pt)")
     parser.add_argument("--device", default=None, help="Device: cuda, cuda:0, or cpu")
@@ -169,7 +169,7 @@ def main():
         collate_fn=custom_collate_fn,
     )
 
-    model = ThesisNeurosymbolicModel(
+    model = GRAFTSAR(
         **cfg["model_args"],
         device=device,
     ).to(device)

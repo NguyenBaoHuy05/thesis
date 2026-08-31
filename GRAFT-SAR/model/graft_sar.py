@@ -33,9 +33,10 @@ from model.crl.components import ConceptLogicLayers
 from model.concept_decoder import GroupAwareConceptDecoder
 
 
-class ThesisNeurosymbolicModel(nn.Module):
+class GRAFTSAR(nn.Module):
     """
-    Core Unified Neurosymbolic Model.
+    GRAFT-SAR: Group-aware Residual Adaptive Fusion with Temperature-Annealed Logic
+    for Skeleton Action Recognition.
     """
 
     def __init__(
@@ -405,3 +406,7 @@ class ThesisNeurosymbolicModel(nn.Module):
             })
 
         return explanations
+
+
+# Alias for backward compatibility
+ThesisNeurosymbolicModel = GRAFTSAR

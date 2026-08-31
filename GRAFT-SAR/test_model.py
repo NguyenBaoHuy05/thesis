@@ -1,6 +1,6 @@
 """
-Automated Verification and Smoke Test Suite for ThesisModel
-===========================================================
+Automated Verification and Smoke Test Suite for GRAFT-SAR
+=========================================================
 Tests:
 1. Concept loading & 9-group partitioning
 2. Knowledge Graph ontology matrices (S_KG, C_KG, A_KG)
@@ -22,7 +22,7 @@ from knowledge_graph import (
     build_joint_semantic_dependency_matrix,
     build_semantic_similarity_from_concepts,
 )
-from model.thesis_model import ThesisNeurosymbolicModel
+from model.graft_sar import GRAFTSAR
 
 
 def test_concepts_and_kg():
@@ -57,7 +57,7 @@ def test_skateformer_backbone():
     index_t = torch.linspace(-1, 1, T).unsqueeze(0).repeat(B, 1)
     labels = torch.tensor([0, 1], dtype=torch.long)
 
-    model = ThesisNeurosymbolicModel(
+    model = GRAFTSAR(
         backbone_name="skateformer",
         backbone_cfg={
             "in_channels": 3,
@@ -109,7 +109,7 @@ def test_ctrgcn_backbone():
     x = torch.randn(B, C, T, V, M)
     labels = torch.tensor([2, 3], dtype=torch.long)
 
-    model = ThesisNeurosymbolicModel(
+    model = GRAFTSAR(
         backbone_name="ctrgcn",
         backbone_cfg={
             "in_channels": 3,
@@ -143,7 +143,7 @@ def test_ctrgcn_backbone():
 
 def main():
     print("=" * 60)
-    print("    RUNNING THESIS NEUROSYMBOLIC MODEL VERIFICATION SUITE   ")
+    print("      RUNNING GRAFT-SAR MODEL VERIFICATION SUITE           ")
     print("=" * 60)
     test_concepts_and_kg()
     test_skateformer_backbone()

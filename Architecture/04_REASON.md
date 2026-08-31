@@ -114,10 +114,10 @@ Một điểm đặc trưng của REASON là chiến lược huấn luyện ng�
 - **Cú sốc tối ưu hóa ở Epoch 50 (Training Discontinuity):** Việc đột ngột kích hoạt tầng Logic ở Epoch 50 gây xung đột gradient mạnh, có thể làm phá vỡ các đặc trưng ổn định đã học được ở giai đoạn 1.
 - **Xung đột giữa Divergence Loss và Gom cụm ngữ nghĩa:** Divergence Loss ép các vector biểu diễn trực giao có thể triệt tiêu các đặc trưng vốn có tính phối hợp tự nhiên (ví dụ: tay và chân phối hợp khi đi bộ).
 - **Phụ thuộc nặng vào Pretrained Weights của CLIP:** Đòi hỏi phải nạp mô hình CLIP lớn, làm tăng dung lượng lưu trữ và tài nguyên tính toán trong quá trình huấn luyện.
-- **Chưa có cơ chế Residual Fusion:** Toàn bộ dự đoán hành động ở giai đoạn 2 bắt buộc phải đi qua tầng Logic, dẫn đến độ chính xác nhận dạng bị giảm so với mô hình nhận thức thuần túy.
+- **Chưa có cơ chế Residual Fusion:** Toàn bộ dự đoán hành động ở giai đoạn 2 đi qua tầng Logic, nên nhánh nhận thức và nhánh giải thích chưa được tách biệt ở đầu ra.
 
 ---
 
 ## 4. Kết Luận
 
-REASON đại diện cho bước tiến lớn về **Căn chỉnh Ngữ nghĩa Thị giác - Ngôn ngữ (Vision-Language Alignment)** trong lĩnh vực Neurosymbolic Skeleton Action Recognition. Các hạn chế về mặt dung hợp và sốc huấn luyện của REASON là tiền đề trực tiếp để hoàn thiện mô hình `ThesisModel`.
+REASON mở rộng kiến trúc nhận dạng khung xương bằng một nhánh căn chỉnh skeleton–language, Concept Refiner và tầng logic. Các thành phần này tạo tiền đề cho việc thiết kế framework hợp nhất `GRAFT-SAR` với decoder concept phân nhóm và cơ chế fusion tách biệt.

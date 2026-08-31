@@ -1,12 +1,12 @@
 # Kiến Trúc Mô Hình ECR-SkateFormer
 > **Tên đầy đủ:** Explainable Concept Reasoner SkateFormer (Joint Spatial-Temporal Concept Bottleneck & Differentiable Logic Reasoner)  
-> **Mã nguồn tương ứng:** `d:\Thesis\ECR-SkateFormer\` và `d:\Thesis\SkateFormerOld\skateformer_cbm.py`, `d:\Thesis\SkateFormerOld\joint_symbolic_model.py`
+> **Mã nguồn tương ứng:** `d:\Thesis\ECR-SkateFormer\` và `d:\Thesis\GCCR-Skateformer\joint_symbolic_model.py`
 
 ---
 
 ## 1. Tổng Quan & Động Lực Thiết Kế
 
-Mô hình SkateFormer gốc đạt độ chính xác rất cao nhưng hoạt động hoàn toàn như một "hộp đen" (Black-box). Để kết hợp giữa **Năng lực Thị giác Sâu (Perception)** và **Khả năng Suy luận Ký hiệu (Neuro-Symbolic Reasoning)**, **ECR-SkateFormer** được phát triển nhằm:
+Mô hình SkateFormer gốc hoạt động như một "hộp đen" (Black-box) ở tầng phân loại cuối. Để kết hợp giữa **Năng lực Thị giác Sâu (Perception)** và **Khả năng Suy luận Ký hiệu (Neuro-Symbolic Reasoning)**, **ECR-SkateFormer** được phát triển nhằm:
 1. Chèn một **Lớp thắt cổ chai Khái niệm (Concept Bottleneck Layer)** ngay sau SkateFormer Backbone để chuyển đổi đặc trưng tiềm ẩn thành các thuộc tính ngữ nghĩa con người hiểu được (ví dụ: `head_nod`, `hand_reach`, `arm_raise`, `temporal_fast`).
 2. Sử dụng **Công cụ Suy luận Logic Khả vi (Differentiable Logic Reasoner - DCR / KGUnionLayer)** được khởi tạo từ **Đồ thị Tri thức (Knowledge Graph Prior)** để suy diễn hành động từ các khái niệm thay vì dùng lớp phân loại tuyến tính thông thường.
 
@@ -32,11 +32,11 @@ Mô hình SkateFormer gốc đạt độ chính xác rất cao nhưng hoạt đ�
                      └──────────────────────┬──────────────────────┘
                                             ▼
                                  Concept Bottleneck Vector
-                                    c ∈ [0, 1]^(B × 72)
+                                    c ∈ [0, 1]^(B × K)
                                             │
                                             ▼
                              Expanded Literals: [c, 1 - c]
-                                   (144 chiều logic)
+                                   (2K chiều logic)
                                             │
                                             ▼
                           [KG-Primed Logic Reasoner (L1)]
@@ -71,9 +71,9 @@ Thay vì dùng Global Average Pooling làm mất thông tin phân cấp, ECR-Ska
 
 ### 2.2. Khối Thắt Cổ Chai Khái Niệm (Concept Bottleneck Heads)
 
-Từ 2 vector $f_{spa}$ và $f_{tem}$, mô hình đưa qua các mạng MLP chuyên trách để dự đoán xác suất kích hoạt của **72-74 khái niệm nguyên tử (Atomic Concepts)**:
-- **Nhánh không gian:** $f_{spa} \xrightarrow{\text{MLP}_{spa}} \hat{c}_{spa} \in [0, 1]^{52}$ (Bao gồm các nhóm: Head, Hand, Arm, Hip, Leg, Foot, Two-person interaction).
-- **Nhánh thời gian:** $f_{tem} \xrightarrow{\text{MLP}_{tem}} \hat{c}_{tem} \in [0, 1]^{20}$ (Bao gồm: Direction, Phase, Acceleration, Frequency).
+Từ 2 vector $f_{spa}$ và $f_{tem}$, mô hình đưa qua các mạng MLP chuyên trách để dự đoán xác suất kích hoạt của bộ khái niệm nguyên tử. Ký hiệu $K$ cần được xác định theo phiên bản concept annotation đang sử dụng:
+- **Nhánh không gian:** $f_{spa} \xrightarrow{\text{MLP}_{spa}} \hat{c}_{spa}$ (các nhóm Head, Hand, Arm, Hip, Leg, Foot và tương tác hai người).
+- **Nhánh thời gian:** $f_{tem} \xrightarrow{\text{MLP}_{tem}} \hat{c}_{tem}$ (các nhóm Direction, Sequence và Dynamics).
 - Ghép nối vector khái niệm tổng thể:
   $$c = [\hat{c}_{spa} \,\|\, \hat{c}_{tem}] \in [0, 1]^{72}$$
 
@@ -134,11 +134,11 @@ $$\mathcal{L}_{total} = \mathcal{L}_{action}(\hat{y}, y) + \lambda_{con} \mathca
 ### 3.2. Nhược Điểm (Cons)
 - **Hiện tượng "Đói Logic" (Logic Starvation):** Do nhãn concept rất thưa ($>90\%$ là 0), nếu dùng BCE chuẩn, gradient của nhãn âm sẽ ép tất cả concept về 0, làm triệt tiêu tín hiệu vào tầng logic.
 - **Biến mất đạo hàm ở phép nhân T-norm (Gradient Vanishing):** Phép nhân chuỗi dài $\prod$ trong cổng AND dễ khiến gradient tiệm cận 0 khi số lượng concept lớn hoặc chuỗi quy tắc sâu.
-- **Sụt giảm độ chính xác so với Backbone gốc (Accuracy Penalty):** Việc ép toàn bộ thông tin phải đi qua thắt cổ chai hẹp 72 chiều khiến mô hình logic thuần túy bị tụt $2-4\%$ Top-1 Accuracy so với SkateFormer thuần (chưa có residual connection).
+- **Phụ thuộc vào Logic Bottleneck:** Việc ép toàn bộ thông tin đi qua vector concept làm backbone và logic branch phụ thuộc chặt vào chất lượng của concept representation.
 - **Chi phí gán nhãn ma trận Concept:** Đòi hỏi phải xây dựng ma trận nhãn khái niệm cho toàn bộ 60 hoặc 120 lớp hành động của NTU RGB+D.
 
 ---
 
 ## 4. Kết Luận & Đóng Góp
 
-ECR-SkateFormer là bước đột phá đầu tiên trong việc đưa **Neuro-Symbolic Reasoning** vào mô hình Transformer khung xương SOTA. Nó chứng minh rằng mạng nơ-ron có thể vừa học biểu diễn sâu vừa tuân thủ các quy tắc logic hình thức giải thích được.
+ECR-SkateFormer là kiến trúc kết hợp backbone Transformer khung xương với Concept Bottleneck và tầng suy luận logic khả vi. Điểm đóng góp kiến trúc nằm ở việc biến đặc trưng tiềm ẩn thành các concept trung gian trước khi suy luận hành động.

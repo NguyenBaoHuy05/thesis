@@ -1,34 +1,21 @@
 """
 Backbones Registry and Factory
 ==============================
-Provides factory methods to instantiate and wrap any skeleton action recognition backbone.
+Provides factory methods to instantiate SkateFormer backbone adapter.
 """
 
 from __future__ import annotations
 
-from typing import Any, Dict, Type, Union
+from typing import Any, Dict, Type
 import torch
 import torch.nn as nn
 
 from model.backbones.base_adapter import BaseBackboneAdapter
 from model.backbones.skateformer_adapter import SkateFormerAdapter
-from model.backbones.ctrgcn_adapter import CTRGCNAdapter
-from model.backbones.stgcn_adapter import STGCNAdapter
-from model.backbones.hypergcn_adapter import HyperGCNAdapter
-from model.backbones.skgcn_adapter import SKGCNAdapter
 
 
 BACKBONE_REGISTRY: Dict[str, Type[BaseBackboneAdapter]] = {
     "skateformer": SkateFormerAdapter,
-    "ctrgcn": CTRGCNAdapter,
-    "ctr_gcn": CTRGCNAdapter,
-    "stgcn": STGCNAdapter,
-    "st_gcn": STGCNAdapter,
-    "baseline": STGCNAdapter,
-    "hypergcn": HyperGCNAdapter,
-    "hyper_gcn": HyperGCNAdapter,
-    "skgcn": SKGCNAdapter,
-    "sk_gcn": SKGCNAdapter,
 }
 
 
@@ -47,7 +34,7 @@ def build_backbone(
     Factory function to construct a backbone adapter by name.
 
     Args:
-        backbone_name: Name of the backbone ('skateformer', 'ctrgcn', 'stgcn', 'hypergcn', 'skgcn')
+        backbone_name: Name of the backbone ('skateformer')
         backbone_cfg: Keyword arguments dict forwarded to the backbone adapter
         num_class: Number of action classes
 
@@ -63,12 +50,8 @@ def build_backbone(
     cfg = (backbone_cfg or {}).copy()
     cfg.update(kwargs)
 
-    # Ensure num_class or num_classes is passed properly
     if "num_class" not in cfg and "num_classes" not in cfg:
-        if key == "skateformer":
-            cfg["num_classes"] = num_class
-        else:
-            cfg["num_class"] = num_class
+        cfg["num_classes"] = num_class
 
     adapter_cls = BACKBONE_REGISTRY[key]
     return adapter_cls(**cfg)

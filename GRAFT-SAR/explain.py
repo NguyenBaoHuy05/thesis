@@ -17,11 +17,11 @@ from torch.utils.data import DataLoader
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from feeders.feeder_ntu import NTUFeeder, custom_collate_fn
-from model.thesis_model import ThesisNeurosymbolicModel
+from model.graft_sar import GRAFTSAR
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Explain Actions with Symbolic Logic")
+    parser = argparse.ArgumentParser(description="Explain Actions with GRAFT-SAR Symbolic Logic")
     parser.add_argument("--config", default="config/ntu60_skateformer_logic.yaml")
     parser.add_argument("--checkpoint", default=None, help="Path to checkpoint .pt")
     parser.add_argument("--num-samples", type=int, default=5, help="Number of test samples to explain")
@@ -52,7 +52,7 @@ def main():
     )
 
     # Initialize model
-    model = ThesisNeurosymbolicModel(
+    model = GRAFTSAR(
         **cfg["model_args"],
         device=device,
     ).to(device)

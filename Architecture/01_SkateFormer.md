@@ -1,7 +1,12 @@
-# Kiến Trúc Mô Hình SkateFormer
+# Kiến Trúc SkateFormer Backbone & GCCR-Skateformer
 > **Tên đầy đủ:** SkateFormer: Skeletal-Temporal Transformer for Human Action Recognition (ECCV 2024)  
 > **Tác giả:** Jeonghyeok Do, Munchurl Kim (KAIST VIC-Lab)  
-> **Mã nguồn tương ứng:** `d:\Thesis\SkateFormerOld\` và `d:\Thesis\ECR-SkateFormer\`
+> **Tên thư mục hiện tại:** **GCCR-Skateformer**  
+> **Mã nguồn tương ứng:** `d:\Thesis\GCCR-Skateformer\` và `d:\Thesis\ECR-SkateFormer\`
+
+> **Phạm vi:** `GCCR-Skateformer` là framework tập trung vào SkateFormer backbone kết hợp Concept Bottleneck và grouped concept compatibility. Thành phần chính gồm `JointSpatialTemporalCBM`, `JointSymbolicActionCompatibility`, bộ concept annotation, backbone adapter và công cụ late-fusion. Trong tài liệu này, “SkateFormer” chỉ backbone; “GCCR-Skateformer” chỉ model wrapper và toàn bộ mã nguồn mở rộng.
+
+> **Tên gọi kiến trúc:** `JointSymbolicActionCompatibility` là **Grouped Concept Compatibility Reasoner (GCCR)** ở cấp module. Đây là bộ chấm điểm tương thích giữa xác suất concept theo nhóm và template concept của từng action; nó không phải một model độc lập và cũng không thực hiện phép AND/OR logic tường minh.
 
 ---
 
@@ -11,7 +16,7 @@ Trong nhận dạng hành động người dựa trên chuỗi khung xương (Sk
 1. **Ràng buộc topo đồ thị vật lý cố định:** Khó nắm bắt các mối liên kết ngữ nghĩa giữa các khớp xa nhau (ví dụ: tay cầm chân, hai bàn tay chạm nhau).
 2. **Chi phí tính toán của Transformer chuẩn:** Nếu áp dụng Self-Attention toàn cục lên toàn bộ $T$ khung hình và $V$ khớp xương với $M$ người ($N = T \times V \times M$), độ phức tạp là $\mathcal{O}((T \cdot V \cdot M)^2)$, gây bùng nổ bộ nhớ GPU.
 
-**SkateFormer** ra đời nhằm giải quyết triệt để vấn đề này bằng cách phân rã không gian đặc trưng khung xương thành **4 loại phân vùng quan hệ (Partitions)** và áp dụng cơ chế **Skate-Attention** hiệu quả cao.
+**SkateFormer** được thiết kế để xử lý vấn đề này bằng cách phân rã không gian đặc trưng khung xương thành **4 loại phân vùng quan hệ (Partitions)** và áp dụng cơ chế **Skate-Attention**. Phần này chỉ mô tả cấu trúc kiến trúc; hiệu năng thực nghiệm cần được trình bày ở phần thí nghiệm riêng.
 
 ```
                   Raw Skeleton Sequence X ∈ ℝ^(B × C_in × T × V × M)
@@ -59,7 +64,7 @@ Trong nhận dạng hành động người dựa trên chuỗi khung xương (Sk
 | **Type III** | $P_{\text{joint-body}}$ | **Joint-Body:** Chú ý không gian giữa các khớp trong cùng một khung hình thời gian (tư thế tức thời). | $T \times (V \cdot M)$ |
 | **Type IV** | $P_{\text{comp-body}}$ | **Component-Body:** Chú ý giữa các nhóm chi qua lại trong cùng một khoảng thời gian (tương tác giữa tay và chân). | $(T / K_{\text{temp}}) \times (K_{\text{temp}} \cdot V \cdot M)$ |
 
-Nhờ cách chia này, độ phức tạp tính toán giảm từ $\mathcal{O}((T V M)^2)$ xuống còn $\mathcal{O}(T \cdot (VM)^2 + (VM) \cdot T^2)$, cho phép xử lý chuỗi dài mà không quá tải bộ nhớ.
+Các phân vùng giúp giới hạn phạm vi chú ý theo từng quan hệ không-thời gian. Độ phức tạp cụ thể phụ thuộc vào cách triển khai kích thước phân vùng và cần được tính theo cấu hình thực tế.
 
 ---
 
@@ -114,13 +119,9 @@ $$y_{\text{ensemble}} = w_J y_J + w_B y_B + w_{JV} y_{JV} + w_{BV} y_{BV}$$
 ## 4. Ưu Điểm & Nhược Điểm
 
 ### 4.1. Ưu Điểm (Pros)
-- **Độ chính xác vượt trội (SOTA Accuracy):** Đạt kết quả Top-1 hàng đầu thế giới trên các tập dữ liệu lớn chuẩn quốc tế:
-  - NTU RGB+D 60: $\approx 93.5\%$ (X-Sub), $\approx 96.8\%$ (X-View).
-  - NTU RGB+D 120: $\approx 90.1\%$ (X-Sub), $\approx 91.8\%$ (X-Set).
-  - NW-UCLA: $\approx 96.5\%$.
-- **Mô hình hóa quan hệ linh hoạt:** Vượt qua giới hạn của đồ thị GCN tĩnh, tự động học tương tác giữa mọi cặp khớp bất kỳ mà không cần định nghĩa cạnh đồ thị thủ công.
-- **Tiết kiệm tài nguyên so với Full-Transformer:** Chiến lược 4 phân vùng giúp giảm độ phức tạp tính toán đáng kể, huấn luyện mượt mà trên GPU phổ thông.
-- **Khả năng biểu diễn đa dòng:** Hoạt động xuất sắc trên cả 4 modalities (Joint, Bone, Velocity).
+- **Mô hình hóa quan hệ linh hoạt:** Cho phép học tương tác giữa các khớp trong những vùng quan hệ được định nghĩa thay vì chỉ phụ thuộc vào cạnh đồ thị vật lý.
+- **Phân rã không-thời gian:** Bốn loại phân vùng cung cấp các góc nhìn bổ sung về quỹ đạo khớp, quan hệ bộ phận và tư thế toàn thân.
+- **Khả năng mở rộng theo modality:** Có thể dùng làm backbone cho các dòng Joint, Bone, Joint Velocity và Bone Velocity; việc ensemble các dòng là một pipeline bên ngoài backbone.
 
 ### 4.2. Nhược Điểm (Cons)
 - **Hộp đen hoàn toàn (Complete Black-Box):** Mạng nơ-ron sâu trực tiếp dự đoán phân phối xác suất hành động qua một lớp `nn.Linear` cuối cùng. Không thể giải thích *tại sao* mô hình đưa ra quyết định đó.
@@ -132,4 +133,4 @@ $$y_{\text{ensemble}} = w_J y_J + w_B y_B + w_{JV} y_{JV} + w_{BV} y_{BV}$$
 
 ## 5. Kết Luận & Vai Trò Trong Luận Văn
 
-SkateFormer là **xương sống nơ-ron nhận thức (Perception Backbone)** mạnh mẽ nhất trong chuỗi nghiên cứu của luận văn. Nó cung cấp bản đồ đặc trưng không-thời gian chất lượng cao để làm đầu vào cho các tầng giải thích ngữ nghĩa và suy luận logic ở các mô hình cải tiến tiếp theo (`ECR-SkateFormer`, `REASON`, `ThesisModel`).
+SkateFormer là **xương sống nơ-ron nhận thức (Perception Backbone)** trong chuỗi nghiên cứu của luận văn. `GCCR-Skateformer` cung cấp wrapper Concept Bottleneck, GCCR compatibility reasoner và công cụ ensemble để kết nối backbone này với các mô hình cải tiến tiếp theo (`ECR-SkateFormer`, `REASON`, `GRAFT-SAR`).
