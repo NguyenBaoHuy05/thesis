@@ -1,0 +1,120 @@
+base_lr: 0.0001
+batch_size: 32
+device:
+- 0
+feeder: feeders.feeder_ntu.Feeder
+grad_clip: true
+grad_max: 1.0
+loss_type: LSCE
+lr_scheduler: cosine
+min_lr: 1.0e-06
+model: model.lcr_skateformer.LCR_SkateFormer
+model_args:
+  action_mode: linear
+  asymmetric_gamma_neg: 2.0
+  attn_drop: 0.5
+  aux_action_loss_weight: 0.3
+  backbone_weights: /content/ntu60_CS/SkateFormer_j.pt
+  concept_loss_weight: 1.0
+  concept_negative_weight: 0.15
+  concept_positive_weight: 1.0
+  drop_path: 0.2
+  early_concept_loss_weight: 0.5
+  head_drop: 0.0
+  index_t: true
+  kg_init_mode: kg_primed
+  kg_loss_weight: 0.01
+  kg_prior_map:
+    alongside:
+    - - arm_raise
+      - hand_wave
+    - - leg_step
+      - foot_step
+    excludes:
+    - - arm_raise
+      - hip_sit
+    - - leg_step
+      - hip_squat
+    require:
+    - - arm_raise
+      - arm_extend
+    - - leg_step
+      - foot_step
+    - - hand_wave
+      - arm_raise
+  kg_prior_strength: 1.0
+  l1_dim: 128
+  l2_dim: 128
+  max_gate: 0.5
+  mlp_ratio: 4.0
+  num_classes: 60
+  num_concepts: 72
+  num_frames: 64
+  num_heads: 32
+  num_loops: 2
+  num_people: 2
+  num_points: 24
+  part_diversity_weight: 0.01
+  prior_retention_weight: 0.01
+  prototype_and_weight: 0.35
+  rel: true
+  return_aux: true
+  rule_sparsity_weight: 0.001
+  shared_weights: true
+  spatial_concepts: 52
+  stability_loss_weight: 0.05
+  temporal_concepts: 20
+  type_1_size:
+  - 8
+  - 8
+  type_2_size:
+  - 8
+  - 12
+  type_3_size:
+  - 8
+  - 8
+  type_4_size:
+  - 8
+  - 12
+  update_gate_init: 0.1
+  use_action_feedback: false
+nesterov: true
+num_epoch: 150
+num_worker: 4
+optimizer: AdamW
+phase: train
+seed: 1
+test_batch_size: 32
+test_feeder_args:
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  debug: false
+  p_interval:
+  - 0.95
+  partition: true
+  remove_null_concept: true
+  split: test
+  thres: 64
+  uniform: true
+  window_size: 64
+train_feeder_args:
+  aug_method: a123489
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  debug: false
+  inter_p: 0.2
+  intra_p: 0.5
+  p_interval:
+  - 0.5
+  - 1
+  partition: true
+  remove_null_concept: true
+  split: train
+  thres: 64
+  uniform: true
+  window_size: 64
+warm_up_epoch: 10
+warmup_lr: 1.0e-06
+warmup_prefix: false
+weight_decay: 0.05
+work_dir: ./work_dir/ntu60_cs/LCR_SkateFormer_j_K2_linear

@@ -1,0 +1,119 @@
+seed: 1
+num_worker: 4
+work_dir: ./work_dir/ntu/cs/ablation_A3_channel_mod/
+phase: train
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  remove_null_concept: true
+  split: train
+  debug: false
+  window_size: 64
+  p_interval:
+  - 0.5
+  - 1
+  aug_method: a123489
+  intra_p: 0.5
+  inter_p: 0.2
+  thres: 64
+  uniform: true
+  partition: true
+test_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  remove_null_concept: true
+  split: test
+  window_size: 64
+  p_interval:
+  - 0.95
+  thres: 64
+  uniform: true
+  partition: true
+  debug: false
+model: model.reason_skateformer.SFB_ECR_SkateFormer
+model_args:
+  num_classes: 60
+  num_concepts: 72
+  spatial_concepts: 52
+  temporal_concepts: 20
+  num_people: 2
+  num_points: 24
+  num_frames: 64
+  backbone_weights: /content/ntu60_inter_CSub/SkateFormer_j.pt
+  num_heads: 32
+  attn_drop: 0.5
+  head_drop: 0.0
+  rel: true
+  drop_path: 0.2
+  type_1_size:
+  - 8
+  - 8
+  type_2_size:
+  - 8
+  - 12
+  type_3_size:
+  - 8
+  - 8
+  type_4_size:
+  - 8
+  - 12
+  mlp_ratio: 4.0
+  index_t: true
+  l1_dim: 128
+  l2_dim: 128
+  kg_init_mode: kg_primed
+  action_mode: prototype
+  prototype_and_weight: 0.35
+  kg_prior_strength: 1.0
+  feedback_mode: channel_modulation
+  feedback_beta: 0.2
+  feedback_lambda: 0.0
+  feedback_confidence_gating: true
+  early_stages: 2
+  concept_loss_weight: 1.0
+  early_concept_loss_weight: 0.5
+  feedback_consistency_weight: 0.02
+  kg_loss_weight: 0.01
+  prior_retention_weight: 0.01
+  rule_sparsity_weight: 0.001
+  part_diversity_weight: 0.01
+  concept_negative_weight: 0.15
+  concept_positive_weight: 1.0
+  asymmetric_gamma_neg: 2.0
+  return_aux: true
+  kg_prior_map:
+    require:
+    - - arm_raise
+      - arm_extend
+    - - leg_step
+      - foot_step
+    - - hand_wave
+      - arm_raise
+    alongside:
+    - - arm_raise
+      - hand_wave
+    - - leg_step
+      - foot_step
+    excludes:
+    - - arm_raise
+      - hip_sit
+    - - leg_step
+      - hip_squat
+optimizer: AdamW
+weight_decay: 0.05
+lr_scheduler: cosine
+base_lr: 0.0001
+min_lr: 1.0e-06
+warmup_lr: 1.0e-06
+warmup_prefix: false
+warm_up_epoch: 2
+device:
+- 0
+batch_size: 32
+test_batch_size: 32
+num_epoch: 150
+nesterov: true
+grad_clip: true
+grad_max: 1.0
+loss_type: LSCE
