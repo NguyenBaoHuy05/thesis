@@ -1,18 +1,15 @@
 #!/usr/bin/env python
 import os
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-os.chdir(ROOT)
+os.chdir(os.path.dirname(__file__))
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import yaml
 import time
-import re
+from pathlib import Path
 import random
 import numpy as np
 from tqdm import tqdm
-import argparse
 
 import torch
 import torch.nn.functional as F
@@ -46,63 +43,10 @@ def init_seed(seed):
     torch.backends.cudnn.benchmark = True
 
 
-def resolve_config_value(value, root_dir):
-    def find_matching_file(name: str):
-        if not name:
-            return None
-        candidates = []
-        for folder in [root_dir, root_dir / 'data', root_dir / 'checkpoints', root_dir / 'concepts', root_dir / 'work_dir']:
-            candidates.append(folder / name)
-        for folder in [root_dir, root_dir / 'data', root_dir / 'checkpoints', root_dir / 'concepts', root_dir / 'work_dir']:
-            if folder.exists():
-                candidates.extend(folder.rglob(name))
-        for cand in candidates:
-            if cand.exists():
-                return str(cand.resolve())
-        return None
-
-    if isinstance(value, str):
-        env_match = re.fullmatch(r'\$\{([A-Z0-9_]+)(?::-([^}]*))?\}', value)
-        if env_match:
-            env_name, default_value = env_match.groups()
-            return os.environ.get(env_name, default_value or '')
-
-        if value.startswith('~'):
-            return os.path.expanduser(value)
-
-        if value.startswith('./') or value.startswith('../'):
-            return str((root_dir / value).resolve())
-
-        if os.path.isabs(value):
-            if os.path.exists(value):
-                return value
-            name = Path(value).name
-            match = find_matching_file(name)
-            if match:
-                return match
-            # extra fallback: match by dataset family, because some configs still use NTU120_CSet.npz / NTU120_CSub.npz names
-            stem = Path(name).stem
-            for suffix in ['*.npz', '*.pt', '*.csv']:
-                for folder in [root_dir, root_dir / 'data', root_dir / 'checkpoints', root_dir / 'concepts']:
-                    if folder.exists():
-                        matches = list(folder.rglob(suffix))
-                        for cand in matches:
-                            if stem in cand.stem or stem.replace('_CSet', '').replace('_CSub', '') in cand.stem:
-                                return str(cand.resolve())
-            return value
-
-    elif isinstance(value, dict):
-        return {k: resolve_config_value(v, root_dir) for k, v in value.items()}
-    elif isinstance(value, list):
-        return [resolve_config_value(v, root_dir) for v in value]
-    return value
-
-
 class Trainer:
     def __init__(self, config_path):
         with open(config_path, 'r') as f:
-            raw_args = yaml.safe_load(f)
-        self.args = resolve_config_value(raw_args, ROOT)
+            self.args = yaml.safe_load(f)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         init_seed(self.args.get('seed', 1))
@@ -134,9 +78,6 @@ class Trainer:
             pin_memory=True,
             persistent_workers=True if self.args['num_worker'] > 0 else False
         )
-
-        concept_names = list(self.data_loader['train'].dataset.vocab)
-        self.args['concept_names'] = concept_names
 
         # model
         self.model = SkeletonACL_CLIP_Logic(self.args, self.device).to(self.device)
@@ -669,12 +610,7 @@ class Trainer:
 
 def main():
     """Main entry point."""
-    parser = argparse.ArgumentParser(description="REASON framework")
-    parser.add_argument('--config', type=str, required=True, help='path to the config file')
-    # add other arguments if needed, but for now just config
-    args, unknown = parser.parse_known_args()
-    
-    cfg = args.config
+    cfg = os.path.join(os.path.dirname(__file__), 'config', 'xset', 'config_skeleton_crl_jm.yaml')
     print(30*'=')
     print(f"Using config file: {cfg}")
     print(30*'~')

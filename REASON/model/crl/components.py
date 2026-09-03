@@ -9,7 +9,7 @@ from typing import Optional, Union, Tuple
 
 THRESHOLD = 0.5
 INIT_RANGE = 0.5
-EPSILON = 1e-5 # Changed from 1e-10 for float16 (AMP) stability
+EPSILON = 1e-10
 INIT_L = 0.0
 
 
@@ -525,15 +525,9 @@ class ConceptLogicLayers(nn.Module):
     """
     Concept Reasoning Layer (CRL) for action recognition.
     Learns logical rules from concepts to predict action classes.
-
-    Supports two initialization modes for the switchboard weights:
-    - random: original REASON behavior
-    - kg_primed: initialize from a KG relation prior so rule discovery is guided rather than fully free
     """
     def __init__(self, n_concepts, n_actions, l1_dim=256, l2_dim=256, 
-                 use_not=True, use_skip=True, temperature=1.0, l2_weight=5e-6,
-                 kg_init_mode='random', kg_prior_map=None, kg_prior_strength=1.0,
-                 concept_names=None):
+                 use_not=True, use_skip=True, temperature=1.0, l2_weight=5e-6):
         super(ConceptLogicLayers, self).__init__()
 
         self.n_concepts = n_concepts
@@ -544,10 +538,6 @@ class ConceptLogicLayers(nn.Module):
         self.use_skip = use_skip
         self.l2_weight = l2_weight
         self.temperature = temperature
-        self.kg_init_mode = kg_init_mode.lower() if isinstance(kg_init_mode, str) else 'random'
-        self.kg_prior_map = kg_prior_map or {'require': [], 'alongside': [], 'excludes': []}
-        self.kg_prior_strength = float(kg_prior_strength)
-        self.concept_names = concept_names or [f'concept_{i}' for i in range(n_concepts)]
 
         # self.tanh = nn.Tanh()
         self.scaled_softsign = ScaledSoftsign()
@@ -598,85 +588,7 @@ class ConceptLogicLayers(nn.Module):
             
         # Temperature parameter (from original CRL)
         self.t = nn.Parameter(torch.log(torch.tensor([self.temperature])))
-
-        if self.kg_init_mode == 'kg_primed':
-            self._apply_kg_priming()
         
-    def _resolve_concept_index(self, entry):
-        if isinstance(entry, int):
-            return entry
-        if isinstance(entry, str):
-            if entry in self.concept_names:
-                return self.concept_names.index(entry)
-            key = entry.strip().lower()
-            for idx, name in enumerate(self.concept_names):
-                if str(name).strip().lower() == key:
-                    return idx
-            return None
-        return None
-
-    def _apply_kg_priming(self):
-        if not isinstance(self.kg_prior_map, dict):
-            return
-
-        relation_map = {
-            'require': self.kg_prior_map.get('require', []),
-            'alongside': self.kg_prior_map.get('alongside', []),
-            'excludes': self.kg_prior_map.get('excludes', [])
-        }
-
-        for layer in self.layer_list:
-            if not isinstance(layer, UnionLayer):
-                continue
-
-            with torch.no_grad():
-                input_dim = layer.con_layer.W.shape[0]
-                output_dim = layer.con_layer.W.shape[1]
-                if input_dim == 0 or output_dim == 0:
-                    continue
-
-                base_noise = 0.03 * torch.rand_like(layer.con_layer.W)
-                prior = torch.zeros_like(layer.con_layer.W)
-
-                for j in range(output_dim):
-                    seed_idx = j % input_dim
-                    for i in range(input_dim):
-                        score = 0.02
-                        if i == seed_idx:
-                            score = 1.0
-                        else:
-                            score = 0.05
-
-                        for rel_name, rel_items in relation_map.items():
-                            if rel_name == 'require':
-                                value = self.kg_prior_strength
-                            elif rel_name == 'alongside':
-                                value = 0.5 * self.kg_prior_strength
-                            elif rel_name == 'excludes':
-                                value = 0.0
-                            else:
-                                value = 0.0
-
-                            for pair in rel_items:
-                                if len(pair) != 2:
-                                    continue
-                                a, b = pair
-                                a_idx = self._resolve_concept_index(a)
-                                b_idx = self._resolve_concept_index(b)
-                                if a_idx is None or b_idx is None:
-                                    continue
-                                if i == a_idx and seed_idx == b_idx:
-                                    score = value
-                                if i == b_idx and seed_idx == a_idx:
-                                    score = value
-                                if rel_name == 'excludes' and (i == a_idx or i == b_idx):
-                                    score = 0.0
-
-                        prior[i, j] = score
-
-                layer.con_layer.W.copy_(prior + base_noise)
-                layer.dis_layer.W.copy_(prior + base_noise)
-                
     def forward(self, concepts):
         concepts = self.norm(concepts)
         concepts = self.scaled_softsign(concepts)#* 5.0  # Scale tanh output from [-1, 1] to [-2, 2]

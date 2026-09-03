@@ -1,7 +1,7 @@
 # Skeleton CRL Training Configuration
 
 # WandB configuration
-use_wandb: False
+use_wandb: True
 wandb_project: SkeletonACLv5
 wandb_entity: null  # Set to your WandB username
 wandb_name: temp #v5exp6
@@ -9,7 +9,7 @@ wandb_name: temp #v5exp6
 #baseline-bce-clip-ln-aug-div-logic-ln #-fc2-sgd-steplr-aug-78concep
 
 # Work directory
-work_dir: ./work_dir/ablation/kg_pretrain
+work_dir: /data_hdd/talha/nsai/scal/work_dir/temp #v5exp6
 #v7_exp2_adamw_mld64_bce_0.1cont_rmsn_oldBIN64 
 #baseline-bce-clip-ln-aug-div-logic-ln #-fc2-sgd-steplr-aug-78concep
 
@@ -46,10 +46,10 @@ show_topk: [1, 5]
 
 model: hgcn.hypergcn_large.Model
 model_args:
-  pretrain_chkpt: /content/runs-122-120048.pt
+  pretrain_chkpt: /data_hdd/talha/nsai/scal/hgcn/hgcn_l_j.pt
   num_class: 120
-  spatial_concepts: 52
-  temporal_concepts: 20
+  spatial_concepts: 52 # 53 # concepts to be predicted by GCN
+  temporal_concepts: 26 # 27
   num_point: 25
   num_person: 2
   hyper_joints: 3
@@ -66,26 +66,14 @@ logic_model:
   use_skip: True
   temperature: 1.0
   l2_weight: 1.0e-6
-  kg_init_mode: kg_primed   # options: random | kg_primed
-  kg_prior_strength: 1.0
-  kg_prior_map:
-    require:
-      - ["arm_raise", "arm_extend"]
-      - ["leg_step", "foot_step"]
-    alongside:
-      - ["arm_raise", "hand_wave"]
-      - ["leg_step", "foot_step"]
-    excludes:
-      - ["arm_raise", "hip_sit"]
-      - ["leg_step", "hip_squat"]
 
 # Feeder
 feeder: feeders.feeder_ntu.Feeder
-num_worker: 8
+num_worker: 32
 
 train_feeder_args:
-  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
-  concepts_csv: /content/REASON/concepts/ntu_rgbd_60_120.csv
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSub.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: train
   random_choose: False
   random_shift: False
@@ -101,8 +89,8 @@ train_feeder_args:
   remove_null_concept: True
 
 test_feeder_args:
-  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU120_CSub_64f.npz
-  concepts_csv: /content/REASON/concepts/ntu_rgbd_60_120.csv
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSub.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: test
   window_size: 64
   p_interval: [0.95]
@@ -142,8 +130,8 @@ crl_lr: 5.0e-5
 crl_min_lr: 1.0e-6
 
 # Training schedule
-batch_size: 64
-test_batch_size: 64
+batch_size: 164
+test_batch_size: 164
 start_epoch: 0
 num_epoch: 200
 warm_up_epoch: 5
@@ -182,7 +170,7 @@ lora_args:
   position: all
   r: 16
   root_path: ''
-  save_path: ./work_dir/lora/
+  save_path: /data_hdd/talha/nsai/GAP/work_dir/lora/
   seed: 1
   shots: 16
 

@@ -361,8 +361,8 @@ def split_prompts_by_part(concept_df, ordered_concept_dict):
     # for full body only
     # combined_list['full_body'].append('This action involves interaction of two persons.')
 
-    temporal_concepts = [c for c in concepts if c.startswith('temporal_')]
-    tmp_prompts = generate_temporal_prompts(temporal_concepts, subject="a person",
+    tmp_strt_idx = sum(list(ordered_concept_dict.values())[:-1])
+    tmp_prompts = generate_temporal_prompts(concepts[tmp_strt_idx:], subject="a person",
                                         context="in a short action video for action recognition",
                                         variants_per_concept=1)# <- keep varients fixed here
     x = list(tmp_prompts.values())

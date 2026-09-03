@@ -1,8 +1,7 @@
 #%%
 import os
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parent.parent
+# os.chdir(os.path.dirname(__file__))
+# os.chdir('/data_hdd/talha/nsai/scal/')
 
 import yaml
 import torch
@@ -19,8 +18,8 @@ from hgcn.hypergcn_large import Model
 from loralib.utils import apply_lora, mark_only_lora_as_trainable
 
 from model.multi_pos_clip import MultiPositiveClipLoss, MultiPositiveClipConfig
-# from model.twowayloss import TwoWayLoss
-# from model.losses import AsymmetricLoss, AsymmetricLossOptimized
+from model.twowayloss import TwoWayLoss
+from model.losses import AsymmetricLoss, AsymmetricLossOptimized
 from model.crl.components import ConceptLogicLayers
 from model.ml_decoder import MLDecoder
 
@@ -34,7 +33,6 @@ class DivergenceLoss(nn.Module):
         loss = 0
 
         for i in x:
-            i = i.float() # Cast to float32 for AMP stability
             norm = torch.norm(i, dim=-1, keepdim=True, p=2)
             norm = norm @ norm.T
             loss_i = i @ i.T
@@ -57,23 +55,9 @@ class DivergenceLoss(nn.Module):
 
 #%%
 
-def resolve_local_path(candidate, default_rel):
-    if candidate is None:
-        return str((ROOT / default_rel).resolve())
-    candidate = str(candidate)
-    if os.path.isabs(candidate):
-        return candidate
-    if candidate.startswith('${') and candidate.endswith('}'):
-        env_name = candidate[2:-1]
-        env_val = os.environ.get(env_name)
-        if env_val:
-            return env_val
-        return str((ROOT / default_rel).resolve())
-    return str((ROOT / candidate).resolve())
-
-
-# Prefer env override. If not set, use a project-local default path.
-chkpt_clip = os.environ.get('REASON_CLIP_CHECKPOINT', str((ROOT / 'checkpoints' / 'runs-text_encoder-110-34650.pt').resolve()))
+# chkpt = '/mnt/ssd/Talha/scal/runs-110-34650.pt'
+# chkpt = '/data_hdd/talha/nsai/scal/hgcn/hgcn-runs-122-120048.pt'
+chkpt_clip = '/data_hdd/talha/nsai/GAP/work_dir/ntu120_exp13/csub/lst_joint/runs-text_encoder-110-34650.pt'
 
 # skeleton_model.load_state_dict(torch.load(chkpt))
 # %%
@@ -86,7 +70,7 @@ class GCN_Encoder(nn.Module):
     """
     def __init__(self, model_args):
         super(GCN_Encoder, self).__init__()
-        self.checkpoint_path = resolve_local_path(model_args.get('pretrain_chkpt'), 'checkpoints/hgcn/hgcn_l_j.pt')
+        self.checkpoint_path = model_args['pretrain_chkpt']
         del model_args['pretrain_chkpt']
         # Load pretrained model
         self.skeleton_model = Model(**model_args)
@@ -137,11 +121,7 @@ class Text_Encoder(nn.Module):
         
         self.text_encoder[self.lora_args.backbone] = clip_model # text encoder that accepts tokenized text input
         if not self.full_finetune:
-            if os.path.exists(checkpoint_path):
-                self.text_encoder.load_state_dict(torch.load(checkpoint_path, map_location=device))
-                print(f"   • Loaded LoRA text encoder from {checkpoint_path}")
-            else:
-                print(f"   • Warning: LoRA text encoder checkpoint not found at {checkpoint_path}. Initializing from scratch.")
+            self.text_encoder.load_state_dict(torch.load(checkpoint_path, map_location=device))
         self.text_encoder.to(device)
         
         print(30*'-')
@@ -261,11 +241,7 @@ class SkeletonACL_CLIP_Logic(nn.Module):
             use_not=self.logic_args.use_not,
             use_skip=self.logic_args.use_skip,
             temperature=self.logic_args.temperature,
-            l2_weight=self.logic_args.l2_weight,
-            kg_init_mode=getattr(self.logic_args, 'kg_init_mode', 'random'),
-            kg_prior_map=getattr(self.logic_args, 'kg_prior_map', None),
-            kg_prior_strength=getattr(self.logic_args, 'kg_prior_strength', 1.0),
-            concept_names=getattr(self.args, 'concept_names', None)
+            l2_weight=self.logic_args.l2_weight
         ).to(device)
 
         mplclip_cfg = MultiPositiveClipConfig(

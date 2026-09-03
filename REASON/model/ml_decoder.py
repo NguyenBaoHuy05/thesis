@@ -38,7 +38,6 @@ class TransformerDecoderLayerOptimal(nn.Module):
         self.dropout3 = nn.Dropout(dropout)
 
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        self.self_attn = self.multihead_attn  # PyTorch 2.0+ compatibility fix
 
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
@@ -57,8 +56,7 @@ class TransformerDecoderLayerOptimal(nn.Module):
     def forward(self, tgt: Tensor, memory: Tensor, tgt_mask: Optional[Tensor] = None,
                 memory_mask: Optional[Tensor] = None,
                 tgt_key_padding_mask: Optional[Tensor] = None,
-                memory_key_padding_mask: Optional[Tensor] = None,
-                **kwargs) -> Tensor:
+                memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
         tgt = tgt + self.dropout1(tgt)
         tgt = self.norm1(tgt)
         tgt2 = self.multihead_attn(tgt, memory, memory)[0]

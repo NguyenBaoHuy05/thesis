@@ -8,7 +8,7 @@ wandb_name: v5exp6set
 #v7_exp2_adamw_mld64_2way_0.1cont_rmsn_oldBIN # skeleton_acl_xsub_run1_ASM-SGD-noAug-Dual #-fc2-sgd-steplr-aug-78concep
 
 # Work directory
-work_dir: ${REASON_WORK_DIR:-./work_dir/v5exp6set}
+work_dir: /data_hdd/talha/nsai/scal/work_dir/v5exp6set
 #v7_exp2_adamw_mld64_2way_0.1cont_rmsn_oldBIN # skeleton_crl_ntu_xsub_ASM-noAug-Dual #-fc2-sgd-steplr-aug-78concep
 
 # Phase
@@ -44,7 +44,7 @@ show_topk: [1, 5]
 
 model: hgcn.hypergcn_large.Model
 model_args:
-  pretrain_chkpt: ${REASON_PRETRAIN_HGCN:-./checkpoints/hgcn/hgcn_l_j_set.pt}
+  pretrain_chkpt: /data_hdd/talha/nsai/scal/hgcn/hgcn_l_j_set.pt
   num_class: 120
   spatial_concepts: 52 # 53 # concepts to be predicted by GCN
   temporal_concepts: 26 # 27
@@ -70,8 +70,8 @@ feeder: feeders.feeder_ntu.Feeder
 num_worker: 24
 
 train_feeder_args:
-  data_path: ${REASON_DATA_PATH:-./data/ntu120/NTU120_CSet.npz}
-  concepts_csv: ${REASON_CONCEPTS_CSV:-./concepts/ntu_rgbd_60_120.csv}
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSet.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: train
   random_choose: False
   random_shift: False
@@ -87,8 +87,8 @@ train_feeder_args:
   remove_null_concept: True
 
 test_feeder_args:
-  data_path: ${REASON_DATA_PATH:-./data/ntu120/NTU120_CSet.npz}
-  concepts_csv: ${REASON_CONCEPTS_CSV:-./concepts/ntu_rgbd_60_120.csv}
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSet.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: test
   window_size: 64
   p_interval: [0.95]
@@ -168,7 +168,7 @@ lora_args:
   position: all
   r: 16
   root_path: ''
-  save_path: ${REASON_LORA_PATH:-./work_dir/lora/}
+  save_path: /data_hdd/talha/nsai/GAP/work_dir/lora/
   seed: 1
   shots: 16
 

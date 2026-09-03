@@ -11,7 +11,7 @@ import torch.nn.functional as F
 import torch.distributed as dist
 
 
-def _l2_normalize(x: torch.Tensor, eps: float = 1e-5) -> torch.Tensor:
+def _l2_normalize(x: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
     return x / (x.norm(dim=-1, keepdim=True) + eps)
 
 
@@ -148,7 +148,7 @@ class MultiPositiveClipLoss(nn.Module):
         # Optional row weights
         if self.cfg.row_weights is not None:
             w = self.cfg.row_weights.to(device, dtype=logits.dtype)
-            w = w / (w.sum() + 1e-5)
+            w = w / (w.sum() + 1e-8)
             loss_i2t = (loss_i2t_row * w).sum()
         else:
             loss_i2t = loss_i2t_row.mean()
@@ -173,7 +173,7 @@ class MultiPositiveClipLoss(nn.Module):
 
             if self.cfg.col_weights is not None:
                 w = self.cfg.col_weights.to(device, dtype=logits.dtype)
-                w = w / (w.sum() + 1e-5)
+                w = w / (w.sum() + 1e-8)
                 loss_t2i = (loss_t2i_col * w).sum()
             else:
                 loss_t2i = loss_t2i_col.mean()
