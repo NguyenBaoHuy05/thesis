@@ -1,0 +1,115 @@
+phase: train
+seed: 1
+work_dir: ./work_dir/ntu60_cv/CLIR_SkateFormer_j_A3_K3
+feeder: feeders.feeder_ntu.Feeder
+num_worker: 4
+train_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CV_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  split: train
+  window_size: 64
+  thres: 64
+  uniform: true
+  partition: true
+  remove_null_concept: true
+  p_interval:
+  - 0.5
+  - 1
+  aug_method: a123489
+  intra_p: 0.5
+  inter_p: 0.2
+  debug: false
+test_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CV_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  split: test
+  window_size: 64
+  thres: 64
+  uniform: true
+  partition: true
+  remove_null_concept: true
+  p_interval:
+  - 0.95
+  debug: false
+model: model.clir_skateformer.CLIR_SkateFormer
+model_args:
+  num_classes: 60
+  num_concepts: 72
+  spatial_concepts: 52
+  temporal_concepts: 20
+  num_people: 2
+  num_points: 24
+  num_frames: 64
+  backbone_weights: /content/ntu60_CV/SkateFormer_j.pt
+  num_loops: 3
+  r1: 256
+  r2a: 128
+  r2b: 128
+  beta_max: 0.5
+  beta_init: 0.1
+  literal_mode: soft
+  temperature: 5.0
+  hidden_dim: 256
+  dropout: 0.1
+  lambda_sup: 1.0
+  lambda_reg: 0.0
+  concept_negative_weight: 0.15
+  concept_positive_weight: 1.0
+  asymmetric_gamma_neg: 2.0
+  return_aux: true
+  random_feedback: false
+  use_feature_bypass: false
+  num_heads: 32
+  mlp_ratio: 4.0
+  drop_path: 0.2
+  attn_drop: 0.5
+  head_drop: 0.0
+  rel: true
+  index_t: true
+  type_1_size:
+  - 8
+  - 8
+  type_2_size:
+  - 8
+  - 12
+  type_3_size:
+  - 8
+  - 8
+  type_4_size:
+  - 8
+  - 12
+optimizer: AdamW
+base_lr: 0.0001
+min_lr: 1.0e-06
+warmup_lr: 1.0e-06
+warm_up_epoch: 10
+warmup_prefix: false
+weight_decay: 0.05
+nesterov: true
+lr_scheduler: cosine
+grad_clip: true
+grad_max: 1.0
+batch_size: 32
+test_batch_size: 32
+num_epoch: 70
+start_epoch: 0
+loss_type: LSCE
+phase1_epochs: 30
+backbone_lr_scale: 0.1
+crl_lr_scale: 1.0
+update_cell_lr_scale: 2.0
+ste_temperature_start: 5.0
+ste_temperature_end: 10.0
+lambda_reg: 0.005
+log_interval: 100
+save_interval: 5
+save_epoch: 30
+eval_interval: 5
+print_log: true
+show_topk:
+- 1
+- 5
+save_score: false
+save_trace: false
+device:
+- 0

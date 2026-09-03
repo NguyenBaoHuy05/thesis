@@ -1,0 +1,302 @@
+[
+  {
+    "action_name": "drink_water",
+    "action_idx": 0,
+    "clauses": []
+  },
+  {
+    "action_name": "eat_meal",
+    "action_idx": 1,
+    "clauses": []
+  },
+  {
+    "action_name": "brush_teeth",
+    "action_idx": 2,
+    "clauses": []
+  },
+  {
+    "action_name": "brush_hair",
+    "action_idx": 3,
+    "clauses": []
+  },
+  {
+    "action_name": "drop",
+    "action_idx": 4,
+    "clauses": []
+  },
+  {
+    "action_name": "pick_up",
+    "action_idx": 5,
+    "clauses": []
+  },
+  {
+    "action_name": "throw",
+    "action_idx": 6,
+    "clauses": []
+  },
+  {
+    "action_name": "sit_down",
+    "action_idx": 7,
+    "clauses": []
+  },
+  {
+    "action_name": "stand_up",
+    "action_idx": 8,
+    "clauses": []
+  },
+  {
+    "action_name": "clapping",
+    "action_idx": 9,
+    "clauses": []
+  },
+  {
+    "action_name": "reading",
+    "action_idx": 10,
+    "clauses": []
+  },
+  {
+    "action_name": "writing",
+    "action_idx": 11,
+    "clauses": []
+  },
+  {
+    "action_name": "tear_up_paper",
+    "action_idx": 12,
+    "clauses": []
+  },
+  {
+    "action_name": "put_on_jacket",
+    "action_idx": 13,
+    "clauses": []
+  },
+  {
+    "action_name": "take_off_jacket",
+    "action_idx": 14,
+    "clauses": []
+  },
+  {
+    "action_name": "put_on_a_shoe",
+    "action_idx": 15,
+    "clauses": []
+  },
+  {
+    "action_name": "take_off_a_shoe",
+    "action_idx": 16,
+    "clauses": []
+  },
+  {
+    "action_name": "put_on_glasses",
+    "action_idx": 17,
+    "clauses": []
+  },
+  {
+    "action_name": "take_off_glasses",
+    "action_idx": 18,
+    "clauses": []
+  },
+  {
+    "action_name": "put_on_a_hat_cap",
+    "action_idx": 19,
+    "clauses": []
+  },
+  {
+    "action_name": "take_off_a_hat_cap",
+    "action_idx": 20,
+    "clauses": []
+  },
+  {
+    "action_name": "cheer_up",
+    "action_idx": 21,
+    "clauses": []
+  },
+  {
+    "action_name": "hand_waving",
+    "action_idx": 22,
+    "clauses": []
+  },
+  {
+    "action_name": "kicking_something",
+    "action_idx": 23,
+    "clauses": []
+  },
+  {
+    "action_name": "reach_into_pocket",
+    "action_idx": 24,
+    "clauses": []
+  },
+  {
+    "action_name": "hopping",
+    "action_idx": 25,
+    "clauses": []
+  },
+  {
+    "action_name": "jump_up",
+    "action_idx": 26,
+    "clauses": []
+  },
+  {
+    "action_name": "phone_call",
+    "action_idx": 27,
+    "clauses": []
+  },
+  {
+    "action_name": "play_with_phone_tablet",
+    "action_idx": 28,
+    "clauses": []
+  },
+  {
+    "action_name": "type_on_a_keyboard",
+    "action_idx": 29,
+    "clauses": []
+  },
+  {
+    "action_name": "point_to_something",
+    "action_idx": 30,
+    "clauses": []
+  },
+  {
+    "action_name": "taking_a_selfie",
+    "action_idx": 31,
+    "clauses": []
+  },
+  {
+    "action_name": "check_time_(from_watch)",
+    "action_idx": 32,
+    "clauses": []
+  },
+  {
+    "action_name": "rub_two_hands",
+    "action_idx": 33,
+    "clauses": []
+  },
+  {
+    "action_name": "nod_head_bow",
+    "action_idx": 34,
+    "clauses": []
+  },
+  {
+    "action_name": "shake_head",
+    "action_idx": 35,
+    "clauses": []
+  },
+  {
+    "action_name": "wipe_face",
+    "action_idx": 36,
+    "clauses": []
+  },
+  {
+    "action_name": "salute",
+    "action_idx": 37,
+    "clauses": []
+  },
+  {
+    "action_name": "put_palms_together",
+    "action_idx": 38,
+    "clauses": []
+  },
+  {
+    "action_name": "cross_hands_in_front",
+    "action_idx": 39,
+    "clauses": []
+  },
+  {
+    "action_name": "sneeze_cough",
+    "action_idx": 40,
+    "clauses": []
+  },
+  {
+    "action_name": "staggering",
+    "action_idx": 41,
+    "clauses": []
+  },
+  {
+    "action_name": "falling_down",
+    "action_idx": 42,
+    "clauses": []
+  },
+  {
+    "action_name": "headache",
+    "action_idx": 43,
+    "clauses": []
+  },
+  {
+    "action_name": "chest_pain",
+    "action_idx": 44,
+    "clauses": []
+  },
+  {
+    "action_name": "back_pain",
+    "action_idx": 45,
+    "clauses": []
+  },
+  {
+    "action_name": "neck_pain",
+    "action_idx": 46,
+    "clauses": []
+  },
+  {
+    "action_name": "nausea_vomiting",
+    "action_idx": 47,
+    "clauses": []
+  },
+  {
+    "action_name": "fan_self",
+    "action_idx": 48,
+    "clauses": []
+  },
+  {
+    "action_name": "punch_slap",
+    "action_idx": 49,
+    "clauses": []
+  },
+  {
+    "action_name": "kicking",
+    "action_idx": 50,
+    "clauses": []
+  },
+  {
+    "action_name": "pushing",
+    "action_idx": 51,
+    "clauses": []
+  },
+  {
+    "action_name": "pat_on_back",
+    "action_idx": 52,
+    "clauses": []
+  },
+  {
+    "action_name": "point_finger",
+    "action_idx": 53,
+    "clauses": []
+  },
+  {
+    "action_name": "hugging",
+    "action_idx": 54,
+    "clauses": []
+  },
+  {
+    "action_name": "giving_object",
+    "action_idx": 55,
+    "clauses": []
+  },
+  {
+    "action_name": "touch_pocket",
+    "action_idx": 56,
+    "clauses": []
+  },
+  {
+    "action_name": "shaking_hands",
+    "action_idx": 57,
+    "clauses": []
+  },
+  {
+    "action_name": "walking_towards",
+    "action_idx": 58,
+    "clauses": []
+  },
+  {
+    "action_name": "walking_apart",
+    "action_idx": 59,
+    "clauses": []
+  }
+]
