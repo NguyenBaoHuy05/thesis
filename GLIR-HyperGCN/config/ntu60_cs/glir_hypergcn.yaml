@@ -1,0 +1,77 @@
+# Cau hinh dung chung cho ca V2 va V3 — chi khac o co che lich huan luyen,
+# duoc chon qua `python train.py --variant v2|v3 --config <file nay>`.
+# V2 = G1+G2, set_phase() roi rac (giong CLIR goc, dung lam baseline so sanh).
+# V3 = G1+G2+G3, set_progress() lien tuc (Muc 3, 10_CLIR-SkateFormer_v2_Proposal.md).
+
+phase: train
+seed: 1
+work_dir: ./work_dir/ntu60_cs/glir_hypergcn
+num_workers: 4
+
+train_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  split: train
+  window_size: 64
+  thres: 64
+  uniform: true
+  partition: true
+  remove_null_concept: true
+  p_interval: [0.5, 1]
+  aug_method: a123489
+  intra_p: 0.5
+  inter_p: 0.2
+  debug: false
+
+test_feeder_args:
+  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
+  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  split: test
+  window_size: 64
+  thres: 64
+  uniform: true
+  partition: true
+  remove_null_concept: true
+  p_interval: [0.95]
+  debug: false
+
+# model_args (GLIRHyperGCN.__init__)
+num_classes: 60
+num_concepts: 72
+spatial_concepts: 52
+temporal_concepts: 20
+num_person: 2
+num_point: 25              # NTU-25 chuan, KHONG phai 24 nhu SkateFormer — xem NTU25_BODY_PART_JOINTS
+in_channels: 3
+embedding_channels: 128    # -> feat_dim = 512
+backbone_weights: null     # chua co checkpoint HyperGCN pretrained rieng cho repo nay
+num_loops: 2
+r1: 256
+r2a: 128
+r2b: 128
+beta_max: 0.5
+beta_init: 0.1
+literal_mode: soft
+temperature: 5.0
+hidden_dim: 256
+dropout: 0.1
+lambda_sup: 1.0
+lambda_reg: 0.0
+lambda_ground: 0.1          # G2 — trong so L_ground
+concept_negative_weight: 0.15
+concept_positive_weight: 1.0
+asymmetric_gamma_neg: 2.0
+return_aux: true
+random_feedback: false
+use_grounding: true         # G2 — tat neu muon chay nhu V1 (chi G1)
+clip_backbone: ViT-B/32
+
+# optimizer / schedule
+base_lr: 0.0001
+weight_decay: 0.05
+grad_clip: 1.0
+batch_size: 16
+test_batch_size: 16
+num_epoch: 70
+phase1_epochs: 30           # chi dung cho --variant v2 (set_phase roi rac)
+eval_interval: 5

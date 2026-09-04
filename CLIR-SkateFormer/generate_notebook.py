@@ -49,7 +49,26 @@ def build_notebook():
 
     # Clean imports for notebook scope
     import re
-    feeder_clean = feeder_ntu_source.replace("from feeders import tools", "# 'tools' is directly available in notebook scope")
+    feeder_import_replacement = """import sys, types
+if '.' not in sys.path:
+    sys.path.insert(0, '.')
+try:
+    from feeders import tools
+except Exception:
+    if 'tools' not in globals() or tools is None:
+        tools = sys.modules.get('tools', sys.modules.get('feeders.tools', None))
+"""
+    feeder_clean = feeder_ntu_source.replace("from feeders import tools", feeder_import_replacement)
+    getitem_guard = """    def __getitem__(self, index):
+        global tools
+        if 'tools' not in globals() or tools is None:
+            import sys
+            try:
+                from feeders import tools
+            except Exception:
+                tools = sys.modules.get('tools', sys.modules.get('feeders.tools', None))
+"""
+    feeder_clean = feeder_clean.replace("    def __getitem__(self, index):", getitem_guard)
     crl_clean = re.sub(r"^from \.[^\n]+", "# relative import in notebook scope", crl_source, flags=re.MULTILINE)
     rule_ext_clean = re.sub(r"^from \.[^\n]+", "# relative import in notebook scope", rule_ext_source, flags=re.MULTILINE)
     clir_clean = re.sub(r"^from \.[^\n]+", "# relative import in notebook scope", clir_source, flags=re.MULTILINE)
@@ -114,7 +133,35 @@ with open("concepts/ntu_rgbd_60_120.csv", "w", encoding="utf-8") as f:
 print("Concept CSV written: concepts/ntu_rgbd_60_120.csv (72 concepts)")
 """)
     add_code(f"""# Data Augmentation Tools
+import os
+import sys
+import types
+
+# 1. Lưu feeders/tools.py vào workspace để DataLoader workers có thể import feeders.tools bình thường
+os.makedirs("feeders", exist_ok=True)
+with open("feeders/__init__.py", "w", encoding="utf-8") as f:
+    f.write("")
+with open("feeders/tools.py", "w", encoding="utf-8") as f:
+    f.write({repr(tools_source)})
+
+if "." not in sys.path:
+    sys.path.insert(0, ".")
+
+# 2. Định nghĩa hàm augmentation trong notebook scope
 {tools_source}
+
+# 3. Đăng ký module 'tools' vào sys.modules và globals để cả gọi trực tiếp lẫn qua tools.<func> đều hoạt động 100%
+tools = types.ModuleType("tools")
+for _k, _v in list(globals().items()):
+    if not _k.startswith("_"):
+        setattr(tools, _k, _v)
+sys.modules["tools"] = tools
+sys.modules["feeders.tools"] = tools
+
+feeders_mod = types.ModuleType("feeders")
+setattr(feeders_mod, "tools", tools)
+sys.modules["feeders"] = feeders_mod
+print("Data augmentation tools ready and feeders/tools.py written to disk!")
 """)
     add_code(f"""# NTU RGB+D Feeder
 {feeder_clean}
@@ -470,20 +517,38 @@ class CLIRTrainer:
         acc = correct / total if total > 0 else 0.0
         return acc
 
+    def _build_checkpoint(self, epoch):
+        # Gói đầy đủ state để resume, khớp optimizer/phase hiện tại (Phase 1 hoặc 2)
+        return {
+            "epoch": epoch + 1,
+            "global_step": self.global_step,
+            "phase_step": self.phase_step,
+            "current_phase": self.current_phase,
+            "best_acc": self.best_acc,
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+
     def run(self):
         print(f"Starting full training for {self.cfg['num_epoch']} epochs on {self.cfg['benchmark'].upper()}...")
         for epoch in range(self.cfg["num_epoch"]):
             train_loss, train_acc = self.train_epoch(epoch)
-            
+
+            # Lưu checkpoint mới nhất mỗi epoch (đầy đủ optimizer, khớp phase hiện tại)
+            latest_path = os.path.join(self.cfg["work_dir"], "checkpoint_latest.pt")
+            torch.save(self._build_checkpoint(epoch), latest_path)
+
             if (epoch + 1) % 5 == 0 or (epoch + 1) == self.cfg["num_epoch"]:
                 val_acc = self.eval_epoch()
                 print(f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f}, Train Acc: {train_acc*100:.2f}%, Val Acc: {val_acc*100:.2f}%")
-                
+
                 # Save best checkpoint
                 if val_acc > self.best_acc:
                     self.best_acc = val_acc
                     save_path = os.path.join(self.cfg["work_dir"], "best_model.pt")
                     torch.save(self.model.state_dict(), save_path)
+                    best_ckpt_path = os.path.join(self.cfg["work_dir"], "best_checkpoint.pt")
+                    torch.save(self._build_checkpoint(epoch), best_ckpt_path)
                     print(f"★ Saved new best model to {save_path} (Acc: {self.best_acc*100:.2f}%)")
 
 print("CLIRTrainer defined successfully!")
