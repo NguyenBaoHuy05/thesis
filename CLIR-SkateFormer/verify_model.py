@@ -62,10 +62,36 @@ def print_section(title):
 def test_literal_layer():
     print_section("Test 1: LiteralLayer & BinarizeSTE (72 concepts & 74 concepts)")
     for n_concepts in (72, 74):
-        layer = LiteralLayer(n_concepts=n_concepts, mode="soft")
+        # 1. Default Pure STE mode check
+        layer = LiteralLayer(n_concepts=n_concepts)
+        assert layer.mode == "ste", f"Expected default mode 'ste', got {layer.mode}"
+        assert layer.temperature == 2.0, f"Expected default temperature 2.0, got {layer.temperature}"
         z = torch.randn(4, n_concepts, requires_grad=True)
 
-        # 1. Soft mode
+        # Forward STE at T=2.0 (initial temperature)
+        l_ste_t2 = layer(z)
+        assert l_ste_t2.shape == (4, 2 * n_concepts)
+        p_ste_pos = l_ste_t2[:, :n_concepts]
+        unique_vals = torch.unique(p_ste_pos.detach())
+        for val in unique_vals:
+            assert abs(val.item() - 0.0) < 1e-4 or abs(val.item() - 1.0) < 1e-4
+
+        w = torch.randn_like(l_ste_t2)
+        loss_ste_t2 = (l_ste_t2 * w).sum()
+        loss_ste_t2.backward()
+        assert z.grad is not None and (z.grad.abs() > 0).any(), "Gradient must propagate through BinarizeSTE at T=2.0"
+        z.grad.zero_()
+
+        # Annealed STE at T=10.0 (final temperature)
+        layer.temperature = 10.0
+        l_ste_t10 = layer(z)
+        loss_ste_t10 = (l_ste_t10 * w).sum()
+        loss_ste_t10.backward()
+        assert z.grad is not None and (z.grad.abs() > 0).any(), "Gradient must propagate through BinarizeSTE at T=10.0"
+        z.grad.zero_()
+
+        # 2. Soft mode fallback check
+        layer.mode = "soft"
         l_soft = layer(z)
         assert l_soft.shape == (4, 2 * n_concepts)
         assert (l_soft >= 0.0).all() and (l_soft <= 1.0).all()
@@ -73,26 +99,12 @@ def test_literal_layer():
         p_neg = l_soft[:, n_concepts:]
         assert torch.allclose(p_pos + p_neg, torch.ones_like(p_pos), atol=1e-5)
 
-        w = torch.randn_like(l_soft)
         loss_soft = (l_soft * w).sum()
         loss_soft.backward()
         assert z.grad is not None and (z.grad.abs() > 0).any()
         z.grad.zero_()
 
-        # 2. STE mode
-        layer.mode = "ste"
-        layer.temperature = 5.0
-        l_ste = layer(z)
-        assert l_ste.shape == (4, 2 * n_concepts)
-        p_ste_pos = l_ste[:, :n_concepts]
-        unique_vals = torch.unique(p_ste_pos.detach())
-        for val in unique_vals:
-            assert abs(val.item() - 0.0) < 1e-4 or abs(val.item() - 1.0) < 1e-4
-
-        loss_ste = (l_ste * w).sum()
-        loss_ste.backward()
-        assert z.grad is not None and (z.grad.abs() > 0).any()
-        print(f"  [OK] LiteralLayer for {n_concepts} concepts (soft + STE) verified.")
+        print(f"  [OK] LiteralLayer for {n_concepts} concepts (Pure STE [T=2, T=10] + Soft fallback) verified.")
 
     print("[PASS] LiteralLayer & BinarizeSTE test passed.")
 
@@ -246,8 +258,43 @@ def test_full_clir_skateformer():
     concept_targets = torch.randint(0, 2, (batch_size, num_concepts)).float()
     action_labels = torch.randint(0, num_classes, (batch_size,)).long()
 
-    # Forward Phase 1
+    # 0. Pure STE Default Initialization & Gradient Flow Check
     model.train()
+    assert model.reasoner.literal_mode == "ste", f"Expected default mode 'ste', got {model.reasoner.literal_mode}"
+    assert model.reasoner.temperature == 2.0, f"Expected default temperature 2.0, got {model.reasoner.temperature}"
+    assert model.lambda_reg == 0.005, f"Expected default lambda_reg 0.005, got {model.lambda_reg}"
+    assert model.reasoner.beta_max == 0.5, f"Expected default beta_max 0.5, got {model.reasoner.beta_max}"
+
+    out_default = model(x, concept_targets=concept_targets, action_labels=action_labels)
+    assert out_default["action_logits"].shape == (batch_size, num_classes)
+    assert out_default["concept_logits"].shape == (batch_size, num_concepts)
+    assert "l_reg" in out_default
+    assert "l_sparse" in out_default
+    assert "l_stable" in out_default
+    print("  [OK] Pure STE default mode (mode='ste', temp=2.0, lambda_reg=0.005, beta_max=0.5) verified.")
+
+    # Backward gradient flow directly under Pure STE
+    total_loss_ste = F.cross_entropy(out_default["action_logits"], action_labels) + out_default["aux_loss"]
+    total_loss_ste.backward()
+    assert any(p.grad is not None and p.grad.abs().sum() > 0 for p in model.backbone.parameters())
+    assert model.spatial_head[0].weight.grad is not None
+    assert model.temporal_head[0].weight.grad is not None
+    assert model.reasoner.crl.l1_and.weight_logit.grad is not None
+    assert model.reasoner.update_cell.logic_proj[0].weight.grad is not None
+    assert model.reasoner.raw_beta.grad is not None
+    model.zero_grad()
+    print("  [OK] Pure STE backward gradient flow verified (backbone + heads + CRL + UpdateCell).")
+
+    # Temperature Annealing Check (T=10.0)
+    model.reasoner.temperature = 10.0
+    out_t10 = model(x, concept_targets=concept_targets, action_labels=action_labels)
+    total_loss_t10 = F.cross_entropy(out_t10["action_logits"], action_labels) + out_t10["aux_loss"]
+    total_loss_t10.backward()
+    assert model.reasoner.crl.l1_and.weight_logit.grad is not None
+    model.zero_grad()
+    print("  [OK] Temperature annealing to 10.0 backward gradient flow verified.")
+
+    # 1. Backwards Compatibility: Forward Phase 1 Fallback
     model.set_phase(1)
     assert model.reasoner.literal_mode == "soft"
     assert model.reasoner.beta_max == 0.1
@@ -256,7 +303,7 @@ def test_full_clir_skateformer():
     out_p1 = model(x, concept_targets=concept_targets, action_labels=action_labels)
     assert out_p1["action_logits"].shape == (batch_size, num_classes)
     assert out_p1["concept_logits"].shape == (batch_size, num_concepts)
-    print(f"  [OK] Phase 1 forward (72 concepts, beta={beta_p1.detach().numpy()}) verified.")
+    print(f"  [OK] Phase 1 forward fallback (72 concepts, beta={beta_p1.detach().numpy()}) verified.")
 
     # Forward Phase 2
     model.set_phase(2, temperature=6.0)

@@ -140,8 +140,8 @@ class IterativeLogicReasoner(nn.Module):
         r2b:          int   = 128,
         beta_max:     float = 0.5,
         beta_init:    float = 0.1,
-        literal_mode: str   = "soft",
-        temperature:  float = 5.0,
+        literal_mode: str   = "ste",
+        temperature:  float = 2.0,
         hidden_dim:   int   = 256,
         dropout:      float = 0.1,
         random_feedback: bool = False,
@@ -310,12 +310,12 @@ class CLIRSkateFormer(nn.Module):
         r1, r2a, r2b:        Kích thước rule banks (256, 128, 128).
         beta_max:            Giá trị tối đa của β (0.5).
         beta_init:           Khởi tạo của β (0.1).
-        literal_mode:        'soft' (Phase 1) hoặc 'ste' (Phase 2).
-        temperature:         Nhiệt độ STE.
+        literal_mode:        'ste' (mặc định Pure STE) hoặc 'soft'.
+        temperature:         Nhiệt độ STE (mặc định 2.0, annealing dần tới 10.0).
         hidden_dim:          Chiều ẩn ConceptUpdateCell (256).
         dropout:             Dropout rate (0.1).
         lambda_sup:          Trọng số L_sup (1.0 cố định).
-        lambda_reg:          Trọng số L_reg (0.0 Phase1, 0.005 Phase2).
+        lambda_reg:          Trọng số L_reg (mặc định 0.005 cho rule sparsity + loop stability).
         concept_negative_weight: Trọng số negative trong Asymmetric BCE (0.15).
         asymmetric_gamma_neg:    γ- cho Asymmetric BCE (2.0).
         return_aux:          Có trả về thông tin phụ không (True khi train).
@@ -339,13 +339,13 @@ class CLIRSkateFormer(nn.Module):
         r2b:          int   = 128,
         beta_max:     float = 0.5,
         beta_init:    float = 0.1,
-        literal_mode: str   = "soft",
-        temperature:  float = 5.0,
+        literal_mode: str   = "ste",
+        temperature:  float = 2.0,
         hidden_dim:   int   = 256,
         dropout:      float = 0.1,
         # Loss weights
         lambda_sup:              float = 1.0,
-        lambda_reg:              float = 0.0,
+        lambda_reg:              float = 0.005,
         concept_negative_weight: float = 0.15,
         concept_positive_weight: float = 1.0,
         asymmetric_gamma_neg:    float = 2.0,

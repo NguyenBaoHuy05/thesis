@@ -22,9 +22,13 @@ CLIR-SkateFormer kết hợp backbone nhận thức không-thời gian **SkateFo
      $$z^{t+1} = z^t + \beta^t \cdot \Delta z^t$$
    - $\Delta z^t$ được sinh ra từ **Logic Evidence** $r^t = [r_{\text{and}}; r_{\text{and2}}; r_{\text{or1}}] \in \mathbb{R}^{512}$ phản ánh đánh giá logic mức cao xuống không gian concept logits liên tục.
 
-4. **Huấn luyện 2 Phase (Staged Training):**
-   - **Phase 1 (Epoch 1–30):** Warm-up với chế độ `soft` (Sigmoid liên tục, $\beta_{\max}=0.1, \lambda_{\text{reg}}=0$) giúp backbone và concept heads hội tụ vững.
-   - **Phase 2 (Epoch 31+):** STE (Straight-Through Estimator, $\beta_{\max}=0.5$) với lịch annealing temperature $5.0 \rightarrow 10.0$ và $\lambda_{\text{reg}}=0.005$ để ép luật thưa và trích xuất mệnh đề DNF sắc bén.
+4. **Huấn luyện 100% Pure STE (Straight-Through Estimator) với Continuous Temperature Annealing:**
+   - **Forward Pass:** Ngay từ Epoch 1, toàn bộ literals $l^t$ được binarize cứng về $\{0, 1\}$ qua `BinarizeSTE`, đảm bảo tính trung thực tuyệt đối giữa mô hình mạng nơ-ron và động cơ luật tượng trưng.
+   - **Continuous Temperature Annealing ($2.0 \rightarrow 10.0$):**
+     - Ở các epoch đầu ($T = 2.0$): Vùng gradient hoạt động rộng $\big[-\frac{3}{T}, \frac{3}{T}\big] = [-1.5, 1.5]$ chống bão hòa sớm, giúp gradient truyền mượt về backbone SkateFormer mà không bị triệt tiêu (giải quyết triệt để cold-start problem khi bỏ warm-up).
+     - Ở các epoch cuối ($T \rightarrow 10.0$): Hàm surrogate tiệm cận bước nhảy Heaviside lý tưởng, triệt tiêu chênh lệch giữa training và exact DNF rule evaluation.
+   - **Tối ưu hóa liên tục 1 chu kỳ:** Áp dụng per-group learning rate ngay từ Epoch 0 (backbone scale 0.1, CRL scale 1.0, UpdateCell scale 2.0) với Cosine LR Scheduler liên tục, không bị gián đoạn hay reset giữa chừng.
+   - **Tương thích ngược 2-Phase:** Hỗ trợ cơ chế 2-phase cũ (Phase 1 Soft $\rightarrow$ Phase 2 STE) khi cấu hình `phase1_epochs > 0`.
 
 ---
 
@@ -79,7 +83,7 @@ Chạy huấn luyện trên benchmark NTU RGB+D 120 Cross-Setup:
 python main.py --config config/train/ntu120_cset/CLIR_SkateFormer_j.yaml
 ```
 
-*Quá trình huấn luyện sẽ tự động kích hoạt Phase 1 ở Epoch 1–30 và chuyển sang Phase 2 (bật STE, cập nhật per-group learning rate, kích hoạt $\mathcal{L}_{\text{reg}}$) từ Epoch 31.*
+*Mặc định mô hình chạy ở chế độ 100% Pure STE ngay từ Epoch 1 (`phase1_epochs: 0`), tự động anneal temperature từ 2.0 đến 10.0, áp dụng per-group learning rate và regularizer $\mathcal{L}_{\text{reg}}$ liên tục suốt toàn bộ số epoch.*
 
 ### 3. Trích xuất luật logic DNF (Rule Extraction)
 

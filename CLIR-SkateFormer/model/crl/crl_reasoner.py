@@ -61,8 +61,8 @@ class CRLReasoner(nn.Module):
         r1:           int   = _R1,
         r2a:          int   = _R2A,
         r2b:          int   = _R2B,
-        literal_mode: str   = "soft",
-        temperature:  float = 5.0,
+        literal_mode: str   = "ste",
+        temperature:  float = 2.0,
     ):
         super().__init__()
         self.n_concepts  = int(n_concepts)

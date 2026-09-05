@@ -1,11 +1,12 @@
 """CLIR-SkateFormer Training and Evaluation Processor.
 
 Hỗ trợ:
-- Staged Training: Phase 1 (Concept Warm-up) và Phase 2 (STE + Rule Sparsification)
-- Per-group learning rates: backbone (freeze/low), concept_head, crl, update_cell
+- Pure STE Training (mặc định) với Continuous Temperature Annealing (2.0 → 10.0)
+- 2-Phase Staged Training fallback (Phase 1 Soft Warm-up, Phase 2 STE) khi cấu hình phase1_epochs > 0
+- Per-group learning rates: backbone (scale 0.1), crl (scale 1.0), update_cell (scale 2.0)
 - Deep supervision: aux action loss trên intermediate y^t
 - Concept supervision: Asymmetric BCE loss
-- Rule Sparsity + Loop Stability regularization (Phase 2)
+- Rule Sparsity + Loop Stability regularization
 - Reasoning trace logging (save_trace)
 """
 
@@ -188,12 +189,12 @@ def get_parser():
 
     # ── CLIR-specific ────────────────────────────────────────────────────────
     parser.add_argument(
-        "--phase1-epochs", type=int, default=30,
-        help="Number of epochs for Phase 1 (Concept Warm-up, soft mode)"
+        "--phase1-epochs", type=int, default=0,
+        help="Number of epochs for Phase 1 (0 = Pure STE from start, >0 = 2-phase staged training)"
     )
     parser.add_argument(
         "--backbone-lr-scale", type=float, default=0.1,
-        help="Learning rate scale for backbone in Phase 2 (0 = freeze)"
+        help="Learning rate scale for backbone in Phase 2 / Pure STE (0 = freeze)"
     )
     parser.add_argument(
         "--crl-lr-scale", type=float, default=1.0,
@@ -204,16 +205,16 @@ def get_parser():
         help="Learning rate scale for ConceptUpdateCell"
     )
     parser.add_argument(
-        "--ste-temperature-start", type=float, default=5.0,
-        help="Starting STE temperature at beginning of Phase 2"
+        "--ste-temperature-start", type=float, default=2.0,
+        help="Starting STE temperature (default 2.0)"
     )
     parser.add_argument(
         "--ste-temperature-end", type=float, default=10.0,
-        help="Final STE temperature at end of Phase 2 (linear annealing)"
+        help="Final STE temperature at end of training (linear annealing to 10.0)"
     )
     parser.add_argument(
         "--lambda-reg", type=float, default=0.005,
-        help="Regularization weight lambda_reg for Phase 2"
+        help="Regularization weight lambda_reg for rule sparsity and stability"
     )
 
     return parser
@@ -249,7 +250,18 @@ class Processor:
         self.global_step = 0
         self.best_acc = 0.0
         self.best_acc_epoch = 0
-        self.current_training_phase = 1  # sẽ update khi epoch > phase1_epochs
+
+        # Nhận diện chế độ huấn luyện: Pure Soft vs Pure STE vs 2-Phase Staged
+        self.is_pure_soft = (
+            self.arg.model_args.get("literal_mode", "") == "soft"
+            or self.arg.phase1_epochs >= self.arg.num_epoch
+        )
+        if self.is_pure_soft:
+            self.current_training_phase = 1
+        elif self.arg.phase1_epochs <= 0:
+            self.current_training_phase = 2
+        else:
+            self.current_training_phase = 1
 
         self.use_cuda = (
             torch.cuda.is_available()
@@ -264,10 +276,26 @@ class Processor:
         concept_dataset = self.data_loader.get("train", self.data_loader.get("test")).dataset
         self.phase_step = 0
         self.load_model()
-        # Khởi động chính xác ở Phase 1 (soft mode, beta_max=0.1, lambda_reg=0.0)
+        # Khởi tạo phase mô hình: Pure Soft, Pure STE, hoặc 2-Phase Warm-up
         m = self.model.module if hasattr(self.model, "module") else self.model
         if hasattr(m, "set_phase"):
-            m.set_phase(1)
+            if self.is_pure_soft:
+                m.set_phase(1)
+                m.lambda_reg = 0.0
+                self.print_log("[Training Mode] 🌿 PURE SOFT BASELINE (Continuous Sigmoid, No STE, lambda_reg=0.0)")
+            elif self.arg.phase1_epochs <= 0:
+                m.set_phase(2, temperature=self.arg.ste_temperature_start)
+                m.lambda_reg = self.arg.lambda_reg
+                self.print_log(
+                    f"[Training Mode] 🚀 100% PURE STE ANNEALING (T: {self.arg.ste_temperature_start} → {self.arg.ste_temperature_end}, "
+                    f"lambda_reg: {self.arg.lambda_reg})"
+                )
+            else:
+                m.set_phase(1)
+                self.print_log(
+                    f"[Training Mode] 🔄 2-PHASE STAGED TRAINING (Phase 1: 1–{self.arg.phase1_epochs} soft, "
+                    f"Phase 2: {self.arg.phase1_epochs + 1}–{self.arg.num_epoch} STE)"
+                )
 
         if self.use_cuda:
             self.model = self.model.cuda(self.output_device)
@@ -366,11 +394,17 @@ class Processor:
         crl_scale = self.arg.crl_lr_scale
         uc_scale = self.arg.update_cell_lr_scale
 
-        if self.current_training_phase == 1:
-            # Phase 1: single group, tất cả trainable
+        # Staged training ở Phase 1 (warm-up): single group
+        is_staged_phase1 = (
+            self.current_training_phase == 1
+            and not getattr(self, "is_pure_soft", False)
+            and 0 < self.arg.phase1_epochs < self.arg.num_epoch
+        )
+        if is_staged_phase1:
+            # Phase 1 của Staged Training: single group, tất cả trainable
             return [{"params": self.model.parameters(), "lr": base_lr}]
         else:
-            # Phase 2: per-group LRs
+            # Pure STE, Pure Soft, hoặc Phase 2: per-group LRs (công bằng cho ablation so sánh)
             backbone_params = list(m.backbone.parameters()) + \
                               list(m.spatial_pool_score.parameters()) + \
                               list(m.temporal_pool_score.parameters()) + \
@@ -426,6 +460,14 @@ class Processor:
 
     def _maybe_switch_phase(self, epoch: int):
         """Kiểm tra và chuyển phase nếu cần."""
+        if getattr(self, "is_pure_soft", False):
+            # Chế độ Pure Soft: chạy cố định Phase 1 suốt toàn bộ số epoch
+            return
+
+        if self.arg.phase1_epochs <= 0:
+            # Chế độ Pure STE: chạy cố định Phase 2 từ Epoch 1, không switch/rebuild
+            return
+
         m = self.model.module if hasattr(self.model, "module") else self.model
 
         if epoch < self.arg.phase1_epochs:
@@ -463,6 +505,15 @@ class Processor:
 
     def _get_ste_temperature(self, epoch: int) -> float:
         """Tính STE temperature theo lịch annealing tuyến tính."""
+        if self.arg.phase1_epochs <= 0:
+            # Pure STE: Annealing tuyến tính mượt mà từ T_start → T_end trên toàn bộ num_epoch
+            progress = min(1.0, max(0.0, epoch / max(1, self.arg.num_epoch - 1)))
+            return (
+                self.arg.ste_temperature_start
+                + progress * (self.arg.ste_temperature_end - self.arg.ste_temperature_start)
+            )
+
+        # 2-Phase fallback
         if epoch < self.arg.phase1_epochs:
             return self.arg.ste_temperature_start
         progress = (epoch - self.arg.phase1_epochs) / max(
@@ -497,12 +548,17 @@ class Processor:
         # ── Kiểm tra phase switch ────────────────────────────────────────────
         self._maybe_switch_phase(epoch)
 
-        # ── Cập nhật STE temperature (Phase 2) ──────────────────────────────
+        # ── Cập nhật trạng thái từng epoch ──────────────────────────────────
         if self.current_training_phase == 2:
             temp = self._get_ste_temperature(epoch)
             m = self.model.module if hasattr(self.model, "module") else self.model
             if hasattr(m, "reasoner"):
                 m.reasoner.temperature = temp
+            self.print_log(f"Phase 2 (Pure STE) - STE Temperature: {temp:.3f}, lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
+        else:
+            m = self.model.module if hasattr(self.model, "module") else self.model
+            mode_desc = "Pure Soft" if getattr(self, "is_pure_soft", False) else "Phase 1 Warm-up"
+            self.print_log(f"Phase 1 ({mode_desc}) - Mode: 'soft' (Continuous Sigmoid), lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
 
         loader = self.data_loader["train"]
         loss_values, acc_values, aux_loss_values = [], [], []
@@ -515,7 +571,7 @@ class Processor:
                 data, index_t, label, index = batch
                 concept_targets = None
 
-            if self.current_training_phase == 1:
+            if self.arg.phase1_epochs <= 0 or self.current_training_phase == 1:
                 self.lr_scheduler.step_update(self.global_step)
             else:
                 self.lr_scheduler.step_update(self.phase_step)

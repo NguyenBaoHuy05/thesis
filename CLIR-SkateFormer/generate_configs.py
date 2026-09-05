@@ -51,6 +51,11 @@ def build_config(
     ablation_tag: str = "",
     random_feedback: bool = False,
     use_feature_bypass: bool = False,
+    literal_mode: str = "ste",
+    phase1_epochs: int = 0,
+    lambda_reg: float = 0.005,
+    ste_temperature_start: float = 2.0,
+    ste_temperature_end: float = 10.0,
 ) -> dict:
     num_classes = info["num_classes"]
     train_data = info["train_data"]
@@ -109,12 +114,12 @@ def build_config(
             "r2b": 128,
             "beta_max": beta_max,
             "beta_init": beta_init,
-            "literal_mode": "soft",
-            "temperature": 5.0,
+            "literal_mode": literal_mode,
+            "temperature": ste_temperature_start,
             "hidden_dim": 256,
             "dropout": 0.1,
             "lambda_sup": 1.0,
-            "lambda_reg": 0.0,
+            "lambda_reg": lambda_reg,
             "concept_negative_weight": 0.15,
             "concept_positive_weight": 1.0,
             "asymmetric_gamma_neg": 2.0,
@@ -149,13 +154,13 @@ def build_config(
         "num_epoch": 70,
         "start_epoch": 0,
         "loss_type": "LSCE",
-        "phase1_epochs": 30,
+        "phase1_epochs": phase1_epochs,
         "backbone_lr_scale": 0.1,
         "crl_lr_scale": 1.0,
         "update_cell_lr_scale": 2.0,
-        "ste_temperature_start": 5.0,
-        "ste_temperature_end": 10.0,
-        "lambda_reg": 0.005,
+        "ste_temperature_start": ste_temperature_start,
+        "ste_temperature_end": ste_temperature_end,
+        "lambda_reg": lambda_reg,
         "log_interval": 100,
         "save_interval": 5,
         "save_epoch": 30,
@@ -168,46 +173,79 @@ def build_config(
     }
 
 
+def save_yaml_with_mode_blocks(filepath: Path, cfg: dict):
+    yaml_str = yaml.dump(cfg, sort_keys=False)
+    comment_guide = """
+# ==============================================================================
+# LUA CHON CHE DO HUAN LUYEN: COMMENT / UNCOMMENT DE SO SANH NHANH
+# ==============================================================================
+# --- [CHE DO 1: 100% PURE STE ANNEALING (MAC DINH - DE XUAT CHO LUAN VAN)] ---
+# Cac gia tri tren dang duoc kich hoat:
+#   model_args.literal_mode: ste
+#   phase1_epochs: 0
+#   ste_temperature_start: 2.0
+#   ste_temperature_end: 10.0
+#   lambda_reg: 0.005
+#
+# --- [CHE DO 2: CHI SOFT KHONG (PURE SOFT BASELINE DE SO SANH ABLATION)] ---
+# De chuyen sang chay Pure Soft trong file nay, sua 3 tham so tuong ung:
+#   model_args:
+#     literal_mode: soft      # Thay vi ste
+#   phase1_epochs: 70         # Thay vi 0 (hoac bang num_epoch)
+#   lambda_reg: 0.0           # Thay vi 0.005
+# (Hoac su dung truc tiep file cau hinh tao san CLIR_SkateFormer_j_PureSoft.yaml)
+# ==============================================================================
+"""
+    with open(filepath, "w", encoding="utf-8") as f:
+        f.write(yaml_str)
+        f.write(comment_guide)
+
+
 def main():
     for split_name, info in DATASET_CONFIGS.items():
         out_dir = CONFIG_DIR / "train" / split_name
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # Standard K=2 (Main Model A4)
+        # 1. Standard K=2 (Main Model A4 - 100% Pure STE Annealing)
         cfg_k2 = build_config(split_name, info, num_loops=2, ablation_tag="A4_K2")
-        with open(out_dir / "CLIR_SkateFormer_j_K2.yaml", "w") as f:
-            yaml.dump(cfg_k2, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_K2.yaml", cfg_k2)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j.yaml", cfg_k2)
 
-        # Standard default alias
-        with open(out_dir / "CLIR_SkateFormer_j.yaml", "w") as f:
-            yaml.dump(cfg_k2, f, sort_keys=False)
+        # 2. Pure Soft Baseline (Ablation: chỉ soft không, không dùng STE)
+        cfg_pure_soft = build_config(
+            split_name,
+            info,
+            num_loops=2,
+            beta_init=0.1,
+            beta_max=0.1,
+            ablation_tag="PureSoft",
+            literal_mode="soft",
+            phase1_epochs=70,
+            lambda_reg=0.0,
+        )
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_PureSoft.yaml", cfg_pure_soft)
 
-        # Ablation A3: K=1
+        # 3. Ablation A3: K=1
         cfg_k1 = build_config(split_name, info, num_loops=1, ablation_tag="A3_K1")
-        with open(out_dir / "CLIR_SkateFormer_j_K1.yaml", "w") as f:
-            yaml.dump(cfg_k1, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_K1.yaml", cfg_k1)
 
-        # Ablation A3: K=3
+        # 4. Ablation A3: K=3
         cfg_k3 = build_config(split_name, info, num_loops=3, ablation_tag="A3_K3")
-        with open(out_dir / "CLIR_SkateFormer_j_K3.yaml", "w") as f:
-            yaml.dump(cfg_k3, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_K3.yaml", cfg_k3)
 
-        # Ablation A2: True No-Loop (num_loops=0, beta=0)
+        # 5. Ablation A2: True No-Loop (num_loops=0, beta=0)
         cfg_a2 = build_config(split_name, info, num_loops=0, beta_init=0.0, beta_max=0.0, ablation_tag="A2_NoLoop")
-        with open(out_dir / "CLIR_SkateFormer_j_A2_NoLoop.yaml", "w") as f:
-            yaml.dump(cfg_a2, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_A2_NoLoop.yaml", cfg_a2)
 
-        # Ablation A5: Random Logic Feedback
+        # 6. Ablation A5: Random Logic Feedback
         cfg_a5 = build_config(split_name, info, num_loops=2, random_feedback=True, ablation_tag="A5_RandomFeedback")
-        with open(out_dir / "CLIR_SkateFormer_j_A5_RandomFeedback.yaml", "w") as f:
-            yaml.dump(cfg_a5, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_A5_RandomFeedback.yaml", cfg_a5)
 
-        # Ablation A6: CLIR-Bypass (Feature bypass)
+        # 7. Ablation A6: CLIR-Bypass (Feature bypass)
         cfg_a6 = build_config(split_name, info, num_loops=2, use_feature_bypass=True, ablation_tag="A6_Bypass")
-        with open(out_dir / "CLIR_SkateFormer_j_A6_Bypass.yaml", "w") as f:
-            yaml.dump(cfg_a6, f, sort_keys=False)
+        save_yaml_with_mode_blocks(out_dir / "CLIR_SkateFormer_j_A6_Bypass.yaml", cfg_a6)
 
-    print(f"Generated all configurations under {CONFIG_DIR}")
+    print(f"Generated all configurations (including Pure STE & Pure Soft blocks) under {CONFIG_DIR}")
 
 
 if __name__ == "__main__":

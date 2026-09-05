@@ -4,8 +4,8 @@ Module này thực hiện bước đầu tiên trong luận chứng logic (CRL p
   z^t ∈ R^(B × 72)  →  l^t ∈ R^(B × 144)
 
 Hai chế độ:
-  - 'soft': Dùng sigmoid liên tục (Phase 1 warm-up, gradient mượt)
-  - 'ste':  Dùng Straight-Through Estimator nhị phân (Phase 2 rule sparsification)
+  - 'ste':  Dùng Straight-Through Estimator nhị phân (mặc định: Pure STE, temperature annealing 2.0 → 10.0)
+  - 'soft': Dùng sigmoid liên tục (hỗ trợ warm-up / phân tích liên tục nếu cần)
 
 Nguyên tắc bất biến:
   z^t (concept logits) LUÔN là số thực liên tục.
@@ -42,7 +42,7 @@ class BinarizeSTE(torch.autograd.Function):
         return grad_z, None  # None cho temperature (không học được)
 
 
-def binarize_ste(z: torch.Tensor, temperature: float = 5.0) -> torch.Tensor:
+def binarize_ste(z: torch.Tensor, temperature: float = 2.0) -> torch.Tensor:
     """Hàm tiện ích gọi BinarizeSTE."""
     return BinarizeSTE.apply(z, temperature)
 
@@ -54,11 +54,11 @@ class LiteralLayer(nn.Module):
 
     Args:
         n_concepts: Số lượng concepts (mặc định 72).
-        mode: 'soft' hoặc 'ste'.
-        temperature: Nhiệt độ cho STE (annealing dần từ 5.0 → 10.0 ở Phase 2).
+        mode: 'ste' (mặc định cho Pure STE) hoặc 'soft'.
+        temperature: Nhiệt độ cho STE (annealing từ 2.0 → 10.0 xuyên suốt training).
     """
 
-    def __init__(self, n_concepts: int = 72, mode: str = "soft", temperature: float = 5.0):
+    def __init__(self, n_concepts: int = 72, mode: str = "ste", temperature: float = 2.0):
         super().__init__()
         self.n_concepts = int(n_concepts)
         self._mode = mode

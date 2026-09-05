@@ -83,7 +83,7 @@ except Exception:
 > 1. Mã hóa tri thức Action-Concept trực tiếp bằng luật DNF phân cấp (L1 part-grouped AND → L2a AND2 ∥ L2b OR1 → Strict ActionHead).
 > 2. Loại bỏ hoàn toàn ma trận tương quan Concept-Concept tĩnh $72 \times 72$.
 > 3. Tinh chỉnh khái niệm vòng lặp ($K=2$) dẫn dắt bởi **Logic Evidence** mức cao ($r^t \in \mathbb{R}^{512}$).
-> 4. Huấn luyện Staged 2-Phase (Phase 1 Soft Sigmoid Warm-up $\rightarrow$ Phase 2 STE & Rule Sparsification).
+> 4. Huấn luyện 100% Pure STE (Straight-Through Estimator) với Continuous Temperature Annealing ($T_{\text{start}}=2.0 \rightarrow T_{\text{end}}=10.0$).
 
 ---
 
@@ -96,7 +96,7 @@ except Exception:
 6. **Block 6**: RuleExtractor (Post-hoc DNF Rule Extraction & Fidelity Engine)
 7. **Block 7**: Kiểm thử nhanh tính toàn vẹn (Quick Smoke Test cho 60CSub)
 8. **Block 8**: Thiết lập Cấu hình & DataLoaders (Mặc định NTU60 Cross-Subject)
-9. **Block 9**: Vòng lặp Huấn luyện Staged 2-Phase & Lưu Checkpoint
+9. **Block 9**: Vòng lặp Huấn luyện 100% Pure STE (hoặc 2-Phase fallback) & Lưu Checkpoint
 10. **Block 10**: Trích xuất & Trực quan hóa Luật DNF (Precision, Coverage, Fidelity)
 11. **Block 11**: Huấn luyện qua dòng lệnh CLI (Alternative CLI Execution cho NTU60 CS)
 """)
@@ -220,13 +220,18 @@ x_dummy = torch.randn(2, 3, 64, 24, 2)
 c_targets = torch.randint(0, 2, (2, 72)).float()
 a_labels = torch.randint(0, 60, (2,)).long()
 
-# Phase 1
+# Pure STE Default Check (Epoch 1 setup)
+out_default = model_smoke(x_dummy, concept_targets=c_targets, action_labels=a_labels)
+print(f"Default Pure STE Loss: {out_default['aux_loss'].item():.4f}, l_reg: {out_default['l_reg'].item():.4f}, beta={model_smoke.reasoner.get_betas().detach().numpy()}")
+assert out_default["action_logits"].shape == (2, 60), "Action logits must have shape [2, 60] for 60CSub"
+
+# Phase 1 Fallback Check
 model_smoke.set_phase(1)
 out1 = model_smoke(x_dummy, concept_targets=c_targets, action_labels=a_labels)
-print(f"Phase 1 Loss: {out1['aux_loss'].item():.4f}, beta={model_smoke.reasoner.get_betas().detach().numpy()}")
+print(f"Phase 1 Fallback Loss: {out1['aux_loss'].item():.4f}, beta={model_smoke.reasoner.get_betas().detach().numpy()}")
 assert out1["action_logits"].shape == (2, 60), "Action logits must have shape [2, 60] for 60CSub"
 
-# Phase 2
+# Phase 2 Check
 model_smoke.set_phase(2, temperature=6.0)
 out2 = model_smoke(x_dummy, concept_targets=c_targets, action_labels=a_labels)
 print(f"Phase 2 Loss: {out2['aux_loss'].item():.4f}, l_reg: {out2['l_reg'].item():.4f}, beta={model_smoke.reasoner.get_betas().detach().numpy()}")
@@ -236,7 +241,12 @@ print("Smoke Test for 60CSub Passed!")
 
     # Block 8
     add_md(r"""## ⚙️ Block 8: Cấu hình Huấn luyện & Chuẩn bị DataLoaders (NTU60 Cross-Subject)
-Mặc định được thiết lập cho **NTU60 Cross-Subject (60CSub)**. Bạn cũng có thể chọn benchmark khác qua menu dropdown.
+Mặc định được thiết lập cho **NTU60 Cross-Subject (60CSub)**.
+
+> 💡 **TÙY CHỌN CHẾ ĐỘ HUẤN LUYỆN ĐỂ SO SÁNH**:
+> Dưới đây có 2 block cấu hình sẵn sàng. Bạn chỉ cần **comment / uncomment** 1 trong 2 block để so sánh trực tiếp:
+> 1. **Block 1**: 🚀 `100% Pure STE Annealing` (Đề xuất cho luận văn - Binarize cứng $\{0, 1\}$, Temperature Annealing $2.0 \rightarrow 10.0$, $\mathcal{L}_{\text{reg}}=0.005$).
+> 2. **Block 2**: 🌿 `Pure Soft Baseline` (Để so sánh ablation - Sigmoid liên tục, Không dùng STE, Không binarize, $\mathcal{L}_{\text{reg}}=0.0$).
 """)
     add_code("""# Cấu hình Benchmark (Mặc định NTU60 Cross-Subject / 60CSub)
 BENCHMARK = "ntu60_cs"  # @param ["ntu60_cs", "ntu60_cv", "ntu120_csub", "ntu120_cset"]
@@ -274,6 +284,34 @@ DATASET_CONFIGS = {
 
 selected = DATASET_CONFIGS[BENCHMARK]
 
+# ==============================================================================
+# 🎯 LỰA CHỌN CHẾ ĐỘ HUẤN LUYỆN: COMMENT / UNCOMMENT 1 TRONG 2 BLOCK DƯỚI ĐÂY
+# ==============================================================================
+
+# --- [BLOCK 1] 🚀 CHẾ ĐỘ 100% PURE STE ANNEALING (MẶC ĐỊNH - ĐỀ XUẤT CHO LUẬN VĂN) ---
+# Đặc điểm: Literals nhị phân {0, 1} từ Epoch 1, T anneal 2.0 -> 10.0, L_reg = 0.005
+TRAINING_MODE = {
+    "mode_name": "Pure_STE_Annealing",
+    "literal_mode": "ste",
+    "phase1_epochs": 0,             # 0 = Bắt đầu STE ngay từ Epoch 1
+    "ste_temperature_start": 2.0,   # T_start = 2.0 chống bão hòa / chết gradient
+    "ste_temperature_end": 10.0,    # T_end = 10.0 tiệm cận hàm Heaviside, tối đa Rule Fidelity
+    "lambda_reg": 0.005,            # Bật rule sparsity & loop stability
+    "beta_max": 0.5,                # Biên độ feedback tinh chỉnh logic K=2
+}
+
+# --- [BLOCK 2] 🌿 CHẾ ĐỘ CHỈ SOFT KHÔNG (PURE SOFT BASELINE ĐỂ SO SÁNH ABLATION) ---
+# (Để chạy so sánh: Uncomment block dưới và comment block 1 ở trên)
+# TRAINING_MODE = {
+#     "mode_name": "Pure_Soft",
+#     "literal_mode": "soft",
+#     "phase1_epochs": 999,           # Chạy Soft toàn bộ quá trình (không bao giờ chuyển STE)
+#     "ste_temperature_start": 1.0,   # Không dùng STE
+#     "ste_temperature_end": 1.0,
+#     "lambda_reg": 0.0,              # Tắt rule sparsity regularization
+#     "beta_max": 0.1,                # Giữ beta nhỏ ổn định cho continuous sigmoid
+# }
+
 TRAIN_CONFIG = {
     "benchmark": BENCHMARK,
     "num_classes": selected["num_classes"],
@@ -281,17 +319,16 @@ TRAIN_CONFIG = {
     "spatial_concepts": 52,
     "temporal_concepts": 20,
     
-    # Đường dẫn dữ liệu (thay đổi theo thư mục Google Drive của bạn)
+    # Đường dẫn dữ liệu
     "train_data": selected["train_data"],
     "test_data": selected["test_data"],
     "backbone_weights": selected["backbone_weights"],
-    "work_dir": selected["work_dir"],
+    "work_dir": selected["work_dir"] if TRAINING_MODE.get("mode_name") != "Pure_Soft" else selected["work_dir"] + "_PureSoft",
     
-    # Tham số huấn luyện
+    # Tham số huấn luyện chung
     "batch_size": 32,
     "test_batch_size": 32,
     "num_epoch": 70,
-    "phase1_epochs": 30,
     "base_lr": 1e-4,
     "min_lr": 1e-6,
     "warmup_lr": 1e-6,
@@ -299,25 +336,30 @@ TRAIN_CONFIG = {
     "weight_decay": 0.05,
     "grad_clip": 1.0,
     
-    # Học theo nhóm ở Phase 2
+    # Học theo nhóm (áp dụng cho cả 2 mode để so sánh công bằng)
     "backbone_lr_scale": 0.1,
     "crl_lr_scale": 1.0,
     "update_cell_lr_scale": 2.0,
     "lambda_sup": 1.0,
-    "lambda_reg": 0.005,
-    "ste_temperature_start": 5.0,
-    "ste_temperature_end": 10.0,
     
     # Vòng lặp CLIR
     "num_loops": 2,
     "beta_init": 0.1,
-    "beta_max": 0.5,
 }
 
+# Hợp nhất cấu hình chế độ được chọn
+TRAIN_CONFIG.update(TRAINING_MODE)
+
 os.makedirs(TRAIN_CONFIG["work_dir"], exist_ok=True)
-print(f"Active Benchmark: {BENCHMARK.upper()} ({TRAIN_CONFIG['num_classes']} action classes)")
-for k, v in TRAIN_CONFIG.items():
-    print(f"  {k}: {v}")
+print("=" * 75)
+print(f"Active Benchmark:     {BENCHMARK.upper()} ({TRAIN_CONFIG['num_classes']} action classes)")
+print(f"Active Training Mode: [{TRAINING_MODE.get('mode_name')}]")
+if TRAINING_MODE.get('mode_name') == 'Pure_Soft':
+    print("                      🌿 PURE SOFT BASELINE (Continuous Sigmoid, No STE, lambda_reg=0.0)")
+else:
+    print(f"                      🚀 100% PURE STE ANNEALING (T: {TRAIN_CONFIG['ste_temperature_start']} -> {TRAIN_CONFIG['ste_temperature_end']}, lambda_reg={TRAIN_CONFIG['lambda_reg']})")
+print(f"Work Directory:       {TRAIN_CONFIG['work_dir']}")
+print("=" * 75)
 """)
 
     add_code("""# Khởi tạo DataLoader nếu file dữ liệu tồn tại
@@ -359,9 +401,12 @@ else:
 """)
 
     # Block 9
-    add_md(r"""## 🏋️ Block 9: Vòng lặp Huấn luyện Staged 2-Phase & Lưu Checkpoint
-- **Phase 1 (Epoch 1–30)**: Concept Warm-up (`soft mode`, $\beta_{\max}=0.1$, $\lambda_{\text{reg}}=0$).
-- **Phase 2 (Epoch 31–70)**: STE Binarization (`ste mode`, $\beta_{\max}=0.5$, $\lambda_{\text{reg}}=0.005$, temperature $5.0 \rightarrow 10.0$).
+    add_md(r"""## 🏋️ Block 9: Vòng lặp Huấn luyện 100% Pure STE & Lưu Checkpoint
+- **Pure STE Training (Mặc định)**: Literals nhị phân $\{0, 1\}$ ở forward pass ngay từ Epoch 1, backward nhận gradient qua surrogate sigmoid.
+- **Continuous Temperature Annealing**: $T$ tăng tuyến tính từ $2.0 \rightarrow 10.0$ xuyên suốt toàn bộ số epoch (vừa chống chết gradient, vừa tối đa hóa Rule Fidelity).
+- **Per-group LRs**: Backbone SkateFormer (scale 0.1), CRL Modules (scale 1.0), UpdateCell (scale 2.0).
+- **Scheduler**: 1 chu kỳ Cosine Annealing liên tục kèm 10 epoch warm-up.
+- **Fallback 2-Phase**: Nếu cấu hình `phase1_epochs > 0`, hệ thống tự động chạy chế độ 2-Phase (Warm-up Phase 1 $\rightarrow$ STE Phase 2).
 """)
     add_code("""from tqdm import tqdm
 import torch.optim as optim
@@ -388,8 +433,27 @@ class CLIRTrainer:
             lambda_reg=cfg["lambda_reg"],
         ).to(self.device)
         
-        self.current_phase = 1
-        self.model.set_phase(1)
+        self.is_pure_soft = (
+            self.cfg.get("literal_mode") == "soft"
+            or self.cfg.get("phase1_epochs", 0) >= self.cfg["num_epoch"]
+        )
+
+        if self.is_pure_soft:
+            self.current_phase = 1
+            self.model.set_phase(1)
+            self.model.lambda_reg = self.cfg.get("lambda_reg", 0.0)
+            if "beta_max" in self.cfg:
+                self.model.reasoner.beta_max = self.cfg["beta_max"]
+        elif self.cfg.get("phase1_epochs", 0) <= 0:
+            self.current_phase = 2
+            self.model.set_phase(2, temperature=self.cfg.get("ste_temperature_start", 2.0))
+            self.model.lambda_reg = self.cfg.get("lambda_reg", 0.005)
+            if "beta_max" in self.cfg:
+                self.model.reasoner.beta_max = self.cfg["beta_max"]
+        else:
+            self.current_phase = 1
+            self.model.set_phase(1)
+
         self.best_acc = 0.0
         self.global_step = 0
         self.phase_step = 0
@@ -398,9 +462,15 @@ class CLIRTrainer:
 
     def _init_optimizer(self):
         base_lr = self.cfg["base_lr"]
-        if self.current_phase == 1:
+        is_staged_p1 = (
+            self.current_phase == 1
+            and not getattr(self, "is_pure_soft", False)
+            and 0 < self.cfg.get("phase1_epochs", 0) < self.cfg["num_epoch"]
+        )
+        if is_staged_p1:
             params = [{"params": self.model.parameters(), "lr": base_lr}]
         else:
+            # Per-group LRs cho cả Pure STE và Pure Soft (so sánh ablation công bằng)
             bb_scale = self.cfg["backbone_lr_scale"]
             crl_scale = self.cfg["crl_lr_scale"]
             uc_scale = self.cfg["update_cell_lr_scale"]
@@ -426,7 +496,7 @@ class CLIRTrainer:
         # Scheduler
         if self.train_loader is not None:
             n_iter = len(self.train_loader)
-            if self.current_phase == 1:
+            if getattr(self, "is_pure_soft", False) or self.cfg.get("phase1_epochs", 0) <= 0 or self.current_phase == 1:
                 total_steps = self.cfg["num_epoch"] * n_iter
                 warmup_steps = self.cfg["warm_up_epoch"] * n_iter
                 self.scheduler = CosineLRScheduler(
@@ -442,6 +512,17 @@ class CLIRTrainer:
                 )
 
     def check_phase_switch(self, epoch):
+        if getattr(self, "is_pure_soft", False):
+            # Pure Soft: không bao giờ switch phase, không STE annealing
+            return
+
+        if self.cfg.get("phase1_epochs", 0) <= 0:
+            # Pure STE continuous annealing từ 2.0 → 10.0
+            progress = min(1.0, max(0.0, epoch / max(1, self.cfg["num_epoch"] - 1)))
+            temp = self.cfg["ste_temperature_start"] + progress * (self.cfg["ste_temperature_end"] - self.cfg["ste_temperature_start"])
+            self.model.reasoner.temperature = temp
+            return
+
         new_phase = 1 if epoch < self.cfg["phase1_epochs"] else 2
         if new_phase != self.current_phase:
             print(f"\\n{'='*60}\\n[PHASE SWITCH] Switching from Phase {self.current_phase} to Phase {new_phase} at Epoch {epoch+1}\\n{'='*60}")
@@ -461,7 +542,14 @@ class CLIRTrainer:
         self.check_phase_switch(epoch)
         total_loss, correct, total = 0.0, 0, 0
         
-        pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}/{self.cfg['num_epoch']} (P{self.current_phase})")
+        if getattr(self, "is_pure_soft", False):
+            mode_tag = "Pure-Soft"
+        elif self.current_phase == 2:
+            mode_tag = f"Pure-STE T={self.model.reasoner.temperature:.2f}"
+        else:
+            mode_tag = f"Phase-{self.current_phase}"
+
+        pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}/{self.cfg['num_epoch']} ({mode_tag})")
         for batch in pbar:
             if len(batch) == 5:
                 data, index_t, label, _, c_targets = batch
@@ -475,12 +563,12 @@ class CLIRTrainer:
             c_targets = c_targets.float().to(self.device) if c_targets is not None else None
             
             # Step scheduler
-            if self.current_phase == 1:
+            if getattr(self, "is_pure_soft", False) or self.cfg.get("phase1_epochs", 0) <= 0 or self.current_phase == 1:
                 self.scheduler.step_update(self.global_step)
             else:
                 self.scheduler.step_update(self.phase_step)
+                self.phase_step += 1
             self.global_step += 1
-            self.phase_step += 1
             
             self.optimizer.zero_grad()
             out = self.model(data, index_t=index_t, concept_targets=c_targets, action_labels=label)

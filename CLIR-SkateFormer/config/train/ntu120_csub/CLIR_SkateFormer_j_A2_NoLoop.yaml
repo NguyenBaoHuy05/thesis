@@ -47,12 +47,12 @@ model_args:
   r2b: 128
   beta_max: 0.0
   beta_init: 0.0
-  literal_mode: soft
-  temperature: 5.0
+  literal_mode: ste
+  temperature: 2.0
   hidden_dim: 256
   dropout: 0.1
   lambda_sup: 1.0
-  lambda_reg: 0.0
+  lambda_reg: 0.005
   concept_negative_weight: 0.15
   concept_positive_weight: 1.0
   asymmetric_gamma_neg: 2.0
@@ -94,11 +94,11 @@ test_batch_size: 32
 num_epoch: 70
 start_epoch: 0
 loss_type: LSCE
-phase1_epochs: 30
+phase1_epochs: 0
 backbone_lr_scale: 0.1
 crl_lr_scale: 1.0
 update_cell_lr_scale: 2.0
-ste_temperature_start: 5.0
+ste_temperature_start: 2.0
 ste_temperature_end: 10.0
 lambda_reg: 0.005
 log_interval: 100
@@ -113,3 +113,23 @@ save_score: false
 save_trace: false
 device:
 - 0
+
+# ==============================================================================
+# LUA CHON CHE DO HUAN LUYEN: COMMENT / UNCOMMENT DE SO SANH NHANH
+# ==============================================================================
+# --- [CHE DO 1: 100% PURE STE ANNEALING (MAC DINH - DE XUAT CHO LUAN VAN)] ---
+# Cac gia tri tren dang duoc kich hoat:
+#   model_args.literal_mode: ste
+#   phase1_epochs: 0
+#   ste_temperature_start: 2.0
+#   ste_temperature_end: 10.0
+#   lambda_reg: 0.005
+#
+# --- [CHE DO 2: CHI SOFT KHONG (PURE SOFT BASELINE DE SO SANH ABLATION)] ---
+# De chuyen sang chay Pure Soft trong file nay, sua 3 tham so tuong ung:
+#   model_args:
+#     literal_mode: soft      # Thay vi ste
+#   phase1_epochs: 70         # Thay vi 0 (hoac bang num_epoch)
+#   lambda_reg: 0.0           # Thay vi 0.005
+# (Hoac su dung truc tiep file cau hinh tao san CLIR_SkateFormer_j_PureSoft.yaml)
+# ==============================================================================
