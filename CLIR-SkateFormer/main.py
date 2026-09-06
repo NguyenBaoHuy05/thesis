@@ -197,6 +197,54 @@ def get_parser():
         help="Learning rate scale for backbone in Phase 2 / Pure STE (0 = freeze)"
     )
     parser.add_argument(
+        "--stage1-backbone-lr", type=float, default=1.0e-5,
+        help="Absolute LR for the backbone during Stage 1"
+    )
+    parser.add_argument(
+        "--concept-heads-lr", type=float, default=1.0e-4,
+        help="Absolute LR for spatial/temporal concept heads during Stage 1"
+    )
+    parser.add_argument(
+        "--stage2-backbone-lr", type=float, default=0.0,
+        help="Absolute LR for backbone/concept features during Stage 2"
+    )
+    parser.add_argument(
+        "--crl-lr", type=float, default=1.0e-4,
+        help="Absolute LR for CRL and ActionHead parameters"
+    )
+    parser.add_argument(
+        "--update-cell-lr", type=float, default=2.0e-4,
+        help="Absolute LR for ConceptUpdateCell and beta parameters"
+    )
+    parser.add_argument(
+        "--stage2-concept-heads-lr", type=float, default=0.0,
+        help="Absolute LR for concept heads during Stage 2"
+    )
+    parser.add_argument(
+        "--stage3-start-epoch", type=int, default=51,
+        help="1-based epoch at which Stage 3 End-to-End starts (0 = disabled)"
+    )
+    parser.add_argument(
+        "--stage3-backbone-lr", type=float, default=1.0e-5,
+        help="Absolute LR for the backbone during Stage 3"
+    )
+    parser.add_argument(
+        "--stage3-concept-heads-lr", type=float, default=1.0e-5,
+        help="Absolute LR for concept heads during Stage 3"
+    )
+    parser.add_argument(
+        "--stage3-crl-lr", type=float, default=5.0e-5,
+        help="Absolute LR for CRL and ActionHead during Stage 3"
+    )
+    parser.add_argument(
+        "--stage3-update-cell-lr", type=float, default=1.0e-4,
+        help="Absolute LR for ConceptUpdateCell during Stage 3"
+    )
+    parser.add_argument(
+        "--stage2-backbone-lr-scale", type=float, default=0.0,
+        help="Learning-rate scale for backbone/concept heads after Stage 1 (0 = freeze)"
+    )
+    parser.add_argument(
         "--crl-lr-scale", type=float, default=1.0,
         help="Learning rate scale for CRL modules"
     )
@@ -314,7 +362,13 @@ class Processor:
                     output_device=self.output_device,
                 )
 
-        self.current_stage = 1 if getattr(self.arg, "concept_warmup_epochs", 0) > 0 and self.arg.start_epoch < self.arg.concept_warmup_epochs else 2
+        stage3_start = getattr(self.arg, "stage3_start_epoch", 0)
+        if stage3_start > 0 and self.arg.start_epoch + 1 >= stage3_start:
+            self.current_stage = 3
+        elif getattr(self.arg, "concept_warmup_epochs", 0) > 0 and self.arg.start_epoch < self.arg.concept_warmup_epochs:
+            self.current_stage = 1
+        else:
+            self.current_stage = 2
         if self.current_stage == 1:
             if hasattr(m, "reasoner"):
                 for p in m.reasoner.parameters():
@@ -402,29 +456,50 @@ class Processor:
     def _get_param_groups(self):
         """Tạo parameter groups với per-group learning rates.
 
-        Phase 1: Tất cả dùng base_lr
-        Phase 2: backbone dùng backbone_lr_scale * base_lr (hoặc freeze),
-                 CRL dùng crl_lr_scale * base_lr,
-                 update_cell dùng update_cell_lr_scale * base_lr
+        Learning rates are configured as absolute values per parameter group.
+        The legacy scale arguments remain only as fallbacks for old configs.
         """
         # Lấy model thực (unwrap DataParallel nếu có)
         m = self.model.module if hasattr(self.model, "module") else self.model
 
         base_lr = self.arg.base_lr
-        bb_scale = self.arg.backbone_lr_scale
-        crl_scale = self.arg.crl_lr_scale
-        uc_scale = self.arg.update_cell_lr_scale
+        stage1_backbone_lr = getattr(
+            self.arg, "stage1_backbone_lr",
+            base_lr * getattr(self.arg, "backbone_lr_scale", 0.1),
+        )
+        concept_heads_lr = getattr(self.arg, "concept_heads_lr", base_lr)
+        stage2_backbone_lr = getattr(
+            self.arg,
+            "stage2_backbone_lr",
+            base_lr * getattr(self.arg, "stage2_backbone_lr_scale", getattr(self.arg, "backbone_lr_scale", 0.1)),
+        )
+        stage2_concept_heads_lr = getattr(self.arg, "stage2_concept_heads_lr", stage2_backbone_lr)
+        crl_lr = getattr(
+            self.arg,
+            "crl_lr",
+            base_lr * getattr(self.arg, "crl_lr_scale", 1.0),
+        )
+        update_cell_lr = getattr(
+            self.arg,
+            "update_cell_lr",
+            base_lr * getattr(self.arg, "update_cell_lr_scale", 2.0),
+        )
+        stage3_backbone_lr = getattr(self.arg, "stage3_backbone_lr", stage2_backbone_lr)
+        stage3_concept_heads_lr = getattr(self.arg, "stage3_concept_heads_lr", stage2_concept_heads_lr)
+        stage3_crl_lr = getattr(self.arg, "stage3_crl_lr", crl_lr)
+        stage3_update_cell_lr = getattr(self.arg, "stage3_update_cell_lr", update_cell_lr)
+
+        backbone_params = list(m.backbone.parameters()) + \
+                          list(m.spatial_pool_score.parameters()) + \
+                          list(m.temporal_pool_score.parameters())
+        head_params = list(m.spatial_head.parameters()) + \
+                      list(m.temporal_head.parameters())
 
         if getattr(self, "current_stage", 2) == 1:
             # Stage 1: Chỉ tối ưu hóa Backbone và Concept Heads
-            backbone_params = list(m.backbone.parameters()) + \
-                              list(m.spatial_pool_score.parameters()) + \
-                              list(m.temporal_pool_score.parameters())
-            head_params = list(m.spatial_head.parameters()) + \
-                          list(m.temporal_head.parameters())
             return [
-                {"params": backbone_params, "lr": base_lr * bb_scale, "name": "backbone"},
-                {"params": head_params, "lr": base_lr, "name": "concept_heads"},
+                {"params": backbone_params, "lr": stage1_backbone_lr, "name": "backbone"},
+                {"params": head_params, "lr": concept_heads_lr, "name": "concept_heads"},
             ]
 
         # Staged training ở Phase 1 (warm-up): single group
@@ -436,27 +511,29 @@ class Processor:
         if is_staged_phase1:
             # Phase 1 của Staged Training: single group, tất cả trainable
             return [{"params": self.model.parameters(), "lr": base_lr}]
-        else:
-            # Pure STE, Pure Soft, hoặc Phase 2: per-group LRs (công bằng cho ablation so sánh)
-            backbone_params = list(m.backbone.parameters()) + \
-                              list(m.spatial_pool_score.parameters()) + \
-                              list(m.temporal_pool_score.parameters()) + \
-                              list(m.spatial_head.parameters()) + \
-                              list(m.temporal_head.parameters())
+        # CRLReasoner includes the logic layers and ActionHead.
+        crl_params = list(m.reasoner.crl.parameters())
+        # A6 Ablation: Thêm bypass_head vào nhóm crl để được tối ưu.
+        if getattr(m, "bypass_head", None) is not None:
+            crl_params += list(m.bypass_head.parameters())
 
-            crl_params = list(m.reasoner.crl.parameters())
-            # A6 Ablation: Thêm bypass_head vào nhóm crl để được tối ưu ở Phase 2
-            if getattr(m, "bypass_head", None) is not None:
-                crl_params += list(m.bypass_head.parameters())
+        uc_params  = list(m.reasoner.update_cell.parameters()) + \
+                     [m.reasoner.raw_beta]
 
-            uc_params  = list(m.reasoner.update_cell.parameters()) + \
-                         [m.reasoner.raw_beta]
-
+        if getattr(self, "current_stage", 2) == 3:
             return [
-                {"params": backbone_params, "lr": base_lr * bb_scale,  "name": "backbone"},
-                {"params": crl_params,      "lr": base_lr * crl_scale, "name": "crl"},
-                {"params": uc_params,       "lr": base_lr * uc_scale,  "name": "update_cell"},
+                {"params": backbone_params, "lr": stage3_backbone_lr, "name": "backbone"},
+                {"params": head_params,     "lr": stage3_concept_heads_lr, "name": "concept_heads"},
+                {"params": crl_params,      "lr": stage3_crl_lr, "name": "crl"},
+                {"params": uc_params,       "lr": stage3_update_cell_lr, "name": "update_cell"},
             ]
+
+        return [
+            {"params": backbone_params, "lr": stage2_backbone_lr, "name": "backbone"},
+            {"params": head_params,     "lr": stage2_concept_heads_lr, "name": "concept_heads"},
+            {"params": crl_params,      "lr": crl_lr, "name": "crl"},
+            {"params": uc_params,       "lr": update_cell_lr, "name": "update_cell"},
+        ]
 
     def load_optimizer(self):
         param_groups = self._get_param_groups()
@@ -507,19 +584,48 @@ class Processor:
             )
 
     def _maybe_switch_stage(self, epoch: int):
-        """Kiểm tra và chuyển đổi từ Stage 1 (Concept Warm-up) sang Stage 2 (Logic Reasoning)."""
+        """Switch between Stage 1 concept, Stage 2 logic, and Stage 3 E2E."""
         warmup_ep = getattr(self.arg, "concept_warmup_epochs", 0)
-        target_stage = 1 if (warmup_ep > 0 and epoch < warmup_ep) else 2
+        stage3_start = getattr(self.arg, "stage3_start_epoch", 0)
+        if warmup_ep > 0 and epoch < warmup_ep:
+            target_stage = 1
+        elif stage3_start > 0 and epoch + 1 >= stage3_start:
+            target_stage = 3
+        else:
+            target_stage = 2
 
         if target_stage != self.current_stage:
             self.current_stage = target_stage
             m = self.model.module if hasattr(self.model, "module") else self.model
 
-            if target_stage == 2:
-                # Mở khóa toàn bộ mô hình cho Stage 2
+            if target_stage in (2, 3):
+                # Mở khóa CRL/ActionHead cho Stage 2 và toàn bộ mô hình cho Stage 3.
                 if hasattr(m, "reasoner"):
                     for p in m.reasoner.parameters():
                         p.requires_grad = True
+                if target_stage == 3:
+                    for module in (
+                        m.backbone,
+                        m.spatial_pool_score,
+                        m.temporal_pool_score,
+                        m.spatial_head,
+                        m.temporal_head,
+                    ):
+                        for p in module.parameters():
+                            p.requires_grad = True
+                else:
+                    stage2_feature_lr = getattr(self.arg, "stage2_backbone_lr", 0.0)
+                    stage2_head_lr = getattr(self.arg, "stage2_concept_heads_lr", stage2_feature_lr)
+                    for module in (
+                        m.backbone,
+                        m.spatial_pool_score,
+                        m.temporal_pool_score,
+                    ):
+                        for p in module.parameters():
+                            p.requires_grad = stage2_feature_lr > 0.0
+                    for module in (m.spatial_head, m.temporal_head):
+                        for p in module.parameters():
+                            p.requires_grad = stage2_head_lr > 0.0
                 if hasattr(m, "action_head"):
                     for p in m.action_head.parameters():
                         p.requires_grad = True
@@ -527,10 +633,16 @@ class Processor:
                     for p in m.bypass_head.parameters():
                         p.requires_grad = True
 
+                if target_stage == 2:
+                    stage_title = "STAGE 2: Logic Reasoning"
+                    stage_detail = "Mở khóa CRL Reasoner & ActionHead; giữ backbone/concept heads theo LR Stage 2."
+                else:
+                    stage_title = "STAGE 3: End-to-End Fine-tuning"
+                    stage_detail = "Mở khóa toàn bộ Backbone, Concept Heads, CRL, ActionHead và UpdateCell."
                 self.print_log(
                     f"\n{'='*60}\n"
-                    f"[STAGE SWITCH] 🔓 Chuyển sang STAGE 2: Logic Reasoning tại Epoch {epoch + 1}.\n"
-                    f"Mở khóa CRL Reasoner & ActionHead để học luật DNF từ các concept đã ổn định.\n"
+                    f"[STAGE SWITCH] 🔓 Chuyển sang {stage_title} tại Epoch {epoch + 1}.\n"
+                    f"{stage_detail}\n"
                     f"{'='*60}"
                 )
 
@@ -653,6 +765,15 @@ class Processor:
                 f"[Stage 1: Concept Warm-up] Epoch {epoch + 1}/{self.arg.concept_warmup_epochs} - "
                 f"Tối ưu hóa Concept Heads với Asymmetric BCE Loss (Reasoner & ActionHead frozen)"
             )
+        elif self.current_stage == 3:
+            temp = self._get_ste_temperature(epoch)
+            m = self.model.module if hasattr(self.model, "module") else self.model
+            if hasattr(m, "reasoner"):
+                m.reasoner.temperature = temp
+            self.print_log(
+                f"[Stage 3: End-to-End] Epoch {epoch + 1}/{self.arg.num_epoch} - "
+                f"Fine-tuning toàn bộ Backbone, Concepts và CRL | STE Temperature: {temp:.3f}"
+            )
         else:
             # Kiểm tra phase switch trong Stage 2
             self._maybe_switch_phase(epoch)
@@ -711,7 +832,10 @@ class Processor:
         concept_threshold = float(getattr(self.arg, "concept_threshold", 0.5))
         if not 0.0 <= concept_threshold <= 1.0:
             raise ValueError(f"concept_threshold must be in [0, 1], got {concept_threshold}")
-        desc_stage = "Stage 1: Concept" if is_stage1 else "Stage 2: Action"
+        desc_stage = (
+            "Stage 1: Concept" if is_stage1
+            else ("Stage 3: End-to-End" if self.current_stage == 3 else "Stage 2: Action")
+        )
         process = tqdm(loader, desc=f"Epoch {epoch + 1} ({desc_stage})")
 
         # Stage 1 concept metrics are accumulated globally over the epoch.
@@ -897,6 +1021,12 @@ class Processor:
                 f"Precision: {concept_precision * 100:.2f}% | "
                 f"Recall: {concept_recall * 100:.2f}% | "
                 f"Supported: {concept_supported} | LR: {cur_lr:.6f} | "
+                f"Loss details: {loss_details}"
+            )
+        elif self.current_stage == 3:
+            self.print_log(
+                f"\t[Stage 3: End-to-End] Phase={self.current_training_phase} | "
+                f"Loss: {mean_loss:.4f} | Action Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f} | "
                 f"Loss details: {loss_details}"
             )
         else:
