@@ -737,6 +737,9 @@ class Processor:
             if self.arg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.arg.grad_max)
             self.optimizer.step()
+            actual_model = self.model.module if hasattr(self.model, "module") else self.model
+            if hasattr(actual_model, "clip_weights"):
+                actual_model.clip_weights()
 
             loss_values.append(total_loss.item())
             metric_values.append(step_metric)

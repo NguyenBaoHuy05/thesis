@@ -272,9 +272,30 @@ class IterativeLogicReasoner(nn.Module):
             "betas":   betas,
         }
 
+    def clip_weights(self):
+        """Clip logic layer weights W ∈ [0, 1] sau optimizer step (REASON Mechanism 3)."""
+        self.crl.clip_weights()
+
+    def l1_norm(self) -> torch.Tensor:
+        """Tổng L1 norm của logic layers (REASON Mechanism 5)."""
+        return self.crl.l1_norm()
+
+    def sparsity_loss(self) -> torch.Tensor:
+        """Sparsity loss từ CRLReasoner."""
+        return self.crl.sparsity_loss()
+
     def rule_sparsity_loss(self) -> torch.Tensor:
         """Ủy quyền cho CRLReasoner."""
         return self.crl.rule_sparsity_loss()
+
+    @property
+    def grad_graft(self) -> bool:
+        return self.crl.grad_graft
+
+    @grad_graft.setter
+    def grad_graft(self, val: bool):
+        self.crl.grad_graft = bool(val)
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -781,6 +802,19 @@ class CLIRSkateFormer(nn.Module):
             f"lambda_reg={self.lambda_reg}, "
             f"temperature={self.reasoner.temperature}"
         )
+
+    def clip_weights(self):
+        """Clip logic layer weights W ∈ [0, 1] sau optimizer step (REASON Mechanism 3)."""
+        self.reasoner.clip_weights()
+
+    def l1_norm(self) -> torch.Tensor:
+        """Tổng L1 norm của logic layers (REASON Mechanism 5)."""
+        return self.reasoner.l1_norm()
+
+    def sparsity_loss(self) -> torch.Tensor:
+        """Sparsity loss từ reasoner."""
+        return self.reasoner.sparsity_loss()
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

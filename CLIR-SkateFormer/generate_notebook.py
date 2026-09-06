@@ -673,6 +673,8 @@ class CLIRTrainer:
                 if self.cfg["grad_clip"] > 0:
                     torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["grad_clip"])
                 self.optimizer.step()
+                if hasattr(self.model, "clip_weights"):
+                    self.model.clip_weights()
 
                 total_loss += loss.item()
                 pred = out["action_logits"].argmax(dim=-1)

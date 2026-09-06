@@ -20,7 +20,7 @@ Thiết kế:
     L2a (coordinated patterns), L2b (alternative patterns)
 """
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -79,10 +79,10 @@ class CRLReasoner(nn.Module):
             temperature=temperature,
         )
 
-        self.l1_and   = ConjunctionLayer(
-            n_literals=2 * n_concepts,  # 148
+        self.l1_and = ConjunctionLayer(
+            n_literals=2 * n_concepts,  # 144
             n_rules=r1,                 # 256
-            part_grouped=True,
+            part_grouped=False,         # REASON: Full-body connections
         )
 
         self.l2a_and2 = ConjunctionLayer2(
@@ -90,15 +90,16 @@ class CRLReasoner(nn.Module):
             n_rules_l2a=r2a,  # 128
         )
 
-        self.l2b_or1  = DisjunctionLayer(
+        self.l2b_or1 = DisjunctionLayer(
             n_rules_l1=r1,    # 256
             n_rules_l2b=r2b,  # 128
         )
 
-        # ActionHead: KHÔNG có feature bypass — strict logic mode
-        self.action_head = nn.Linear(r2a + r2b, n_actions)  # 256 → 120
+        # REASON Mechanism 6: ActionHead nhận r_evidence = [r_and1; r_and2; r_or1] (512 chiều)
+        # Bao gồm skip-connection trực tiếp từ L1 primitive rules
+        self.action_head = nn.Linear(self.logic_dim, n_actions)  # 512 → n_actions
 
-    # ── Properties để điều chỉnh LiteralLayer ────────────────────────────────
+    # ── Properties để điều chỉnh LiteralLayer & Logic Layers ─────────────────
     @property
     def literal_mode(self) -> str:
         return self.literal_layer.mode
@@ -115,50 +116,72 @@ class CRLReasoner(nn.Module):
     def temperature(self, value: float):
         self.literal_layer.temperature = float(value)
 
+    @property
+    def grad_graft(self) -> bool:
+        return self.l1_and.grad_graft
+
+    @grad_graft.setter
+    def grad_graft(self, val: bool):
+        self.l1_and.grad_graft = bool(val)
+        self.l2a_and2.grad_graft = bool(val)
+        self.l2b_or1.grad_graft = bool(val)
+
     # ── Forward ──────────────────────────────────────────────────────────────
     def forward(
         self,
         z: torch.Tensor,
+        continuous: Optional[bool] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Suy luận logic 1 lượt.
 
         Args:
-            z: Concept logits [B, n_concepts]  (LUôN là số thực liên tục)
+            z: Concept logits [B, n_concepts] (LUÔN là số thực liên tục)
+            continuous: True nếu ép buộc continuous forward, False nếu ép binarized, None = theo layer.grad_graft
 
         Returns:
-            r_evidence: Logic Evidence [B, logic_dim]   (= [r_and; r_and2; r_or1])
+            r_evidence: Logic Evidence [B, logic_dim] (= [r_and; r_and2; r_or1], 512 chiều)
             y:          Action logits  [B, n_actions]
         """
-        # Bước 1: Tạo literals (chỉ binarize ở đây, z vẫn liên tục)
-        l = self.literal_layer(z)              # [B, 148]
+        # Bước 1: Tạo literals qua RMSNorm + ScaledSoftsign
+        l = self.literal_layer(z)              # [B, 2 * n_concepts]
 
-        # Bước 2: L1 AND rules (part-grouped)
-        r_and = self.l1_and(l)                 # [B, 256]
+        # Bước 2: L1 AND rules (Full-body, Łukasiewicz Product)
+        r_and = self.l1_and(l, continuous=continuous)           # [B, 256]
 
-        # Bước 3: L2 song song
-        r_and2 = self.l2a_and2(r_and)         # [B, 128]
-        r_or1  = self.l2b_or1(r_and)          # [B, 128]
+        # Bước 3: L2 song song (L2a AND2 ∥ L2b OR1)
+        r_and2 = self.l2a_and2(r_and, continuous=continuous)    # [B, 128]
+        r_or1  = self.l2b_or1(r_and, continuous=continuous)     # [B, 128]
 
-        # Bước 4: ActionHead (strict logic mode)
-        l2_cat = torch.cat([r_and2, r_or1], dim=-1)  # [B, 256]
-        y = self.action_head(l2_cat)                   # [B, n_actions]
+        # Bước 4: Logic Evidence 512 chiều: [r_and1 (256); r_and2 (128); r_or1 (128)]
+        r_evidence = torch.cat([r_and, r_and2, r_or1], dim=-1) # [B, 512]
 
-        # Logic Evidence: [r_and; r_and2; r_or1] = [B, 256+128+128] = [B, 512]
-        r_evidence = torch.cat([r_and, r_and2, r_or1], dim=-1)
+        # Bước 5: ActionHead nhận toàn bộ 512 chiều (strict logic mode + L1 skip connection)
+        y = self.action_head(r_evidence)                        # [B, n_actions]
 
         return r_evidence, y
 
-    # ── Loss helpers ─────────────────────────────────────────────────────────
-    def rule_sparsity_loss(self) -> torch.Tensor:
-        """Rule Sparsity Loss theo kế hoạch (Mục 8.2 CLIR plan).
+    # ── Logic weight clipping & Sparsity helpers ────────────────────────────
+    def clip_weights(self):
+        """Clip trọng số logic W ∈ [0, 1] sau optimizer step (REASON Mechanism 3)."""
+        self.l1_and.clip()
+        self.l2a_and2.clip()
+        self.l2b_or1.clip()
 
-        L_sparse = mean(w_and1) + mean(w_and2) + mean(w_or1)
-        """
+    def l1_norm(self) -> torch.Tensor:
+        """Tổng L1 norm của toàn bộ logic layers (REASON Mechanism 5)."""
+        return self.l1_and.l1_norm() + self.l2a_and2.l1_norm() + self.l2b_or1.l1_norm()
+
+    def rule_sparsity_loss(self) -> torch.Tensor:
+        """Rule Sparsity Loss (mean weight loss)."""
         return (
             self.l1_and.sparsity_loss()
             + self.l2a_and2.sparsity_loss()
             + self.l2b_or1.sparsity_loss()
         ) / 3.0
+
+    def sparsity_loss(self) -> torch.Tensor:
+        """Alias cho rule_sparsity_loss."""
+        return self.rule_sparsity_loss()
 
     def extra_repr(self) -> str:
         return (
@@ -166,3 +189,4 @@ class CRLReasoner(nn.Module):
             f"r1={self.r1}, r2a={self.r2a}, r2b={self.r2b}, "
             f"logic_dim={self.logic_dim}"
         )
+

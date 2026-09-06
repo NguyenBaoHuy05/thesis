@@ -18,68 +18,91 @@ Lưu ý:
     log(1 - r_and_j) → -∞  → r_or1_k → 1.0
 """
 
+from typing import Optional
+
 import torch
 import torch.nn as nn
 
-_EPS = 1e-6
+from .conjunction_layer import GradGraft, Product, _EPS
 
 
 class DisjunctionLayer(nn.Module):
-    """L2b OR1 layer: tuyển của các AND rules (fully-connected).
+    """L2b OR1 layer: Tuyển của các AND rules (Alternative Action Patterns).
+
+    Cải tiến theo 6 cơ chế REASON:
+      1. W ∈ [0, 1] trực tiếp (khởi tạo 0.5 * rand, clip sau mỗi optimizer step)
+      2. Łukasiewicz Product T-norm: 1 - Product.apply(1 - r_and * W)
+      3. GradGraft: forward binary, backward continuous
+      4. L1 Sparsity Penalty: l1_norm() và sparsity_loss()
 
     Input:  r_and  ∈ R^(B × n_rules_l1)  — L1 conjunction rule activations
     Output: r_or1  ∈ R^(B × n_rules_l2b) — L2b disjunction rule activations
-
-    Công thức:
-        r_or1_k = 1 - exp( Σ_j w_jk · log(1 - r_and_j + ε) )
-
-    Trong đó w_jk = sigmoid(θ_jk), với θ_jk là trọng số học được.
     """
 
     def __init__(
         self,
         n_rules_l1: int = 256,
         n_rules_l2b: int = 128,
+        init_range: float = 0.5,
+        grad_graft: bool = False,
         eps: float = _EPS,
     ):
         super().__init__()
-        self.n_rules_l1  = int(n_rules_l1)
+        self.n_rules_l1 = int(n_rules_l1)
         self.n_rules_l2b = int(n_rules_l2b)
+        self.grad_graft = bool(grad_graft)
         self.eps = float(eps)
 
-        # Khởi tạo thưa: sigmoid(-3) ≈ 0.047
-        self.weight_logit = nn.Parameter(
-            torch.empty(n_rules_l1, n_rules_l2b).fill_(-3.0)
-        )
+        # Trọng số W ∈ [0, 1] trực tiếp
+        self.W = nn.Parameter(float(init_range) * torch.rand(self.n_rules_l1, self.n_rules_l2b))
+
+    @property
+    def weight_logit(self) -> torch.Tensor:
+        """Hỗ trợ tương thích ngược cho code cũ truy cập weight_logit."""
+        return torch.logit(self.W.data.clamp(1e-4, 1.0 - 1e-4))
 
     def _effective_weights(self) -> torch.Tensor:
-        """Trọng số thực tế w ∈ [0, 1]."""
-        return torch.sigmoid(self.weight_logit)  # [n_rules_l1, n_rules_l2b]
+        """Trọng số thực tế W ∈ [0, 1]."""
+        return self.W.clamp(0.0, 1.0)
 
-    def forward(self, r_and: torch.Tensor) -> torch.Tensor:
-        """Tính disjunction rules.
+    def clip(self):
+        """Clip trọng số vào đoạn [0, 1] sau optimizer step (REASON Mechanism 3)."""
+        self.W.data.clamp_(0.0, 1.0)
 
-        Args:
-            r_and: L1 conjunction activations [B, n_rules_l1] ∈ (0, 1]
-
-        Returns:
-            r_or1: [B, n_rules_l2b] ∈ [0, 1)
-        """
-        w = self._effective_weights()   # [n_rules_l1, n_rules_l2b]
-
-        # log(1 - r_and + ε): phần bù của AND rule
-        log_complement = torch.log((1.0 - r_and).clamp(min=self.eps))  # [B, n_rules_l1]
-
-        # Σ_j w_jk · log(1 - r_and_j): log-space weighted sum
-        log_prod = torch.einsum("bi,ij->bj", log_complement, w)   # [B, n_rules_l2b]
-
-        # r_or1 = 1 - exp(log_prod)
-        r_or1 = 1.0 - torch.exp(log_prod)   # [B, n_rules_l2b] ∈ [0, 1)
-        return r_or1
+    def l1_norm(self) -> torch.Tensor:
+        """Tổng L1 norm cho sparsity penalty (REASON Mechanism 5)."""
+        return torch.sum(self._effective_weights())
 
     def sparsity_loss(self) -> torch.Tensor:
-        """L1 penalty trên trọng số để ép rule thưa."""
+        """Mean sparsity loss."""
         return self._effective_weights().mean()
 
+    def continuous_forward(self, r_and: torch.Tensor) -> torch.Tensor:
+        """Łukasiewicz Product T-norm tuyển liên tục: 1 - Product(1 - r_and * W)."""
+        w = self._effective_weights()                       # [n_rules_l1, n_rules_l2b]
+        X = 1.0 - r_and.unsqueeze(-1) * w                   # [B, n_rules_l1, n_rules_l2b]
+        return 1.0 - Product.apply(X)                       # [B, n_rules_l2b]
+
+    @torch.no_grad()
+    def binarized_forward(self, r_and: torch.Tensor) -> torch.Tensor:
+        """Binarized rule execution với W > 0.5."""
+        Wb = (self._effective_weights() > 0.5).float()
+        return 1.0 - torch.prod(1.0 - r_and.unsqueeze(-1) * Wb, dim=1)
+
+    def forward(self, r_and: torch.Tensor, continuous: Optional[bool] = None) -> torch.Tensor:
+        """Forward pass.
+
+        Args:
+            r_and: L1 conjunction activations [B, n_rules_l1]
+            continuous: Nếu True, dùng continuous forward. Nếu None, dùng not self.grad_graft.
+        """
+        res_tilde = self.continuous_forward(r_and)
+        use_cont = continuous if continuous is not None else (not self.grad_graft)
+        if use_cont:
+            return res_tilde
+        res_bar = self.binarized_forward(r_and)
+        return GradGraft.apply(res_bar, res_tilde)
+
     def extra_repr(self) -> str:
-        return f"n_rules_l1={self.n_rules_l1}, n_rules_l2b={self.n_rules_l2b}"
+        return f"n_rules_l1={self.n_rules_l1}, n_rules_l2b={self.n_rules_l2b}, grad_graft={self.grad_graft}"
+

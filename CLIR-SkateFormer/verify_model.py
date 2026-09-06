@@ -139,20 +139,49 @@ def test_conjunction_and_disjunction():
 
 
 def test_crl_reasoner():
-    print_section("Test 3: CRLReasoner (1-pass Logic Reasoning)")
+    print_section("Test 3: CRLReasoner (1-pass Logic Reasoning & Gradient Flow)")
     n_concepts = 72
     n_actions = 120
     reasoner = CRLReasoner(n_concepts=n_concepts, n_actions=n_actions)
-    z = torch.randn(4, n_concepts)
+    z = torch.randn(4, n_concepts, requires_grad=True)
 
+    # Forward
     r_evidence, y = reasoner(z)
-    assert r_evidence.shape == (4, 512)
-    assert y.shape == (4, n_actions)
+    assert r_evidence.shape == (4, 512), f"Expected r_evidence shape (4, 512), got {r_evidence.shape}"
+    assert y.shape == (4, n_actions), f"Expected y shape (4, {n_actions}), got {y.shape}"
+
+    # Plan 5.1 Test 1: Gradient Flow — Tất cả layers đều > 0
+    y.sum().backward()
+    assert reasoner.l1_and.W.grad is not None and reasoner.l1_and.W.grad.norm() > 1e-4, "L1 gradient dead!"
+    assert reasoner.l2a_and2.W.grad is not None and reasoner.l2a_and2.W.grad.norm() > 1e-4, "L2a gradient dead!"
+    assert reasoner.l2b_or1.W.grad is not None and reasoner.l2b_or1.W.grad.norm() > 1e-4, "L2b gradient dead!"
+    print(f"  [OK] Gradient flow verified: L1 grad={reasoner.l1_and.W.grad.norm():.4f}, L2a grad={reasoner.l2a_and2.W.grad.norm():.4f}, L2b grad={reasoner.l2b_or1.W.grad.norm():.4f}")
+
+    # Plan 5.1 Test 2: Giá trị Activation không bị Underflow/Saturate
+    with torch.no_grad():
+        r_and1 = r_evidence[:, :reasoner.r1]
+        r_and2 = r_evidence[:, reasoner.r1 : reasoner.r1 + reasoner.r2a]
+        r_or1  = r_evidence[:, reasoner.r1 + reasoner.r2a :]
+
+        assert r_and1.mean() > 0.01, f"L1 underflow! Got {r_and1.mean().item():.4f}"
+        assert r_and2.mean() > 0.005, f"L2a underflow! Got {r_and2.mean().item():.4f}"
+        assert r_or1.mean() > 0.01, f"L2b saturated / underflow! Got {r_or1.mean().item():.4f}"
+        assert r_or1.std() > 0.001, f"L2b constant! Got std {r_or1.std().item():.4f}"
+        print(f"  [OK] Activations healthy: r_and1 mean={r_and1.mean():.4f}, r_and2 mean={r_and2.mean():.4f}, r_or1 mean={r_or1.mean():.4f}, std={r_or1.std():.4f}")
+
+    # Clipping & Sparsity
+    reasoner.clip_weights()
+    assert (reasoner.l1_and.W >= 0.0).all() and (reasoner.l1_and.W <= 1.0).all()
+    assert (reasoner.l2a_and2.W >= 0.0).all() and (reasoner.l2a_and2.W <= 1.0).all()
+    assert (reasoner.l2b_or1.W >= 0.0).all() and (reasoner.l2b_or1.W <= 1.0).all()
 
     loss_sp = reasoner.rule_sparsity_loss()
     assert loss_sp.item() >= 0.0
-    print(f"  [OK] CRLReasoner forward: r_evidence={r_evidence.shape}, y={y.shape}, rule_sparsity={loss_sp.item():.4f}")
+    l1_n = reasoner.l1_norm()
+    assert l1_n.item() > 0.0
+    print(f"  [OK] CRLReasoner clipping & sparsity verified: rule_sparsity={loss_sp.item():.4f}, l1_norm={l1_n.item():.2f}")
     print("[PASS] CRLReasoner test passed.")
+
 
 
 def test_concept_update_cell():
@@ -279,18 +308,22 @@ def test_full_clir_skateformer():
     assert any(p.grad is not None and p.grad.abs().sum() > 0 for p in model.backbone.parameters())
     assert model.spatial_head[0].weight.grad is not None
     assert model.temporal_head[0].weight.grad is not None
-    assert model.reasoner.crl.l1_and.weight_logit.grad is not None
+    assert model.reasoner.crl.l1_and.W.grad is not None and model.reasoner.crl.l1_and.W.grad.norm() > 0
+    assert model.reasoner.crl.l2a_and2.W.grad is not None and model.reasoner.crl.l2a_and2.W.grad.norm() > 0
+    assert model.reasoner.crl.l2b_or1.W.grad is not None and model.reasoner.crl.l2b_or1.W.grad.norm() > 0
     assert model.reasoner.update_cell.logic_proj[0].weight.grad is not None
     assert model.reasoner.raw_beta.grad is not None
+    model.clip_weights()
     model.zero_grad()
-    print("  [OK] Pure STE backward gradient flow verified (backbone + heads + CRL + UpdateCell).")
+    print("  [OK] Pure STE backward gradient flow verified (backbone + heads + CRL L1/L2a/L2b + UpdateCell).")
 
     # Temperature Annealing Check (T=10.0)
     model.reasoner.temperature = 10.0
     out_t10 = model(x, concept_targets=concept_targets, action_labels=action_labels)
     total_loss_t10 = F.cross_entropy(out_t10["action_logits"], action_labels) + out_t10["aux_loss"]
     total_loss_t10.backward()
-    assert model.reasoner.crl.l1_and.weight_logit.grad is not None
+    assert model.reasoner.crl.l1_and.W.grad is not None and model.reasoner.crl.l1_and.W.grad.norm() > 0
+    model.clip_weights()
     model.zero_grad()
     print("  [OK] Temperature annealing to 10.0 backward gradient flow verified.")
 
@@ -323,10 +356,14 @@ def test_full_clir_skateformer():
     assert any(p.grad is not None and p.grad.abs().sum() > 0 for p in model.backbone.parameters())
     assert model.spatial_head[0].weight.grad is not None
     assert model.temporal_head[0].weight.grad is not None
-    assert model.reasoner.crl.l1_and.weight_logit.grad is not None
+    assert model.reasoner.crl.l1_and.W.grad is not None and model.reasoner.crl.l1_and.W.grad.norm() > 0
+    assert model.reasoner.crl.l2a_and2.W.grad is not None and model.reasoner.crl.l2a_and2.W.grad.norm() > 0
+    assert model.reasoner.crl.l2b_or1.W.grad is not None and model.reasoner.crl.l2b_or1.W.grad.norm() > 0
     assert model.reasoner.update_cell.logic_proj[0].weight.grad is not None
     assert model.reasoner.raw_beta.grad is not None
+    model.clip_weights()
     print("  [OK] Backward gradient flow through all components verified.")
+
 
     # 2. Ablation A6: Feature Bypass
     model_bypass = CLIR_SkateFormer(

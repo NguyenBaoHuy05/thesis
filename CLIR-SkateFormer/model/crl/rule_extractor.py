@@ -76,29 +76,40 @@ class RuleExtractor:
 
     # ─── Lấy trọng số binarized (giữ nguyên device hiện tại) ───────────────────
 
+    # ─── Lấy trọng số binarized (giữ nguyên device hiện tại) ───────────────────
+
     @torch.no_grad()
     def _get_w_and1(self) -> torch.Tensor:
         """W_and1 binarized [n_literals, r1]."""
-        w = torch.sigmoid(self.reasoner.l1_and.weight_logit)
-        if self.reasoner.l1_and.group_mask is not None:
+        if hasattr(self.reasoner.l1_and, "W"):
+            w = self.reasoner.l1_and.W.data.clamp(0.0, 1.0)
+        else:
+            w = torch.sigmoid(self.reasoner.l1_and.weight_logit)
+        if getattr(self.reasoner.l1_and, "group_mask", None) is not None:
             w = w * self.reasoner.l1_and.group_mask
         return (w >= self.tau_and).float()
 
     @torch.no_grad()
     def _get_w_and2(self) -> torch.Tensor:
         """W_and2 binarized [r1, r2a]."""
-        w = torch.sigmoid(self.reasoner.l2a_and2.weight_logit)
+        if hasattr(self.reasoner.l2a_and2, "W"):
+            w = self.reasoner.l2a_and2.W.data.clamp(0.0, 1.0)
+        else:
+            w = torch.sigmoid(self.reasoner.l2a_and2.weight_logit)
         return (w >= self.tau_and2).float()
 
     @torch.no_grad()
     def _get_w_or1(self) -> torch.Tensor:
         """W_or1 binarized [r1, r2b]."""
-        w = torch.sigmoid(self.reasoner.l2b_or1.weight_logit)
+        if hasattr(self.reasoner.l2b_or1, "W"):
+            w = self.reasoner.l2b_or1.W.data.clamp(0.0, 1.0)
+        else:
+            w = torch.sigmoid(self.reasoner.l2b_or1.weight_logit)
         return (w >= self.tau_or).float()
 
     @torch.no_grad()
     def _get_action_weights(self) -> torch.Tensor:
-        """ActionHead weights [r2a + r2b, n_actions]."""
+        """ActionHead weights [logic_dim, n_actions]."""
         return self.reasoner.action_head.weight.T
 
     # ─── Chuyển đổi literal index → tên concept ────────────────────────────
@@ -117,8 +128,11 @@ class RuleExtractor:
 
     def _extract_l1_rule(self, w_and1: torch.Tensor, l1_rule_idx: int) -> List[Tuple[str, bool]]:
         active_lits = w_and1[:, l1_rule_idx].nonzero(as_tuple=True)[0].tolist()
-        w_col = torch.sigmoid(self.reasoner.l1_and.weight_logit[:, l1_rule_idx])
-        if self.reasoner.l1_and.group_mask is not None:
+        if hasattr(self.reasoner.l1_and, "W"):
+            w_col = self.reasoner.l1_and.W.data[:, l1_rule_idx].clamp(0.0, 1.0)
+        else:
+            w_col = torch.sigmoid(self.reasoner.l1_and.weight_logit[:, l1_rule_idx])
+        if getattr(self.reasoner.l1_and, "group_mask", None) is not None:
             w_col = w_col * self.reasoner.l1_and.group_mask[:, l1_rule_idx]
         sorted_lits = sorted(active_lits, key=lambda i: -w_col[i].item())
         sorted_lits = sorted_lits[:self.top_k_literals]
@@ -133,12 +147,37 @@ class RuleExtractor:
         w_or1  = self._get_w_or1()
         W_act  = self._get_action_weights()
 
-        r2a = self.reasoner.r2a
+        r1 = getattr(self.reasoner, "r1", 256)
+        r2a = getattr(self.reasoner, "r2a", 128)
+        r2b = getattr(self.reasoner, "r2b", 128)
         act_weights = W_act[:, action_idx]
-        and2_weights = act_weights[:r2a]
-        or1_weights  = act_weights[r2a:]
 
         clauses = []
+
+        if act_weights.shape[0] == (r1 + r2a + r2b):
+            # 512-dim ActionHead: [r_and1 (256); r_and2 (128); r_or1 (128)]
+            and1_weights = act_weights[:r1]
+            and2_weights = act_weights[r1 : r1 + r2a]
+            or1_weights  = act_weights[r1 + r2a :]
+
+            # ── AND1 (L1 Skip Connections) — Primitive Pose Rules
+            top_and1_idx = and1_weights.argsort(descending=True)[:self.top_k_l2].tolist()
+            for l1_idx in top_and1_idx:
+                w_val = and1_weights[l1_idx].item()
+                if w_val < self.tau_act:
+                    continue
+                lits = self._extract_l1_rule(w_and1, l1_idx)
+                if lits:
+                    clauses.append({
+                        "type": "and1",
+                        "l1_rule_idx": l1_idx,
+                        "l1_components": [{"l1_rule_idx": l1_idx, "literals": lits}],
+                        "raw_weight": w_val,
+                    })
+        else:
+            # 256-dim ActionHead (legacy)
+            and2_weights = act_weights[:r2a]
+            or1_weights  = act_weights[r2a:]
 
         # ── AND2 (L2a) — chỉ lấy trọng số dương khẳng định
         top_and2_idx = and2_weights.argsort(descending=True)[:self.top_k_l2].tolist()
@@ -186,6 +225,7 @@ class RuleExtractor:
             "action_idx": action_idx,
             "clauses": clauses,
         }
+
 
     def extract_all_rules(self) -> List[Dict]:
         """Trích xuất rules cho tất cả actions và lưu cache."""
@@ -371,7 +411,8 @@ class RuleExtractor:
 
         for ci, clause in enumerate(rule["clauses"]):
             clause_type = clause["type"].upper()
-            l2_idx = clause["l2_rule_idx"]
+            rule_idx = clause.get("l2_rule_idx", clause.get("l1_rule_idx", "?"))
+            layer_tag = "L1" if clause_type == "AND1" else "L2"
             w = clause["raw_weight"]
             parts = []
             for comp in clause["l1_components"]:
@@ -382,8 +423,9 @@ class RuleExtractor:
                 ]
                 parts.append(f"({' ∧ '.join(lit_strs)})")
             connector = " ∨ " if clause_type == "OR1" else " ∧ "
-            clause_str = f"  Clause {ci+1} [{clause_type}, L2={l2_idx}, w={w:.3f}]:\n    {connector.join(parts)}"
+            clause_str = f"  Clause {ci+1} [{clause_type}, {layer_tag}={rule_idx}, w={w:.3f}]:\n    {connector.join(parts)}"
             lines.append(clause_str)
+
 
         if not rule["clauses"]:
             lines.append("  (No active affirmative rules extracted)")
