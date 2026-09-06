@@ -332,9 +332,14 @@ TRAIN_CONFIG = {
     "base_lr": 1e-4,
     "min_lr": 1e-6,
     "warmup_lr": 1e-6,
-    "warm_up_epoch": 10,
+    "warm_up_epoch": 2,
     "weight_decay": 0.05,
     "grad_clip": 1.0,
+    
+    # 🎯 Two-Stage Concept-to-Logic Training (Giải pháp B):
+    # Stage 1: Huấn luyện riêng Concept Head (L_c^0) với Reasoner đóng băng
+    # Stage 2: Mở khóa Reasoner và ActionHead học End-to-End Logic Reasoning
+    "concept_warmup_epochs": 5,   # Khuyên dùng 5 (hoặc 3). Đặt 0 nếu muốn tắt Stage 1
     
     # Học theo nhóm (áp dụng cho cả 2 mode để so sánh công bằng)
     "backbone_lr_scale": 0.1,
@@ -457,11 +462,67 @@ class CLIRTrainer:
         self.best_acc = 0.0
         self.global_step = 0
         self.phase_step = 0
-        
-        self._init_optimizer()
+        self.start_epoch = 0
+
+        # 🎯 Quản lý Two-Stage Concept-to-Logic Training (Giải pháp B):
+        # Stage 1: Huấn luyện riêng Concept Head (L_c^0) với Reasoner đóng băng
+        # Stage 2: Mở khóa Reasoner và ActionHead học End-to-End Logic Reasoning
+        self.current_stage = 1 if self.cfg.get("concept_warmup_epochs", 0) > 0 else 2
+        self._set_stage(self.current_stage, verbose=False)
+
+    def _set_stage(self, stage: int, verbose: bool = True):
+        self.current_stage = stage
+        if stage == 1:
+            if verbose:
+                print(f"\n{'='*70}")
+                print(f"[STAGE 1 ACTIVATED] 🎯 CONCEPT WARM-UP (Epoch 1 → {self.cfg.get('concept_warmup_epochs', 0)})")
+                print("  • Mục tiêu: Dạy Concept Heads & Backbone nhận diện 72 concepts chuẩn xác.")
+                print("  • Đóng băng (Freeze): Tạm khóa CRL Reasoner & ActionHead để chống nhiễu gradient.")
+                print("  • Hàm mất mát: Asymmetric BCE Loss trên 72 concepts (L_c^0).")
+                print(f"{'='*70}\n")
+            for p in self.model.reasoner.parameters():
+                p.requires_grad = False
+            self._init_optimizer()
+        else:
+            if verbose:
+                print(f"\n{'='*70}")
+                print(f"[STAGE 2 ACTIVATED] 🚀 END-TO-END LOGIC REASONING (Epoch {self.cfg.get('concept_warmup_epochs', 0) + 1} → {self.cfg['num_epoch']})")
+                print("  • Mục tiêu: Mở khóa CRL Reasoner & ActionHead để học các luật DNF và phân loại hành động.")
+                print("  • Dữ liệu vào: Concept logits z^0 đã được định hình sạch sẽ từ Stage 1.")
+                print("  • Hàm mất mát: Action Cross-Entropy + Auxiliary Concept Loss.")
+                print(f"{'='*70}\n")
+            for p in self.model.reasoner.parameters():
+                p.requires_grad = True
+            self._init_optimizer()
 
     def _init_optimizer(self):
         base_lr = self.cfg["base_lr"]
+
+        if self.current_stage == 1:
+            # Stage 1: Chỉ tối ưu hóa Backbone và Concept Heads
+            bb_scale = self.cfg.get("backbone_lr_scale", 0.1)
+            backbone_params = list(self.model.backbone.parameters()) + \
+                              list(self.model.spatial_pool_score.parameters()) + \
+                              list(self.model.temporal_pool_score.parameters())
+            head_params = list(self.model.spatial_head.parameters()) + \
+                          list(self.model.temporal_head.parameters())
+            params = [
+                {"params": backbone_params, "lr": base_lr * bb_scale, "name": "backbone"},
+                {"params": head_params, "lr": base_lr, "name": "concept_heads"},
+            ]
+            self.optimizer = optim.AdamW(params, lr=base_lr, weight_decay=self.cfg["weight_decay"])
+
+            if self.train_loader is not None:
+                n_iter = len(self.train_loader)
+                warmup_epochs = max(1, self.cfg.get("concept_warmup_epochs", 1))
+                total_steps = warmup_epochs * n_iter
+                self.scheduler = CosineLRScheduler(
+                    self.optimizer, t_initial=total_steps, lr_min=self.cfg["min_lr"],
+                    warmup_t=0, cycle_limit=1, t_in_epochs=False,
+                )
+            return
+
+        # Stage 2: Mở toàn bộ mô hình
         is_staged_p1 = (
             self.current_phase == 1
             and not getattr(self, "is_pure_soft", False)
@@ -470,11 +531,10 @@ class CLIRTrainer:
         if is_staged_p1:
             params = [{"params": self.model.parameters(), "lr": base_lr}]
         else:
-            # Per-group LRs cho cả Pure STE và Pure Soft (so sánh ablation công bằng)
             bb_scale = self.cfg["backbone_lr_scale"]
             crl_scale = self.cfg["crl_lr_scale"]
             uc_scale = self.cfg["update_cell_lr_scale"]
-            
+
             backbone_params = list(self.model.backbone.parameters()) + \
                               list(self.model.spatial_pool_score.parameters()) + \
                               list(self.model.temporal_pool_score.parameters()) + \
@@ -484,41 +544,49 @@ class CLIRTrainer:
             if getattr(self.model, "bypass_head", None) is not None:
                 crl_params += list(self.model.bypass_head.parameters())
             uc_params = list(self.model.reasoner.update_cell.parameters()) + [self.model.reasoner.raw_beta]
-            
+
             params = [
                 {"params": backbone_params, "lr": base_lr * bb_scale, "name": "backbone"},
                 {"params": crl_params, "lr": base_lr * crl_scale, "name": "crl"},
                 {"params": uc_params, "lr": base_lr * uc_scale, "name": "update_cell"},
             ]
-            
+
         self.optimizer = optim.AdamW(params, lr=base_lr, weight_decay=self.cfg["weight_decay"])
-        
-        # Scheduler
+
         if self.train_loader is not None:
             n_iter = len(self.train_loader)
-            if getattr(self, "is_pure_soft", False) or self.cfg.get("phase1_epochs", 0) <= 0 or self.current_phase == 1:
-                total_steps = self.cfg["num_epoch"] * n_iter
-                warmup_steps = self.cfg["warm_up_epoch"] * n_iter
-                self.scheduler = CosineLRScheduler(
-                    self.optimizer, t_initial=total_steps, lr_min=self.cfg["min_lr"],
-                    warmup_lr_init=self.cfg["warmup_lr"], warmup_t=warmup_steps, cycle_limit=1, t_in_epochs=False,
-                )
-            else:
-                remaining_epochs = max(1, self.cfg["num_epoch"] - self.cfg["phase1_epochs"])
-                total_steps = remaining_epochs * n_iter
-                self.scheduler = CosineLRScheduler(
-                    self.optimizer, t_initial=total_steps, lr_min=self.cfg["min_lr"],
-                    warmup_t=0, cycle_limit=1, t_in_epochs=False,
-                )
+            stage1_epochs = self.cfg.get("concept_warmup_epochs", 0)
+            remaining_epochs = max(1, self.cfg["num_epoch"] - stage1_epochs)
+            total_steps = remaining_epochs * n_iter
+            warmup_steps = min(int(self.cfg.get("warm_up_epoch", 2) * n_iter), int(total_steps * 0.1))
+            self.scheduler = CosineLRScheduler(
+                self.optimizer, t_initial=total_steps, lr_min=self.cfg["min_lr"],
+                warmup_lr_init=self.cfg["warmup_lr"], warmup_t=warmup_steps, cycle_limit=1, t_in_epochs=False,
+            )
+
+    def check_stage_and_phase(self, epoch):
+        # 1. Kiểm tra chuyển đổi Stage (Stage 1 -> Stage 2)
+        warmup_ep = self.cfg.get("concept_warmup_epochs", 0)
+        target_stage = 1 if (warmup_ep > 0 and epoch < warmup_ep) else 2
+        if target_stage != self.current_stage:
+            self._set_stage(target_stage, verbose=True)
+            self.phase_step = 0
+
+        # 2. Kiểm tra nhiệt độ STE / Phase switch khi ở Stage 2
+        if self.current_stage == 2:
+            self.check_phase_switch(epoch)
 
     def check_phase_switch(self, epoch):
         if getattr(self, "is_pure_soft", False):
-            # Pure Soft: không bao giờ switch phase, không STE annealing
             return
 
+        stage1_ep = self.cfg.get("concept_warmup_epochs", 0)
+        effective_epoch = max(0, epoch - stage1_ep)
+        effective_total = max(1, self.cfg["num_epoch"] - stage1_ep - 1)
+
         if self.cfg.get("phase1_epochs", 0) <= 0:
-            # Pure STE continuous annealing từ 2.0 → 10.0
-            progress = min(1.0, max(0.0, epoch / max(1, self.cfg["num_epoch"] - 1)))
+            # Pure STE continuous annealing từ 2.0 → 10.0 trong Stage 2
+            progress = min(1.0, max(0.0, effective_epoch / effective_total))
             temp = self.cfg["ste_temperature_start"] + progress * (self.cfg["ste_temperature_end"] - self.cfg["ste_temperature_start"])
             self.model.reasoner.temperature = temp
             return
@@ -530,24 +598,28 @@ class CLIRTrainer:
             self.model.set_phase(new_phase)
             self._init_optimizer()
             self.phase_step = 0
-            
+
         if self.current_phase == 2:
-            # Linear temperature annealing
-            progress = (epoch - self.cfg["phase1_epochs"]) / max(1, self.cfg["num_epoch"] - self.cfg["phase1_epochs"])
+            rem = max(1, self.cfg["num_epoch"] - self.cfg["phase1_epochs"])
+            progress = (epoch - self.cfg["phase1_epochs"]) / rem
             temp = self.cfg["ste_temperature_start"] + progress * (self.cfg["ste_temperature_end"] - self.cfg["ste_temperature_start"])
             self.model.reasoner.temperature = temp
 
     def train_epoch(self, epoch):
         self.model.train()
-        self.check_phase_switch(epoch)
+        self.check_stage_and_phase(epoch)
+
+        is_stage1 = (self.current_stage == 1)
         total_loss, correct, total = 0.0, 0, 0
-        
-        if getattr(self, "is_pure_soft", False):
-            mode_tag = "Pure-Soft"
+
+        if is_stage1:
+            mode_tag = f"Stage 1: Concept-Warmup ({epoch+1}/{self.cfg.get('concept_warmup_epochs', 0)})"
+        elif getattr(self, "is_pure_soft", False):
+            mode_tag = "Stage 2: Pure-Soft"
         elif self.current_phase == 2:
-            mode_tag = f"Pure-STE T={self.model.reasoner.temperature:.2f}"
+            mode_tag = f"Stage 2: Pure-STE T={self.model.reasoner.temperature:.2f}"
         else:
-            mode_tag = f"Phase-{self.current_phase}"
+            mode_tag = f"Stage 2: Phase-{self.current_phase}"
 
         pbar = tqdm(self.train_loader, desc=f"Epoch {epoch+1}/{self.cfg['num_epoch']} ({mode_tag})")
         for batch in pbar:
@@ -556,38 +628,58 @@ class CLIRTrainer:
             else:
                 data, index_t, label, _ = batch[:4]
                 c_targets = None
-                
+
             data = data.float().to(self.device)
             index_t = index_t.float().to(self.device)
             label = label.long().to(self.device)
             c_targets = c_targets.float().to(self.device) if c_targets is not None else None
-            
+
             # Step scheduler
-            if getattr(self, "is_pure_soft", False) or self.cfg.get("phase1_epochs", 0) <= 0 or self.current_phase == 1:
+            if self.current_stage == 1:
                 self.scheduler.step_update(self.global_step)
             else:
                 self.scheduler.step_update(self.phase_step)
                 self.phase_step += 1
             self.global_step += 1
-            
+
             self.optimizer.zero_grad()
-            out = self.model(data, index_t=index_t, concept_targets=c_targets, action_labels=label)
-            
-            loss = torch.nn.functional.cross_entropy(out["action_logits"], label)
-            if "aux_loss" in out:
-                loss += out["aux_loss"]
-                
-            loss.backward()
-            if self.cfg["grad_clip"] > 0:
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["grad_clip"])
-            self.optimizer.step()
-            
-            total_loss += loss.item()
-            pred = out["action_logits"].argmax(dim=-1)
-            correct += (pred == label).sum().item()
-            total += label.size(0)
-            pbar.set_postfix({"loss": f"{loss.item():.4f}", "acc": f"{correct/total*100:.2f}%"})
-            
+
+            if is_stage1:
+                # Stage 1: Huấn luyện riêng Concept Head bằng Asymmetric BCE Loss
+                out = self.model(data, index_t=index_t, concept_targets=c_targets)
+                loss = out.get("l_c_0", None)
+                if loss is None:
+                    loss = self.model._asymmetric_bce(out["initial_concept_logits"], c_targets)
+
+                loss.backward()
+                if self.cfg["grad_clip"] > 0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["grad_clip"])
+                self.optimizer.step()
+
+                total_loss += loss.item()
+                c_pred = (out["initial_concept_logits"] > 0.0).float()
+                c_acc = (c_pred == c_targets).float().mean().item() if c_targets is not None else 0.0
+                total += 1
+                correct += c_acc
+                pbar.set_postfix({"c_loss": f"{loss.item():.4f}", "c_acc": f"{correct/total*100:.1f}%"})
+            else:
+                # Stage 2: Huấn luyện End-to-End đầy đủ (Action Cross-Entropy + Logic Aux Loss)
+                out = self.model(data, index_t=index_t, concept_targets=c_targets, action_labels=label)
+                loss = torch.nn.functional.cross_entropy(out["action_logits"], label)
+                if "aux_loss" in out:
+                    loss += out["aux_loss"]
+
+                loss.backward()
+                if self.cfg["grad_clip"] > 0:
+                    torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg["grad_clip"])
+                self.optimizer.step()
+
+                total_loss += loss.item()
+                pred = out["action_logits"].argmax(dim=-1)
+                correct += (pred == label).sum().item()
+                total += label.size(0)
+                pbar.set_postfix({"loss": f"{loss.item():.4f}", "acc": f"{correct/total*100:.2f}%"})
+
         return total_loss / len(self.train_loader), correct / total
 
     @torch.no_grad()
@@ -611,27 +703,82 @@ class CLIRTrainer:
             "epoch": epoch + 1,
             "global_step": self.global_step,
             "phase_step": self.phase_step,
+            "current_stage": self.current_stage,
             "current_phase": self.current_phase,
             "best_acc": self.best_acc,
             "model": self.model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
         }
 
+    def load_checkpoint(self, checkpoint_path, resume_training=True):
+        \"\"\"Nạp checkpoint vào mô hình và khôi phục trạng thái huấn luyện nếu cần.\"\"\"
+        if not os.path.exists(checkpoint_path):
+            print(f"[CLIRTrainer] ⚠️ Không tìm thấy checkpoint tại: {checkpoint_path}")
+            return False
+
+        print(f"[CLIRTrainer] 🔄 Đang nạp checkpoint từ: {checkpoint_path}")
+        ckpt = torch.load(checkpoint_path, map_location=self.device)
+
+        # Trích xuất model state_dict (hỗ trợ checkpoint đầy đủ hoặc pure state_dict)
+        state_dict = ckpt.get("model", ckpt) if isinstance(ckpt, dict) else ckpt
+        clean_state = {k.replace("module.", ""): v for k, v in state_dict.items()}
+        missing, unexpected = self.model.load_state_dict(clean_state, strict=False)
+        print(f"[CLIRTrainer] ✓ Đã nạp weights thành công. Missing keys: {len(missing)}, Unexpected keys: {len(unexpected)}")
+
+        if resume_training and isinstance(ckpt, dict) and "epoch" in ckpt:
+            self.start_epoch = ckpt.get("epoch", 0)
+            self.global_step = ckpt.get("global_step", 0)
+            self.phase_step = ckpt.get("phase_step", 0)
+            self.best_acc = ckpt.get("best_acc", 0.0)
+
+            # Khôi phục đúng Stage theo start_epoch
+            warmup_ep = self.cfg.get("concept_warmup_epochs", 0)
+            target_stage = 1 if (warmup_ep > 0 and self.start_epoch < warmup_ep) else 2
+            self._set_stage(target_stage, verbose=True)
+
+            if self.current_stage == 2:
+                self.current_phase = ckpt.get("current_phase", self.current_phase)
+                if hasattr(self.model, "set_phase"):
+                    self.model.set_phase(self.current_phase)
+                self.check_phase_switch(self.start_epoch)
+
+            # Nạp trạng thái optimizer
+            if "optimizer" in ckpt and ckpt["optimizer"] is not None:
+                try:
+                    self.optimizer.load_state_dict(ckpt["optimizer"])
+                    print("[CLIRTrainer] ✓ Đã khôi phục trạng thái Optimizer.")
+                except Exception as e:
+                    print(f"[CLIRTrainer] ⚠️ Không thể khôi phục optimizer state ({e}). Sẽ dùng optimizer mới khởi tạo.")
+
+            print(f"★ [CLIRTrainer] Khôi phục phiên huấn luyện: Bắt đầu từ Epoch {self.start_epoch + 1}/{self.cfg['num_epoch']} (Stage {self.current_stage}, Phase {self.current_phase}, Best Acc: {self.best_acc*100:.2f}%)")
+        else:
+            print("★ [CLIRTrainer] Đã nạp weights (không khôi phục optimizer/epoch metadata).")
+
+        return True
+
     def run(self):
-        print(f"Starting full training for {self.cfg['num_epoch']} epochs on {self.cfg['benchmark'].upper()}...")
-        for epoch in range(self.cfg["num_epoch"]):
+        start_ep = getattr(self, "start_epoch", 0)
+        total_ep = self.cfg["num_epoch"]
+        if start_ep >= total_ep:
+            print(f"[CLIRTrainer] Quá trình huấn luyện đã hoàn tất: start_epoch ({start_ep}) >= num_epoch ({total_ep}).")
+            return
+
+        print(f"Starting training from Epoch {start_ep + 1} to {total_ep} on {self.cfg['benchmark'].upper()}...")
+        for epoch in range(start_ep, total_ep):
             train_loss, train_acc = self.train_epoch(epoch)
 
-            # Lưu checkpoint mới nhất mỗi epoch (đầy đủ optimizer, khớp phase hiện tại)
+            # Lưu checkpoint mới nhất mỗi epoch (đầy đủ optimizer, khớp stage & phase hiện tại)
             latest_path = os.path.join(self.cfg["work_dir"], "checkpoint_latest.pt")
             torch.save(self._build_checkpoint(epoch), latest_path)
 
             if (epoch + 1) % 5 == 0 or (epoch + 1) == self.cfg["num_epoch"]:
                 val_acc = self.eval_epoch()
-                print(f"[Epoch {epoch+1}] Train Loss: {train_loss:.4f}, Train Acc: {train_acc*100:.2f}%, Val Acc: {val_acc*100:.2f}%")
+                stage_tag = "Stage 1 (Concept-Warmup)" if self.current_stage == 1 else "Stage 2 (Logic)"
+                metric_name = "Mean Concept Acc" if self.current_stage == 1 else "Train Acc"
+                print(f"[Epoch {epoch+1} - {stage_tag}] Train Loss: {train_loss:.4f}, {metric_name}: {train_acc*100:.2f}%, Val Acc: {val_acc*100:.2f}%")
 
-                # Save best checkpoint
-                if val_acc > self.best_acc:
+                # Save best checkpoint (chỉ lưu best ở Stage 2 khi đã có suy luận action)
+                if (self.current_stage == 2 or self.cfg.get("concept_warmup_epochs", 0) <= 0) and val_acc > self.best_acc:
                     self.best_acc = val_acc
                     save_path = os.path.join(self.cfg["work_dir"], "best_model.pt")
                     torch.save(self.model.state_dict(), save_path)
@@ -643,8 +790,16 @@ print("CLIRTrainer defined successfully!")
 """)
 
     add_code("""# Chạy huấn luyện (Bỏ comment để bắt đầu huấn luyện nếu đã có dữ liệu)
+# Tùy chọn Resume Checkpoint:
+# - Nếu muốn tiếp tục huấn luyện từ lần chạy trước khi Colab bị ngắt, trỏ đến checkpoint_latest.pt
+# - Nếu muốn huấn luyện mới hoàn toàn từ Epoch 1, đặt RESUME_CHECKPOINT = None
+# RESUME_CHECKPOINT = os.path.join(TRAIN_CONFIG["work_dir"], "checkpoint_latest.pt")
+# RESUME_CHECKPOINT = None
+
 # if train_loader is not None and test_loader is not None:
 #     trainer = CLIRTrainer(TRAIN_CONFIG, train_loader, test_loader)
+#     if RESUME_CHECKPOINT and os.path.exists(RESUME_CHECKPOINT):
+#         trainer.load_checkpoint(RESUME_CHECKPOINT, resume_training=True)
 #     trainer.run()
 """)
 
@@ -663,10 +818,36 @@ with open("concepts/ntu_rgbd_60_120.csv", "r", encoding="utf-8") as f:
 action_names = action_names[:TRAIN_CONFIG["num_classes"]]
 print(f"Loaded {len(concept_names)} concepts and {len(action_names)} actions ({TRAIN_CONFIG['benchmark'].upper()}).")
 
-# Khởi tạo RuleExtractor
-# Sử dụng model_smoke hoặc nạp từ best_model.pt
-model_for_extract = model_smoke.reasoner.crl
+# Khởi tạo mô hình & nạp trọng số đã huấn luyện (nếu có best_model.pt hoặc best_checkpoint.pt)
+best_model_path = os.path.join(TRAIN_CONFIG["work_dir"], "best_model.pt")
+best_ckpt_path = os.path.join(TRAIN_CONFIG["work_dir"], "best_checkpoint.pt")
 
+if os.path.exists(best_model_path) or os.path.exists(best_ckpt_path):
+    load_path = best_model_path if os.path.exists(best_model_path) else best_ckpt_path
+    print(f"★ Nạp mô hình đã huấn luyện từ: {load_path}")
+    eval_model = CLIR_SkateFormer(
+        num_classes=TRAIN_CONFIG["num_classes"],
+        num_concepts=TRAIN_CONFIG["num_concepts"],
+        spatial_concepts=TRAIN_CONFIG["spatial_concepts"],
+        temporal_concepts=TRAIN_CONFIG["temporal_concepts"],
+        num_loops=TRAIN_CONFIG["num_loops"],
+        beta_max=TRAIN_CONFIG["beta_max"],
+        beta_init=TRAIN_CONFIG["beta_init"],
+    ).to("cuda" if torch.cuda.is_available() else "cpu")
+    
+    ckpt_data = torch.load(load_path, map_location="cpu")
+    w = ckpt_data.get("model", ckpt_data) if isinstance(ckpt_data, dict) else ckpt_data
+    eval_model.load_state_dict({k.replace("module.", ""): v for k, v in w.items()}, strict=False)
+    eval_model.eval()
+    model_for_extract = eval_model.reasoner.crl
+    model_for_eval = eval_model
+    print("★ Đã nạp thành công trọng số thực tế để trích xuất luật DNF!")
+else:
+    print("ℹ Chưa tìm thấy checkpoint huấn luyện thực tế. Sử dụng model_smoke để minh họa luồng trích xuất luật.")
+    model_for_extract = model_smoke.reasoner.crl
+    model_for_eval = model_smoke
+
+# Khởi tạo RuleExtractor
 extractor = RuleExtractor(
     reasoner=model_for_extract,
     concept_names=concept_names,
@@ -695,7 +876,7 @@ print("Saved rules to: rules_output/dnf_rules.json and rules_output/dnf_rules.tx
     add_code("""# Đánh giá Fidelity, Coverage, Precision trên tập kiểm tra thực tế
 if test_loader is not None:
     print("Evaluating DNF rule metrics on test set...")
-    metrics = extractor.evaluate_fidelity(model_smoke, test_loader, device="cuda" if torch.cuda.is_available() else "cpu", n_batches=30)
+    metrics = extractor.evaluate_fidelity(model_for_eval, test_loader, device="cuda" if torch.cuda.is_available() else "cpu", n_batches=30)
     print("\\n" + "="*50)
     print("🎯 DNF RULE EXPLAINABILITY EVALUATION")
     print("="*50)
@@ -717,7 +898,17 @@ Nếu bạn muốn huấn luyện theo script chuẩn hóa qua terminal hoặc c
     add_code("""# 1. Huấn luyện qua dòng lệnh trên NTU RGB+D 60 Cross-Subject (60CSub)
 !python main.py --config config/train/ntu60_cs/CLIR_SkateFormer_j.yaml
 
-# 2. Huấn luyện các biến thể Ablation trên NTU60 CS
+# 2. Tiếp tục huấn luyện (Resume) từ checkpoint nếu bị gián đoạn:
+# !python main.py --config config/train/ntu60_cs/CLIR_SkateFormer_j.yaml \\
+#     --weights work_dir/ntu60_cs/CLIR_SkateFormer_j/checkpoint_latest.pt \\
+#     --start-epoch 35
+
+# 3. Chỉ đánh giá (Test/Eval) checkpoint tốt nhất:
+# !python main.py --config config/train/ntu60_cs/CLIR_SkateFormer_j.yaml \\
+#     --weights work_dir/ntu60_cs/CLIR_SkateFormer_j/best_model.pt \\
+#     --phase test
+
+# 4. Huấn luyện các biến thể Ablation trên NTU60 CS
 # Ablation A2: True No-Loop (beta=0, num_loops=0)
 # !python main.py --config config/train/ntu60_cs/CLIR_SkateFormer_j_A2_NoLoop.yaml
 
@@ -727,11 +918,11 @@ Nếu bạn muốn huấn luyện theo script chuẩn hóa qua terminal hoặc c
 # Ablation A6: CLIR-Bypass (Feature bypass branch)
 # !python main.py --config config/train/ntu60_cs/CLIR_SkateFormer_j_A6_Bypass.yaml
 
-# 3. Trích xuất luật DNF sau huấn luyện
-# !python scripts/extract_rules.py \
-#     --checkpoint work_dir/ntu60_cs/CLIR_SkateFormer_j/best_model.pt \
-#     --config config/train/ntu60_cs/CLIR_SkateFormer_j.yaml \
-#     --output-dir work_dir/rules_ntu60_cs \
+# 5. Trích xuất luật DNF sau huấn luyện từ file checkpoint
+# !python scripts/extract_rules.py \\
+#     --checkpoint work_dir/ntu60_cs/CLIR_SkateFormer_j/best_model.pt \\
+#     --config config/train/ntu60_cs/CLIR_SkateFormer_j.yaml \\
+#     --output-dir work_dir/rules_ntu60_cs \\
 #     --eval-fidelity
 """)
 

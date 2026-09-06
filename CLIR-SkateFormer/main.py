@@ -216,6 +216,10 @@ def get_parser():
         "--lambda-reg", type=float, default=0.005,
         help="Regularization weight lambda_reg for rule sparsity and stability"
     )
+    parser.add_argument(
+        "--concept-warmup-epochs", type=int, default=0,
+        help="Number of epochs for Stage 1 Concept Warm-up (0 = disabled, >0 = freeze reasoner and train concept heads only)"
+    )
 
     return parser
 
@@ -306,6 +310,19 @@ class Processor:
                     output_device=self.output_device,
                 )
 
+        self.current_stage = 1 if getattr(self.arg, "concept_warmup_epochs", 0) > 0 and self.arg.start_epoch < self.arg.concept_warmup_epochs else 2
+        if self.current_stage == 1:
+            if hasattr(m, "reasoner"):
+                for p in m.reasoner.parameters():
+                    p.requires_grad = False
+            if hasattr(m, "action_head"):
+                for p in m.action_head.parameters():
+                    p.requires_grad = False
+            if getattr(m, "bypass_head", None) is not None:
+                for p in m.bypass_head.parameters():
+                    p.requires_grad = False
+            self.print_log(f"[Training Stage] 🎯 STAGE 1: Concept Warm-up (Epoch {self.arg.start_epoch + 1} → {self.arg.concept_warmup_epochs}). Reasoner & ActionHead frozen.")
+
         if self.arg.phase == "train":
             self.load_optimizer()
             self.load_scheduler(len(self.data_loader["train"]))
@@ -394,6 +411,18 @@ class Processor:
         crl_scale = self.arg.crl_lr_scale
         uc_scale = self.arg.update_cell_lr_scale
 
+        if getattr(self, "current_stage", 2) == 1:
+            # Stage 1: Chỉ tối ưu hóa Backbone và Concept Heads
+            backbone_params = list(m.backbone.parameters()) + \
+                              list(m.spatial_pool_score.parameters()) + \
+                              list(m.temporal_pool_score.parameters())
+            head_params = list(m.spatial_head.parameters()) + \
+                          list(m.temporal_head.parameters())
+            return [
+                {"params": backbone_params, "lr": base_lr * bb_scale, "name": "backbone"},
+                {"params": head_params, "lr": base_lr, "name": "concept_heads"},
+            ]
+
         # Staged training ở Phase 1 (warm-up): single group
         is_staged_phase1 = (
             self.current_training_phase == 1
@@ -445,18 +474,78 @@ class Processor:
             raise ValueError(f"Unsupported optimizer: {self.arg.optimizer}")
 
     def load_scheduler(self, n_iter_per_epoch):
-        num_steps = int(self.arg.num_epoch * n_iter_per_epoch)
-        warmup_steps = int(self.arg.warm_up_epoch * n_iter_per_epoch)
-        self.lr_scheduler = CosineLRScheduler(
-            self.optimizer,
-            t_initial=(num_steps - warmup_steps) if self.arg.warmup_prefix else num_steps,
-            lr_min=self.arg.min_lr,
-            warmup_lr_init=self.arg.warmup_lr,
-            warmup_t=warmup_steps,
-            cycle_limit=1,
-            t_in_epochs=False,
-            warmup_prefix=self.arg.warmup_prefix,
-        )
+        if getattr(self, "current_stage", 2) == 1:
+            warmup_epochs = max(1, self.arg.concept_warmup_epochs - self.arg.start_epoch)
+            num_steps = int(warmup_epochs * n_iter_per_epoch)
+            self.lr_scheduler = CosineLRScheduler(
+                self.optimizer,
+                t_initial=num_steps,
+                lr_min=self.arg.min_lr,
+                warmup_t=0,
+                cycle_limit=1,
+                t_in_epochs=False,
+            )
+        else:
+            stage1_ep = getattr(self.arg, "concept_warmup_epochs", 0)
+            effective_start = max(0, self.arg.start_epoch - stage1_ep)
+            remaining_epochs = max(1, self.arg.num_epoch - stage1_ep - effective_start)
+            num_steps = int(remaining_epochs * n_iter_per_epoch)
+            warmup_steps = int(min(self.arg.warm_up_epoch, remaining_epochs * 0.1) * n_iter_per_epoch) if self.arg.start_epoch <= stage1_ep else 0
+            self.lr_scheduler = CosineLRScheduler(
+                self.optimizer,
+                t_initial=(num_steps - warmup_steps) if self.arg.warmup_prefix else num_steps,
+                lr_min=self.arg.min_lr,
+                warmup_lr_init=self.arg.warmup_lr,
+                warmup_t=warmup_steps,
+                cycle_limit=1,
+                t_in_epochs=False,
+                warmup_prefix=self.arg.warmup_prefix,
+            )
+
+    def _maybe_switch_stage(self, epoch: int):
+        """Kiểm tra và chuyển đổi từ Stage 1 (Concept Warm-up) sang Stage 2 (Logic Reasoning)."""
+        warmup_ep = getattr(self.arg, "concept_warmup_epochs", 0)
+        target_stage = 1 if (warmup_ep > 0 and epoch < warmup_ep) else 2
+
+        if target_stage != self.current_stage:
+            self.current_stage = target_stage
+            m = self.model.module if hasattr(self.model, "module") else self.model
+
+            if target_stage == 2:
+                # Mở khóa toàn bộ mô hình cho Stage 2
+                if hasattr(m, "reasoner"):
+                    for p in m.reasoner.parameters():
+                        p.requires_grad = True
+                if hasattr(m, "action_head"):
+                    for p in m.action_head.parameters():
+                        p.requires_grad = True
+                if getattr(m, "bypass_head", None) is not None:
+                    for p in m.bypass_head.parameters():
+                        p.requires_grad = True
+
+                self.print_log(
+                    f"\n{'='*60}\n"
+                    f"[STAGE SWITCH] 🔓 Chuyển sang STAGE 2: Logic Reasoning tại Epoch {epoch + 1}.\n"
+                    f"Mở khóa CRL Reasoner & ActionHead để học luật DNF từ các concept đã ổn định.\n"
+                    f"{'='*60}"
+                )
+
+                # Tái khởi tạo optimizer và scheduler cho số epochs còn lại
+                self.load_optimizer()
+                remaining_epochs = max(1, self.arg.num_epoch - epoch)
+                n_iter = len(self.data_loader["train"])
+                num_steps = int(remaining_epochs * n_iter)
+                warmup_steps = int(min(self.arg.warm_up_epoch, remaining_epochs * 0.1) * n_iter)
+                self.lr_scheduler = CosineLRScheduler(
+                    self.optimizer,
+                    t_initial=num_steps,
+                    lr_min=self.arg.min_lr,
+                    warmup_lr_init=self.arg.warmup_lr,
+                    warmup_t=warmup_steps,
+                    cycle_limit=1,
+                    t_in_epochs=False,
+                )
+                self.phase_step = 0
 
     def _maybe_switch_phase(self, epoch: int):
         """Kiểm tra và chuyển phase nếu cần."""
@@ -505,9 +594,13 @@ class Processor:
 
     def _get_ste_temperature(self, epoch: int) -> float:
         """Tính STE temperature theo lịch annealing tuyến tính."""
+        stage1_ep = getattr(self.arg, "concept_warmup_epochs", 0)
+        effective_epoch = max(0, epoch - stage1_ep)
+        effective_total = max(1, self.arg.num_epoch - stage1_ep - 1)
+
         if self.arg.phase1_epochs <= 0:
-            # Pure STE: Annealing tuyến tính mượt mà từ T_start → T_end trên toàn bộ num_epoch
-            progress = min(1.0, max(0.0, epoch / max(1, self.arg.num_epoch - 1)))
+            # Pure STE: Annealing tuyến tính mượt mà từ T_start → T_end trên toàn bộ Stage 2
+            progress = min(1.0, max(0.0, effective_epoch / effective_total))
             return (
                 self.arg.ste_temperature_start
                 + progress * (self.arg.ste_temperature_end - self.arg.ste_temperature_start)
@@ -545,24 +638,36 @@ class Processor:
         self.model.train()
         self.print_log(f"--- Training Epoch: {epoch + 1}/{self.arg.num_epoch} ---")
 
-        # ── Kiểm tra phase switch ────────────────────────────────────────────
-        self._maybe_switch_phase(epoch)
+        # ── Kiểm tra stage switch (Stage 1 -> Stage 2) ───────────────────────
+        self._maybe_switch_stage(epoch)
+
+        is_stage1 = (getattr(self, "current_stage", 2) == 1)
 
         # ── Cập nhật trạng thái từng epoch ──────────────────────────────────
-        if self.current_training_phase == 2:
-            temp = self._get_ste_temperature(epoch)
-            m = self.model.module if hasattr(self.model, "module") else self.model
-            if hasattr(m, "reasoner"):
-                m.reasoner.temperature = temp
-            self.print_log(f"Phase 2 (Pure STE) - STE Temperature: {temp:.3f}, lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
+        if is_stage1:
+            self.print_log(
+                f"[Stage 1: Concept Warm-up] Epoch {epoch + 1}/{self.arg.concept_warmup_epochs} - "
+                f"Tối ưu hóa Concept Heads với Asymmetric BCE Loss (Reasoner & ActionHead frozen)"
+            )
         else:
-            m = self.model.module if hasattr(self.model, "module") else self.model
-            mode_desc = "Pure Soft" if getattr(self, "is_pure_soft", False) else "Phase 1 Warm-up"
-            self.print_log(f"Phase 1 ({mode_desc}) - Mode: 'soft' (Continuous Sigmoid), lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
+            # Kiểm tra phase switch trong Stage 2
+            self._maybe_switch_phase(epoch)
+            if self.current_training_phase == 2:
+                temp = self._get_ste_temperature(epoch)
+                m = self.model.module if hasattr(self.model, "module") else self.model
+                if hasattr(m, "reasoner"):
+                    m.reasoner.temperature = temp
+                self.print_log(f"[Stage 2: Pure STE] - STE Temperature: {temp:.3f}, lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
+            else:
+                m = self.model.module if hasattr(self.model, "module") else self.model
+                mode_desc = "Pure Soft" if getattr(self, "is_pure_soft", False) else "Phase 1 Warm-up"
+                self.print_log(f"[Stage 2: {mode_desc}] - Mode: 'soft' (Continuous Sigmoid), lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
 
         loader = self.data_loader["train"]
-        loss_values, acc_values, aux_loss_values = [], [], []
-        process = tqdm(loader, desc=f"Epoch {epoch + 1}")
+        loss_values, metric_values = [], []
+        metric_name = "c_acc" if is_stage1 else "acc"
+        desc_stage = "Stage 1: Concept" if is_stage1 else "Stage 2: Action"
+        process = tqdm(loader, desc=f"Epoch {epoch + 1} ({desc_stage})")
 
         for batch_idx, batch in enumerate(process):
             if len(batch) == 5:
@@ -571,7 +676,7 @@ class Processor:
                 data, index_t, label, index = batch
                 concept_targets = None
 
-            if self.arg.phase1_epochs <= 0 or self.current_training_phase == 1:
+            if is_stage1 or self.arg.phase1_epochs <= 0 or self.current_training_phase == 1:
                 self.lr_scheduler.step_update(self.global_step)
             else:
                 self.lr_scheduler.step_update(self.phase_step)
@@ -594,15 +699,37 @@ class Processor:
                 return_trace=False,
             )
 
-            if isinstance(output, dict):
-                action_logits = output["action_logits"]
-                main_loss = self.loss(action_logits, label)
-                aux_loss  = output.get("aux_loss", 0.0)
-                total_loss = main_loss + aux_loss
+            if is_stage1:
+                # Stage 1: Tối ưu l_c_0 (Asymmetric BCE Loss trên Concept Heads)
+                if isinstance(output, dict) and "l_c_0" in output and output["l_c_0"] is not None and not (isinstance(output["l_c_0"], (int, float)) and output["l_c_0"] == 0.0):
+                    total_loss = output["l_c_0"]
+                else:
+                    action_logits = output["action_logits"] if isinstance(output, dict) else output
+                    total_loss = self.loss(action_logits, label)
+
+                if isinstance(output, dict) and "z_0" in output and concept_targets is not None:
+                    z_0 = output["z_0"]
+                    pred_c = (torch.sigmoid(z_0) > 0.5).float()
+                    step_metric = torch.mean((pred_c == concept_targets).float()).item()
+                else:
+                    step_metric = 0.0
+
+                process.set_postfix({"c_loss": f"{total_loss.item():.4f}", "c_acc": f"{step_metric * 100:.1f}%"})
             else:
-                action_logits = output
-                total_loss = self.loss(action_logits, label)
-                aux_loss = 0.0
+                # Stage 2: Tối ưu toàn bộ mô hình (Action CE + Aux Loss)
+                if isinstance(output, dict):
+                    action_logits = output["action_logits"]
+                    main_loss = self.loss(action_logits, label)
+                    aux_loss  = output.get("aux_loss", 0.0)
+                    total_loss = main_loss + aux_loss
+                else:
+                    action_logits = output
+                    total_loss = self.loss(action_logits, label)
+                    aux_loss = 0.0
+
+                _, pred_label = torch.max(action_logits.data, 1)
+                step_metric = torch.mean((pred_label == label.data).float()).item()
+                process.set_postfix({"loss": f"{total_loss.item():.4f}", "acc": f"{step_metric * 100:.1f}%"})
 
             # Backward
             self.optimizer.zero_grad()
@@ -612,19 +739,14 @@ class Processor:
             self.optimizer.step()
 
             loss_values.append(total_loss.item())
-            if isinstance(aux_loss, torch.Tensor):
-                aux_loss_values.append(aux_loss.item())
+            metric_values.append(step_metric)
 
-            _, pred_label = torch.max(action_logits.data, 1)
-            acc = torch.mean((pred_label == label.data).float()).item()
-            acc_values.append(acc)
-
-            self.train_writer.add_scalar("acc", acc, self.global_step)
-            self.train_writer.add_scalar("loss", total_loss.item(), self.global_step)
+            self.train_writer.add_scalar(f"train/{metric_name}", step_metric, self.global_step)
+            self.train_writer.add_scalar(f"train/{'c_loss' if is_stage1 else 'loss'}", total_loss.item(), self.global_step)
 
             # Log loss components
             if isinstance(output, dict) and batch_idx % self.arg.log_interval == 0:
-                if "l_sup" in output:
+                if "l_sup" in output and isinstance(output["l_sup"], torch.Tensor):
                     self.train_writer.add_scalar(
                         "l_sup", output["l_sup"].item(), self.global_step
                     )
@@ -634,13 +756,19 @@ class Processor:
                     )
 
         mean_loss = np.mean(loss_values)
-        mean_acc  = np.mean(acc_values) * 100.0
+        mean_metric = np.mean(metric_values) * 100.0
         cur_lr    = self.optimizer.param_groups[0]["lr"]
 
-        self.print_log(
-            f"\tPhase={self.current_training_phase} | "
-            f"Loss: {mean_loss:.4f} | Acc: {mean_acc:.2f}% | LR: {cur_lr:.6f}"
-        )
+        if is_stage1:
+            self.print_log(
+                f"\t[Stage 1: Concept Warm-up] Loss: {mean_loss:.4f} | "
+                f"Concept Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f}"
+            )
+        else:
+            self.print_log(
+                f"\t[Stage 2: Logic Reasoning] Phase={self.current_training_phase} | "
+                f"Loss: {mean_loss:.4f} | Action Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f}"
+            )
 
         # Checkpoint
         m = self.model.module if hasattr(self.model, "module") else self.model
@@ -649,6 +777,7 @@ class Processor:
         checkpoint = {
             "epoch":          epoch + 1,
             "global_step":    self.global_step,
+            "stage":          self.current_stage,
             "model":          weights,
             "optimizer":      self.optimizer.state_dict(),
             "best_acc":       self.best_acc,
@@ -660,7 +789,7 @@ class Processor:
         if save_model:
             torch.save(
                 weights,
-                os.path.join(self.arg.work_dir, f"epoch_{epoch+1}_acc_{mean_acc:.2f}.pt"),
+                os.path.join(self.arg.work_dir, f"epoch_{epoch+1}_{metric_name}_{mean_metric:.2f}.pt"),
             )
 
     def eval(self, epoch, save_score=False, save_trace=False):
@@ -709,7 +838,8 @@ class Processor:
         top5_preds = np.argsort(scores, axis=1)[:, -5:]
         top5_acc = np.mean([labels[i] in top5_preds[i] for i in range(len(labels))]) * 100.0
 
-        if top1_acc > self.best_acc:
+        # Chỉ lưu best_model.pt ở Stage 2 khi Action Classifier & Reasoner hoạt động thực sự
+        if (getattr(self, "current_stage", 2) == 2 or getattr(self.arg, "concept_warmup_epochs", 0) <= 0) and top1_acc > self.best_acc:
             self.best_acc = top1_acc
             self.best_acc_epoch = epoch + 1
             # Save best checkpoint

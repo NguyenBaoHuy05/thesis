@@ -319,9 +319,9 @@ $$\mathcal{L}_{\text{sup}} = \mathcal{L}_c^K + 0.5 \cdot \mathcal{L}_c^0 + 0.3 \
 * $\mathcal{L}_c^0$: Concept loss sớm trên $z^0$ để ép backbone học biểu diễn concept chuẩn ngay từ đầu.
 * $\mathcal{L}_{\text{act}}^t$: Action Cross-Entropy trên các bước trung gian $y^t$ để đảm bảo logic evidence không bị thoái hóa.
 
-**Công thức Asymmetric BCE:**
-$$\mathcal{L}_c(z, \hat{c}) = \frac{\sum_{i,c} r_{ic} \left[ \hat{c}_{ic} \cdot \text{softplus}(-z_{ic}) + (1 - \hat{c}_{ic}) \cdot (1 - \sigma(z_{ic}))^{\gamma_-} \cdot \text{softplus}(z_{ic}) \right]}{\sum_{i,c} r_{ic}}$$
-*(Với $r_{ic}$: positive\_weight=1.0, negative\_weight=0.15, $\gamma_- = 2.0$).*
+**Công thức Asymmetric BCE (Chuẩn ASL Alibaba ICCV 2021 với Margin Clipping):**
+$$\mathcal{L}_c(z, \hat{c}) = \frac{\sum_{i,c} r_{ic} \left[ \hat{c}_{ic} \cdot \text{softplus}(-z_{ic}) + (1 - \hat{c}_{ic}) \cdot \max(0, \sigma(z_{ic}) - m)^{\gamma_-} \cdot \text{softplus}(z_{ic}) \right]}{\sum_{i,c} r_{ic}}$$
+*(Với $r_{ic}$: positive\_weight=1.0, negative\_weight=0.15, probability margin $m = 0.05$, $\gamma_- = 2.0$).*
 
 ### 8.2. Thành phần điều hòa $\mathcal{L}_{\text{reg}}$ (Phase 2+)
 Gộp các loss tự điều hòa (không cần nhãn):

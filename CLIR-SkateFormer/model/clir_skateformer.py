@@ -349,6 +349,7 @@ class CLIRSkateFormer(nn.Module):
         concept_negative_weight: float = 0.15,
         concept_positive_weight: float = 1.0,
         asymmetric_gamma_neg:    float = 2.0,
+        asymmetric_clip:         float = 0.05,
         return_aux:              bool  = True,
         # Ablations
         use_feature_bypass:      bool  = False,  # A6: CLIR-Bypass
@@ -373,6 +374,7 @@ class CLIRSkateFormer(nn.Module):
         self.concept_neg_weight  = float(concept_negative_weight)
         self.concept_pos_weight  = float(concept_positive_weight)
         self.gamma_neg           = float(asymmetric_gamma_neg)
+        self.asymmetric_clip     = float(asymmetric_clip)
         self.return_aux          = bool(return_aux)
         self.use_feature_bypass  = bool(use_feature_bypass)
         self.accepts_concepts    = True   # flag cho training loop
@@ -505,12 +507,12 @@ class CLIRSkateFormer(nn.Module):
         targets:   torch.Tensor,
         mask:      Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Asymmetric BCE loss (Mục 8.1 — CLIR plan).
+        """Asymmetric BCE loss (Mục 8.1 — CLIR plan, chuẩn ASL Alibaba ICCV 2021).
 
         L_c(z, ĉ) = Σ r_ic [ĉ_ic · softplus(-z_ic)
-                             + (1-ĉ_ic) · (1-σ(z_ic))^γ- · softplus(z_ic)] / Σ r_ic
+                             + (1-ĉ_ic) · clamp(σ(z_ic) - m, 0)^γ- · softplus(z_ic)] / Σ r_ic
 
-        Với r_ic: positive_weight=1.0, negative_weight=0.15.
+        Với r_ic: positive_weight=1.0, negative_weight=0.15, m=0.05 (margin clipping), γ-=2.0.
 
         Args:
             logits:  [B, n_concepts]
@@ -523,10 +525,14 @@ class CLIRSkateFormer(nn.Module):
         targets = targets.float().clamp(0.0, 1.0)
         probs = torch.sigmoid(logits)
 
+        # Margin clipping m=0.05: Triệt tiêu 100% loss và gradient của easy negatives (p <= 0.05)
+        clip_m = getattr(self, "asymmetric_clip", 0.05)
+        p_m = torch.clamp(probs - clip_m, min=0.0)
+
         pos_loss = F.softplus(-logits) * targets
         neg_loss = (
             F.softplus(logits)
-            * (1.0 - probs).pow(self.gamma_neg)
+            * p_m.pow(self.gamma_neg)
             * (1.0 - targets)
         )
 

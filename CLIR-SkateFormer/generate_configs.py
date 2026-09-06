@@ -123,6 +123,7 @@ def build_config(
             "concept_negative_weight": 0.15,
             "concept_positive_weight": 1.0,
             "asymmetric_gamma_neg": 2.0,
+            "asymmetric_clip": 0.05,
             "return_aux": True,
             "random_feedback": random_feedback,
             "use_feature_bypass": use_feature_bypass,
