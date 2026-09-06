@@ -2,10 +2,10 @@ phase: train
 seed: 1
 work_dir: ./work_dir/ntu60_cs/CLIR_SkateFormer_j_A4_K2
 feeder: feeders.feeder_ntu.Feeder
-num_worker: 4
+num_worker: 0
 train_feeder_args:
-  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
-  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  data_path: D:\KLTN_Huy\thesis\data\ntu\NTU60_CS.npz
+  concepts_csv: D:\KLTN_Huy\thesis\CLIR-SkateFormer\concepts\ntu_rgbd_60_120.csv
   split: train
   window_size: 64
   thres: 64
@@ -20,8 +20,8 @@ train_feeder_args:
   inter_p: 0.2
   debug: false
 test_feeder_args:
-  data_path: /content/drive/MyDrive/KLTN/KLTN_Huy-Nhu/NTU60_CS_64f.npz
-  concepts_csv: ./concepts/ntu_rgbd_60_120.csv
+  data_path: D:\KLTN_Huy\thesis\data\ntu\NTU60_CS.npz
+  concepts_csv: D:\KLTN_Huy\thesis\CLIR-SkateFormer\concepts\ntu_rgbd_60_120.csv
   split: test
   window_size: 64
   thres: 64
@@ -40,7 +40,7 @@ model_args:
   num_people: 2
   num_points: 24
   num_frames: 64
-  backbone_weights: /content/ntu60_CS/SkateFormer_j.pt
+  backbone_weights: D:\KLTN_Huy\thesis\pretrained\ntu60_CSub\SkateFormer_j.pt
   num_loops: 2
   r1: 256
   r2a: 128
@@ -83,19 +83,20 @@ optimizer: AdamW
 base_lr: 0.0001
 min_lr: 1.0e-06
 warmup_lr: 1.0e-06
-warm_up_epoch: 10
+warm_up_epoch: 2
 warmup_prefix: false
 weight_decay: 0.05
 nesterov: true
 lr_scheduler: cosine
 grad_clip: true
 grad_max: 1.0
-batch_size: 32
-test_batch_size: 32
+batch_size: 64
+test_batch_size: 64
 num_epoch: 70
 start_epoch: 0
 loss_type: LSCE
 phase1_epochs: 0
+concept_warmup_epochs: 5
 backbone_lr_scale: 0.1
 crl_lr_scale: 1.0
 update_cell_lr_scale: 2.0

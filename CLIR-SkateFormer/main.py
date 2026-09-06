@@ -663,8 +663,45 @@ class Processor:
                 mode_desc = "Pure Soft" if getattr(self, "is_pure_soft", False) else "Phase 1 Warm-up"
                 self.print_log(f"[Stage 2: {mode_desc}] - Mode: 'soft' (Continuous Sigmoid), lambda_reg: {getattr(m, 'lambda_reg', 0.0)}")
 
+        # In các tham số thực tế đang được dùng ở đầu mỗi epoch để đối chiếu
+        # với file YAML/notebook.
+        m = self.model.module if hasattr(self.model, "module") else self.model
+        reasoner = getattr(m, "reasoner", None)
+        temperature = getattr(reasoner, "temperature", "n/a")
+        literal_mode = getattr(reasoner, "literal_mode", "n/a")
+        beta_text = "n/a"
+        if reasoner is not None and hasattr(reasoner, "get_betas"):
+            try:
+                beta_values = reasoner.get_betas().detach().cpu().tolist()
+                beta_text = ",".join(f"{b:.4f}" for b in beta_values)
+            except Exception:
+                beta_text = "unavailable"
+        lr_text = ", ".join(
+            f"{group.get('name', i)}={group['lr']:.3e}"
+            for i, group in enumerate(self.optimizer.param_groups)
+        )
+        self.print_log(
+            f"[Epoch Params] batch={self.arg.batch_size}, workers={self.arg.num_worker}, "
+            f"batches={len(self.data_loader['train'])}, stage={self.current_stage}, "
+            f"phase={self.current_training_phase}, mode={literal_mode}, T={temperature}, "
+            f"lambda_reg={getattr(m, 'lambda_reg', 'n/a')}, beta=[{beta_text}], "
+            f"LR=[{lr_text}]"
+        )
+
         loader = self.data_loader["train"]
         loss_values, metric_values = [], []
+        loss_component_values = {}
+
+        def track_loss(name, value):
+            """Lưu các loss scalar để in trung bình ở cuối epoch."""
+            if isinstance(value, torch.Tensor):
+                if value.numel() != 1:
+                    return
+                value = value.detach().item()
+            elif not isinstance(value, (int, float)):
+                return
+            loss_component_values.setdefault(name, []).append(float(value))
+
         metric_name = "c_acc" if is_stage1 else "acc"
         desc_stage = "Stage 1: Concept" if is_stage1 else "Stage 2: Action"
         process = tqdm(loader, desc=f"Epoch {epoch + 1} ({desc_stage})")
@@ -707,8 +744,14 @@ class Processor:
                     action_logits = output["action_logits"] if isinstance(output, dict) else output
                     total_loss = self.loss(action_logits, label)
 
-                if isinstance(output, dict) and "z_0" in output and concept_targets is not None:
-                    z_0 = output["z_0"]
+                # Model hiện trả về initial concept logits với key
+                # "initial_concept_logits" (không phải "z_0").
+                if isinstance(output, dict) and concept_targets is not None:
+                    z_0 = output.get("initial_concept_logits", output.get("z_0"))
+                else:
+                    z_0 = None
+
+                if z_0 is not None:
                     pred_c = (torch.sigmoid(z_0) > 0.5).float()
                     step_metric = torch.mean((pred_c == concept_targets).float()).item()
                 else:
@@ -722,6 +765,8 @@ class Processor:
                     main_loss = self.loss(action_logits, label)
                     aux_loss  = output.get("aux_loss", 0.0)
                     total_loss = main_loss + aux_loss
+                    track_loss("loss_main", main_loss)
+                    track_loss("aux_loss", aux_loss)
                 else:
                     action_logits = output
                     total_loss = self.loss(action_logits, label)
@@ -730,6 +775,15 @@ class Processor:
                 _, pred_label = torch.max(action_logits.data, 1)
                 step_metric = torch.mean((pred_label == label.data).float()).item()
                 process.set_postfix({"loss": f"{total_loss.item():.4f}", "acc": f"{step_metric * 100:.1f}%"})
+
+            track_loss("loss_total", total_loss)
+            if isinstance(output, dict):
+                for component_name in (
+                    "l_c_0", "l_c_K", "l_act_aux", "l_sup",
+                    "l_sparse", "l_stable", "l_reg",
+                ):
+                    if component_name in output:
+                        track_loss(component_name, output[component_name])
 
             # Backward
             self.optimizer.zero_grad()
@@ -761,16 +815,22 @@ class Processor:
         mean_loss = np.mean(loss_values)
         mean_metric = np.mean(metric_values) * 100.0
         cur_lr    = self.optimizer.param_groups[0]["lr"]
+        loss_details = " | ".join(
+            f"{name}={np.mean(values):.6f}"
+            for name, values in loss_component_values.items()
+        )
 
         if is_stage1:
             self.print_log(
                 f"\t[Stage 1: Concept Warm-up] Loss: {mean_loss:.4f} | "
-                f"Concept Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f}"
+                f"Concept Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f} | "
+                f"Loss details: {loss_details}"
             )
         else:
             self.print_log(
                 f"\t[Stage 2: Logic Reasoning] Phase={self.current_training_phase} | "
-                f"Loss: {mean_loss:.4f} | Action Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f}"
+                f"Loss: {mean_loss:.4f} | Action Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f} | "
+                f"Loss details: {loss_details}"
             )
 
         # Checkpoint
