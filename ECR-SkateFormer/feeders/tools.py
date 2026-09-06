@@ -9,8 +9,6 @@ import torch.nn.functional as F
 
 def valid_crop_resize(data_numpy, valid_frame_num, p_interval, window, thres):
     # input: C,T,V,M
-    if isinstance(p_interval, (int, float)):
-        p_interval = [p_interval]
     C, T, V, M = data_numpy.shape
     begin = 0
     end = valid_frame_num if valid_frame_num > 0 else T
@@ -48,8 +46,6 @@ def valid_crop_resize(data_numpy, valid_frame_num, p_interval, window, thres):
 
 def valid_crop_uniform(data_numpy, valid_frame_num, p_interval, window, thres):
     # input: C,T,V,M
-    if isinstance(p_interval, (int, float)):
-        p_interval = [p_interval]
     C, T, V, M = data_numpy.shape
     begin = 0
     end = valid_frame_num if valid_frame_num > 0 else T

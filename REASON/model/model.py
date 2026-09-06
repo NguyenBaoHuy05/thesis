@@ -18,8 +18,6 @@ from hgcn.hypergcn_large import Model
 from loralib.utils import apply_lora, mark_only_lora_as_trainable
 
 from model.multi_pos_clip import MultiPositiveClipLoss, MultiPositiveClipConfig
-from model.twowayloss import TwoWayLoss
-from model.losses import AsymmetricLoss, AsymmetricLossOptimized
 from model.crl.components import ConceptLogicLayers
 from model.ml_decoder import MLDecoder
 
@@ -121,7 +119,12 @@ class Text_Encoder(nn.Module):
         
         self.text_encoder[self.lora_args.backbone] = clip_model # text encoder that accepts tokenized text input
         if not self.full_finetune:
-            self.text_encoder.load_state_dict(torch.load(checkpoint_path, map_location=device))
+            if checkpoint_path is not None and os.path.isfile(checkpoint_path):
+                self.text_encoder.load_state_dict(torch.load(checkpoint_path, map_location=device))
+            else:
+                print(f" * No prior LoRA checkpoint found at '{checkpoint_path}'. Starting from vanilla "
+                      f"pretrained CLIP {self.lora_args.backbone} + freshly-initialized LoRA (LoRA B is "
+                      f"zero-init, so this is the standard LoRA starting point, per paper Table 4).")
         self.text_encoder.to(device)
         
         print(30*'-')
@@ -192,6 +195,7 @@ class SkeletonACL_CLIP_Logic(nn.Module):
         self.total_concepts = self.args.model_args['spatial_concepts'] + self.args.model_args['temporal_concepts']
         self.spatial_concepts = self.args.model_args['spatial_concepts']
         self.temporal_concepts = self.args.model_args['temporal_concepts']
+        self.num_actions = self.args.model_args['num_class']
         
         del self.args.model_args['spatial_concepts']
         del self.args.model_args['temporal_concepts']
@@ -235,7 +239,7 @@ class SkeletonACL_CLIP_Logic(nn.Module):
         # Logic layers - always created but only used after epoch 50
         self.logic_layers = ConceptLogicLayers(
             n_concepts=self.total_concepts,
-            n_actions=120,
+            n_actions=self.num_actions,
             l1_dim=self.logic_args.l1_dim,
             l2_dim=self.logic_args.l2_dim,
             use_not=self.logic_args.use_not,
@@ -266,11 +270,10 @@ class SkeletonACL_CLIP_Logic(nn.Module):
             
         print('L2 weight for logic layers:', self.logic_args.l2_weight)
     def _parse_prompts(self, batch_prompts_by_part):
+        # 'full_body' (52 body-part concepts + 1 interaction) + 'temporal' (21) = 74,
+        # matching concepts/ntu_rgbd_60_120.csv exactly (see spatial_concepts/
+        # temporal_concepts note in the config) - no null-placeholder prompts to drop here.
         all_prompts = batch_prompts_by_part['full_body'] + batch_prompts_by_part['temporal']
-        indices_to_remove = [50, 65] # 53
-
-        for i in sorted(indices_to_remove, reverse=True):
-            all_prompts.pop(i)
         return all_prompts
 
     # def update_temperature(self, epoch, total_epochs):

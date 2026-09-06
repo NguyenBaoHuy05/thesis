@@ -1,0 +1,104 @@
+# Configuration: NTU60 Bone + grouped-DNF logic-only training
+
+# Model Architecture
+model_args:
+  backbone_name: "skateformer"
+  backbone_cfg:
+    in_channels: 3
+    num_classes: 60
+    num_points: 24
+    num_people: 2
+    num_frames: 64
+    depths: [2, 2, 2, 2]
+    # Matches SkateFormer_j.pt: stem/stages use 96 -> 192 -> 192 -> 192.
+    channels: [96, 192, 192, 192]
+    num_heads: 32
+    type_1_size: [8, 8]
+    type_2_size: [8, 12]
+    type_3_size: [8, 8]
+    type_4_size: [8, 12]
+    mlp_ratio: 4.0
+    drop_path: 0.2
+    attn_drop: 0.0
+    drop: 0.0
+  pretrained_backbone: pretrained\ntu60_CSub\SkateFormer_b.pt  # Optional: path to pretrained weights e.g. "checkpoints/skateformer_pretrained.pt"
+  freeze_backbone: false     # Set to true if you only want to train Concept heads + Logic rules
+  num_classes: 60
+  concepts_csv: "concepts/ntu_rgbd_60_120.csv"
+  num_rules: 128
+  use_not_logic: true
+  grouped_logic: true
+  local_rules_per_group: 4
+  cross_group_rules: 32
+  use_clip_alignment: true
+  clip_backbone: "ViT-B/32"
+  lora_r: 4
+  concept_decoder_dim: 256
+  concept_decoder_heads: 8
+  concept_decoder_layers: 1
+  concept_queries_per_group: 4
+  loss_weights:
+    final_ce: 1.0
+    concept_bce: 1.0
+    clip: 0.2
+    kg: 0.1
+    logic_reg: 0.01
+
+# Dataset & Feeding
+feeder: feeders.feeder_ntu.NTUFeeder
+train_feeder_args:
+  data_path: 'D:\KLTN_Huy-Nhu\CTR-GCN\data\ntu\NTU60_CS.npz'
+  split: "train"
+  data_type: "b"
+  window_size: 64
+  p_interval: [0.5, 1.0]
+  bone: false
+  vel: false
+  random_rot: true
+  random_move: true
+  spatial_flip: true
+  partition: true
+  concepts_csv: "concepts/ntu_rgbd_60_120.csv"
+  num_classes: 60
+  debug: false
+
+test_feeder_args:
+  data_path: 'D:\KLTN_Huy-Nhu\CTR-GCN\data\ntu\NTU60_CS.npz'
+  split: "test"
+  data_type: "b"
+  window_size: 64
+  p_interval: [1.0]
+  bone: false
+  vel: false
+  random_rot: false
+  random_move: false
+  spatial_flip: false
+  partition: true
+  concepts_csv: "concepts/ntu_rgbd_60_120.csv"
+  num_classes: 60
+  debug: false
+
+# Training Optimization
+batch_size: 64
+test_batch_size: 64
+num_worker: 0
+base_lr: 0.001
+weight_decay: 0.0005
+staged_training: true
+semantic_epochs: 5
+symbolic_epochs: 5
+e2e_epochs: 100
+num_epoch: 110
+warmup_epochs: 5
+semantic_head_lr: 0.0001
+semantic_backbone_lr: 0.000005
+semantic_clip_lr: 0.00001
+symbolic_lr: 0.0001
+e2e_head_lr: 0.0001
+e2e_backbone_lr: 0.00001
+e2e_clip_lr: 0.00001
+lr_decay_rate: 0.1
+step: [45, 65, 80]
+save_interval: 10
+eval_interval: 1
+work_dir: "./work_dir/ntu60_skateformer_logic_b_grouped"

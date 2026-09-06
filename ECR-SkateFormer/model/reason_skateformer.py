@@ -116,8 +116,6 @@ class KGPrimedReasoner(nn.Module):
                     "action_prototypes are required when action_mode='prototype'"
                 )
             prototypes = torch.as_tensor(action_prototypes, dtype=torch.float32)
-            if prototypes.shape[0] > self.n_actions:
-                prototypes = prototypes[:self.n_actions]
             if prototypes.shape != (self.n_actions, self.n_concepts):
                 raise ValueError(
                     "action_prototypes must have shape "

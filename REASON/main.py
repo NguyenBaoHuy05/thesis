@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 import os
+import sys
+import functools
+import argparse
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
 
 os.chdir(os.path.dirname(__file__))
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -43,10 +50,29 @@ def init_seed(seed):
     torch.backends.cudnn.benchmark = True
 
 
+def _seed_worker(worker_id, seed=1):
+    # Must be a module-level function (not a lambda/closure) so it is
+    # picklable when DataLoader spawns worker processes on Windows.
+    init_seed(seed)
+
+
+def _set_batchnorm_eval(module):
+    """Keep pretrained GCN BatchNorm statistics fixed during fine-tuning.
+
+    The training metric was high with per-batch statistics but collapsed in
+    ``model.eval()``.  Freezing the running statistics makes train/eval use
+    the same feature normalization while retaining trainable affine weights.
+    """
+    if isinstance(module, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d, torch.nn.BatchNorm3d)):
+        module.eval()
+
+
 class Trainer:
-    def __init__(self, config_path):
+    def __init__(self, config_path, weights_path=None):
         with open(config_path, 'r') as f:
             self.args = yaml.safe_load(f)
+        if weights_path:
+            self.args['weights'] = weights_path
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         init_seed(self.args.get('seed', 1))
@@ -56,31 +82,64 @@ class Trainer:
 
         # dataloaders
         self.data_loader = {}
+        train_dataset = Feeder(**self.args['train_feeder_args'])
         self.data_loader['train'] = torch.utils.data.DataLoader(
-            dataset=Feeder(**self.args['train_feeder_args']),
+            dataset=train_dataset,
             batch_size=self.args['batch_size'],
             shuffle=True,
             num_workers=self.args['num_worker'],
             drop_last=True,
-            collate_fn=custom_collate_fn,
-            worker_init_fn=lambda _: init_seed(self.args.get('seed', 1)),
+            collate_fn=functools.partial(custom_collate_fn, dataset=train_dataset),
+            worker_init_fn=functools.partial(_seed_worker, seed=self.args.get('seed', 1)),
             pin_memory=True,
-            persistent_workers=True if self.args['num_worker'] > 0 else False
+            persistent_workers=True if self.args['num_worker'] > 0 else False,
+            prefetch_factor=4 if self.args['num_worker'] > 0 else None
         )
+        test_dataset = Feeder(**self.args['test_feeder_args'])
         self.data_loader['test'] = torch.utils.data.DataLoader(
-            dataset=Feeder(**self.args['test_feeder_args']),
+            dataset=test_dataset,
             batch_size=self.args['test_batch_size'],
             shuffle=False,
             num_workers=self.args['num_worker'],
             drop_last=False,
-            collate_fn=custom_collate_fn,
-            worker_init_fn=lambda _: init_seed(self.args.get('seed', 1)),
+            collate_fn=functools.partial(custom_collate_fn, dataset=test_dataset),
+            worker_init_fn=functools.partial(_seed_worker, seed=self.args.get('seed', 1)),
             pin_memory=True,
-            persistent_workers=True if self.args['num_worker'] > 0 else False
+            persistent_workers=True if self.args['num_worker'] > 0 else False,
+            prefetch_factor=4 if self.args['num_worker'] > 0 else None
         )
 
         # model
         self.model = SkeletonACL_CLIP_Logic(self.args, self.device).to(self.device)
+        self.freeze_backbone_bn = self.args.get('freeze_backbone_bn', True)
+        self.resume_checkpoint = None
+        checkpoint_epoch = None
+        weights_path = self.args.get('weights')
+        if weights_path:
+            weights_path = os.path.abspath(os.fspath(weights_path))
+            if not os.path.isfile(weights_path):
+                raise FileNotFoundError(f"Checkpoint not found: {weights_path}")
+
+            self.resume_checkpoint = torch.load(weights_path, map_location='cpu')
+            state_dict = self.resume_checkpoint.get('model_state', self.resume_checkpoint)
+
+            # The previous run had a large train/eval gap. Do not restore BN
+            # running statistics from that run; the pretrained GCN statistics
+            # loaded by GCN_Encoder are retained instead.
+            state_dict = {
+                key: value for key, value in state_dict.items()
+                if not key.endswith(('running_mean', 'running_var', 'num_batches_tracked'))
+            }
+            missing, unexpected = self.model.load_state_dict(state_dict, strict=False)
+            print(f"Loaded checkpoint: {weights_path}")
+            print(f"Skipped/restored keys: missing={len(missing)}, unexpected={len(unexpected)}")
+
+            checkpoint_epoch = self.resume_checkpoint.get('epoch')
+            if checkpoint_epoch is not None:
+                self.args['start_epoch'] = max(
+                    int(self.args.get('start_epoch', 0)), int(checkpoint_epoch) + 1
+                )
+            self.args['weights'] = weights_path
         '''
         NEW
         '''
@@ -142,6 +201,21 @@ class Trainer:
             logic_lr_type=self.logic_lr_type
         )
         self.optimizer, self.scheduler = opt_sched.optimizer, opt_sched.scheduler
+
+        # Newer checkpoints contain optimizer/scheduler state. Older files in
+        # this workspace do not, so they resume model weights only.
+        if self.resume_checkpoint is not None:
+            if self.resume_checkpoint.get('optimizer_state') is not None:
+                self.optimizer.load_state_dict(self.resume_checkpoint['optimizer_state'])
+            if self.resume_checkpoint.get('scheduler_state') is not None:
+                self.scheduler.load_state_dict(self.resume_checkpoint['scheduler_state'])
+            elif checkpoint_epoch is not None:
+                # Old checkpoints saved only model_state. Advance the new
+                # scheduler to the checkpoint position instead of restarting
+                # its OneCycle schedule from epoch zero.
+                resume_steps = (int(checkpoint_epoch) + 1) * self.steps_per_epoch
+                for _ in range(resume_steps):
+                    self.scheduler.step()
         
         # mixed precision scaler
         self.scaler = torch.cuda.amp.GradScaler(enabled=self.args.get('use_amp', True))
@@ -191,10 +265,14 @@ class Trainer:
     
     def init_metrics(self):
         """Initialize TorchMetrics for tracking accuracy."""
-        model_args = self.args.get('model_args', {})
-        self.num_actions = 120  # NTU-120
-        self.num_spatial = int(model_args.get('spatial_concepts', 52))
-        self.num_temporal = int(model_args.get('temporal_concepts', 26))
+        # NOTE: SkeletonACL_CLIP_Logic.__init__ pops 'spatial_concepts'/'temporal_concepts'
+        # out of the shared model_args dict (self.args['model_args'] here is the *same*
+        # dict object), so by the time this runs those keys are gone and reading them
+        # from self.args would silently fall back to stale defaults. Read the resolved
+        # values back off the already-constructed model instead.
+        self.num_actions = int(self.model.num_actions)
+        self.num_spatial = int(self.model.spatial_concepts)
+        self.num_temporal = int(self.model.temporal_concepts)
 
         # Action metrics
         self.train_action_acc = Accuracy(task='multiclass', num_classes=self.num_actions).to(self.device)
@@ -243,6 +321,10 @@ class Trainer:
     def train_epoch(self, epoch):
         """Train for one epoch with mixed precision."""
         self.model.train()
+        if self.freeze_backbone_bn:
+            # model.train() recursively switches BatchNorm back to train mode,
+            # so apply this after model.train() at the start of every epoch.
+            self.model.skeleton_model.apply(_set_batchnorm_eval)
         self.reset_train_metrics()
             
         epoch_loss = 0.0
@@ -260,10 +342,10 @@ class Trainer:
         )
         
         for step, (batch_data, batch_label, batch_concept_vecs, batch_prompts) in pbar:
-            batch_data = batch_data.to(self.device)
-            batch_label = batch_label.to(self.device)
-            s_trgt = batch_concept_vecs['full_body'].to(self.device)
-            t_trgt = batch_concept_vecs['temporal'].to(self.device)
+            batch_data = batch_data.to(self.device, non_blocking=True)
+            batch_label = batch_label.to(self.device, non_blocking=True)
+            s_trgt = batch_concept_vecs['full_body'].to(self.device, non_blocking=True)
+            t_trgt = batch_concept_vecs['temporal'].to(self.device, non_blocking=True)
 
             # if step == 0:
             #     self.model.update_temperature(epoch, self.num_epochs)
@@ -454,10 +536,10 @@ class Trainer:
         )
         
         for batch_data, batch_label, batch_concept_vecs, batch_prompts in pbar:
-            batch_data = batch_data.to(self.device)
-            batch_label = batch_label.to(self.device)
-            s_trgt = batch_concept_vecs['full_body'].to(self.device)
-            t_trgt = batch_concept_vecs['temporal'].to(self.device)
+            batch_data = batch_data.to(self.device, non_blocking=True)
+            batch_label = batch_label.to(self.device, non_blocking=True)
+            s_trgt = batch_concept_vecs['full_body'].to(self.device, non_blocking=True)
+            t_trgt = batch_concept_vecs['temporal'].to(self.device, non_blocking=True)
 
             with torch.cuda.amp.autocast(enabled=self.args.get('use_amp', True)):
                 with torch.inference_mode():
@@ -542,8 +624,8 @@ class Trainer:
         torch.save({
             'epoch': epoch,
             'model_state': self.model.state_dict(),
-            # 'optimizer_state': self.optimizer.state_dict(),
-            # 'scheduler_state': self.scheduler.state_dict(),
+            'optimizer_state': self.optimizer.state_dict(),
+            'scheduler_state': self.scheduler.state_dict(),
         }, ckpt)
         
         if is_best:
@@ -551,8 +633,8 @@ class Trainer:
             torch.save({
                 'epoch': epoch,
                 'model_state': self.model.state_dict(),
-                # 'optimizer_state': self.optimizer.state_dict(),
-                # 'scheduler_state': self.scheduler.state_dict(),
+                'optimizer_state': self.optimizer.state_dict(),
+                'scheduler_state': self.scheduler.state_dict(),
                 'best_acc': self.best_acc,
                 'best_epoch': self.best_epoch
             }, best_path)
@@ -610,11 +692,28 @@ class Trainer:
 
 def main():
     """Main entry point."""
-    cfg = os.path.join(os.path.dirname(__file__), 'config', 'xset', 'config_skeleton_crl_jm.yaml')
+    default_cfg = os.path.join(
+        os.path.dirname(__file__),
+        'config', 'nturgbd-cross-subject',
+        'config_skeleton_crl_joint_local.yaml'
+    )
+    parser = argparse.ArgumentParser(description='Train REASON skeleton action model')
+    parser.add_argument(
+        '--config',
+        default=default_cfg,
+        help='Path to a YAML configuration file'
+    )
+    parser.add_argument(
+        '--weights',
+        default=None,
+        help='Optional checkpoint to resume from'
+    )
+    cli_args = parser.parse_args()
+    cfg = os.path.abspath(cli_args.config)
     print(30*'=')
     print(f"Using config file: {cfg}")
     print(30*'~')
-    trainer = Trainer(cfg)
+    trainer = Trainer(cfg, weights_path=cli_args.weights)
     trainer.train()
 
 if __name__ == '__main__':

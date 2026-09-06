@@ -10,7 +10,8 @@ class Feeder(Dataset):
     def __init__(self, data_path, label_path=None, p_interval=1, split='train', data_type='j',
                  aug_method='z', intra_p=0.5, inter_p=0.0, window_size=-1,
                  debug=False, thres=64, uniform=False, partition=False,
-                 concepts_csv=None, remove_null_concept=True):
+                 concepts_csv=None, remove_null_concept=True,
+                 concept_num_classes=None):
 
         self.debug = debug
         self.data_path = data_path
@@ -27,6 +28,7 @@ class Feeder(Dataset):
         self.partition = partition
         self.concepts_csv = concepts_csv
         self.remove_null_concept = remove_null_concept
+        self.concept_num_classes = concept_num_classes
         self.load_data()
         self.concept_matrix = None
         self.concept_names = None
@@ -49,6 +51,18 @@ class Feeder(Dataset):
 
         if not rows or 'action_class' not in rows[0]:
             raise ValueError(f'Invalid concepts CSV: {self.concepts_csv}')
+
+        # The shared NTU concept file contains NTU-60 followed by NTU-120's
+        # additional actions. Select the requested class prefix so the
+        # prototype matrix matches the model's number of output classes.
+        if self.concept_num_classes is not None:
+            class_count = int(self.concept_num_classes)
+            if class_count <= 0 or len(rows) < class_count:
+                raise ValueError(
+                    f'Invalid concept_num_classes={class_count} for '
+                    f'{len(rows)} concept rows'
+                )
+            rows = rows[:class_count]
 
         names = [name for name in rows[0].keys() if name != 'action_class']
         # Keep the same 72-label ordering used by REASON.  These are the two

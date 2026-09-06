@@ -127,3 +127,5 @@ python main.py --config config/test/ntu120_csub/test_LCR_SkateFormer_j.yaml --sa
 | **L5** | LCR-SkateFormer ($K=2$, Unshared) | Shared vs independent parameters |
 | **L6** | LCR-SkateFormer (No KG prior) | Measure contribution of KG priming |
 | **L7** | LCR-SkateFormer (No concept update $\beta=0$) | Prove necessity of concept refinement |
+
+
