@@ -53,7 +53,7 @@ model_args:
   dropout: 0.1
   lambda_sup: 1.0
   lambda_reg: 0.005
-  concept_negative_weight: 0.15
+  concept_negative_weight: 1.0
   concept_positive_weight: 1.0
   asymmetric_gamma_neg: 2.0
   asymmetric_clip: 0.05
@@ -97,6 +97,7 @@ start_epoch: 0
 loss_type: LSCE
 phase1_epochs: 0
 concept_warmup_epochs: 5
+concept_threshold: 0.5
 backbone_lr_scale: 0.1
 crl_lr_scale: 1.0
 update_cell_lr_scale: 2.0

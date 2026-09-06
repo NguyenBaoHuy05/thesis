@@ -220,6 +220,10 @@ def get_parser():
         "--concept-warmup-epochs", type=int, default=0,
         help="Number of epochs for Stage 1 Concept Warm-up (0 = disabled, >0 = freeze reasoner and train concept heads only)"
     )
+    parser.add_argument(
+        "--concept-threshold", type=float, default=0.5,
+        help="Sigmoid threshold used for concept Precision/Recall/F1 logging"
+    )
 
     return parser
 
@@ -685,6 +689,7 @@ class Processor:
             f"batches={len(self.data_loader['train'])}, stage={self.current_stage}, "
             f"phase={self.current_training_phase}, mode={literal_mode}, T={temperature}, "
             f"lambda_reg={getattr(m, 'lambda_reg', 'n/a')}, beta=[{beta_text}], "
+            f"concept_threshold={getattr(self.arg, 'concept_threshold', 0.5):.2f}, "
             f"LR=[{lr_text}]"
         )
 
@@ -702,9 +707,43 @@ class Processor:
                 return
             loss_component_values.setdefault(name, []).append(float(value))
 
-        metric_name = "c_acc" if is_stage1 else "acc"
+        metric_name = "c_f1" if is_stage1 else "acc"
+        concept_threshold = float(getattr(self.arg, "concept_threshold", 0.5))
+        if not 0.0 <= concept_threshold <= 1.0:
+            raise ValueError(f"concept_threshold must be in [0, 1], got {concept_threshold}")
         desc_stage = "Stage 1: Concept" if is_stage1 else "Stage 2: Action"
         process = tqdm(loader, desc=f"Epoch {epoch + 1} ({desc_stage})")
+
+        # Stage 1 concept metrics are accumulated globally over the epoch.
+        # Macro metrics are reported over concepts with at least one positive
+        # target, avoiding the distortion from concepts absent in the split.
+        if is_stage1:
+            concept_tp = None
+            concept_fp = None
+            concept_fn = None
+
+        def concept_prf(tp, fp, fn):
+            precision = np.divide(
+                tp, tp + fp, out=np.zeros_like(tp, dtype=float), where=(tp + fp) != 0
+            )
+            recall = np.divide(
+                tp, tp + fn, out=np.zeros_like(tp, dtype=float), where=(tp + fn) != 0
+            )
+            f1 = np.divide(
+                2.0 * precision * recall,
+                precision + recall,
+                out=np.zeros_like(precision),
+                where=(precision + recall) != 0,
+            )
+            supported = (tp + fn) > 0
+            if np.any(supported):
+                return (
+                    float(precision[supported].mean()),
+                    float(recall[supported].mean()),
+                    float(f1[supported].mean()),
+                    int(supported.sum()),
+                )
+            return 0.0, 0.0, 0.0, 0
 
         for batch_idx, batch in enumerate(process):
             if len(batch) == 5:
@@ -752,12 +791,33 @@ class Processor:
                     z_0 = None
 
                 if z_0 is not None:
-                    pred_c = (torch.sigmoid(z_0) > 0.5).float()
-                    step_metric = torch.mean((pred_c == concept_targets).float()).item()
+                    pred_c = (torch.sigmoid(z_0) >= concept_threshold)
+                    target_c = (concept_targets >= 0.5)
+                    if concept_tp is None:
+                        n_concepts = target_c.shape[1]
+                        concept_tp = np.zeros(n_concepts, dtype=np.float64)
+                        concept_fp = np.zeros(n_concepts, dtype=np.float64)
+                        concept_fn = np.zeros(n_concepts, dtype=np.float64)
+                    pred_np = pred_c.detach().cpu().numpy()
+                    target_np = target_c.detach().cpu().numpy()
+                    concept_tp += np.sum(pred_np & target_np, axis=0)
+                    concept_fp += np.sum(pred_np & ~target_np, axis=0)
+                    concept_fn += np.sum(~pred_np & target_np, axis=0)
+                    c_precision, c_recall, c_f1, c_supported = concept_prf(
+                        concept_tp, concept_fp, concept_fn
+                    )
+                    step_metric = c_f1
                 else:
+                    c_precision = c_recall = c_f1 = 0.0
+                    c_supported = 0
                     step_metric = 0.0
 
-                process.set_postfix({"c_loss": f"{total_loss.item():.4f}", "c_acc": f"{step_metric * 100:.1f}%"})
+                process.set_postfix({
+                    "c_loss": f"{total_loss.item():.4f}",
+                    "c_f1": f"{c_f1 * 100:.1f}%",
+                    "c_p": f"{c_precision * 100:.1f}%",
+                    "c_r": f"{c_recall * 100:.1f}%",
+                })
             else:
                 # Stage 2: Tối ưu toàn bộ mô hình (Action CE + Aux Loss)
                 if isinstance(output, dict):
@@ -800,6 +860,9 @@ class Processor:
 
             self.train_writer.add_scalar(f"train/{metric_name}", step_metric, self.global_step)
             self.train_writer.add_scalar(f"train/{'c_loss' if is_stage1 else 'loss'}", total_loss.item(), self.global_step)
+            if is_stage1:
+                self.train_writer.add_scalar("train/concept_precision", c_precision, self.global_step)
+                self.train_writer.add_scalar("train/concept_recall", c_recall, self.global_step)
 
             # Log loss components
             if isinstance(output, dict) and batch_idx % self.arg.log_interval == 0:
@@ -821,9 +884,19 @@ class Processor:
         )
 
         if is_stage1:
+            if concept_tp is not None:
+                concept_precision, concept_recall, concept_f1, concept_supported = concept_prf(
+                    concept_tp, concept_fp, concept_fn
+                )
+            else:
+                concept_precision = concept_recall = concept_f1 = 0.0
+                concept_supported = 0
             self.print_log(
                 f"\t[Stage 1: Concept Warm-up] Loss: {mean_loss:.4f} | "
-                f"Concept Acc: {mean_metric:.2f}% | LR: {cur_lr:.6f} | "
+                f"Concept F1 (macro): {concept_f1 * 100:.2f}% | "
+                f"Precision: {concept_precision * 100:.2f}% | "
+                f"Recall: {concept_recall * 100:.2f}% | "
+                f"Supported: {concept_supported} | LR: {cur_lr:.6f} | "
                 f"Loss details: {loss_details}"
             )
         else:

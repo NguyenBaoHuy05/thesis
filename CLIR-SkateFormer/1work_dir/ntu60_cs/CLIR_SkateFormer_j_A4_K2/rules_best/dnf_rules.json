@@ -1,0 +1,6152 @@
+[
+  {
+    "action_name": "drink_water",
+    "action_idx": 0,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 133,
+        "l1_components": [
+          {
+            "l1_rule_idx": 133,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26383185386657715
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 200,
+        "l1_components": [
+          {
+            "l1_rule_idx": 200,
+            "literals": [
+              [
+                "leg_squat",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "hand_grasp",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26151543855667114
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 227,
+        "l1_components": [
+          {
+            "l1_rule_idx": 227,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "foot_step",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24450889229774475
+      }
+    ]
+  },
+  {
+    "action_name": "eat_meal",
+    "action_idx": 1,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 68,
+        "l1_components": [
+          {
+            "l1_rule_idx": 68,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2629713714122772
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 219,
+        "l1_components": [
+          {
+            "l1_rule_idx": 219,
+            "literals": [
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21870292723178864
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 217,
+        "l1_components": [
+          {
+            "l1_rule_idx": 217,
+            "literals": [
+              [
+                "hip_bend",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21478594839572906
+      }
+    ]
+  },
+  {
+    "action_name": "brush_teeth",
+    "action_idx": 2,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 242,
+        "l1_components": [
+          {
+            "l1_rule_idx": 242,
+            "literals": [
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2807583808898926
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 20,
+        "l1_components": [
+          {
+            "l1_rule_idx": 20,
+            "literals": [
+              [
+                "temporal_sequence_seq_alternating",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24348720908164978
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 37,
+        "l1_components": [
+          {
+            "l1_rule_idx": 37,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "head_static",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23637843132019043
+      }
+    ]
+  },
+  {
+    "action_name": "brush_hair",
+    "action_idx": 3,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 16,
+        "l1_components": [
+          {
+            "l1_rule_idx": 16,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2878488600254059
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 74,
+        "l1_components": [
+          {
+            "l1_rule_idx": 74,
+            "literals": [
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26617372035980225
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 60,
+        "l1_components": [
+          {
+            "l1_rule_idx": 60,
+            "literals": [
+              [
+                "leg_alternating",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26431721448898315
+      }
+    ]
+  },
+  {
+    "action_name": "drop",
+    "action_idx": 4,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 218,
+        "l1_components": [
+          {
+            "l1_rule_idx": 218,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21911397576332092
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 203,
+        "l1_components": [
+          {
+            "l1_rule_idx": 203,
+            "literals": [
+              [
+                "temporal_dynamics_speed_slow",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21500727534294128
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 89,
+        "l1_components": [
+          {
+            "l1_rule_idx": 89,
+            "literals": [
+              [
+                "leg_static_sit",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21218900382518768
+      }
+    ]
+  },
+  {
+    "action_name": "pick_up",
+    "action_idx": 5,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 93,
+        "l1_components": [
+          {
+            "l1_rule_idx": 93,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21560953557491302
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 162,
+        "l1_components": [
+          {
+            "l1_rule_idx": 162,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.1888064742088318
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 84,
+        "l1_components": [
+          {
+            "l1_rule_idx": 84,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.1831279695034027
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 116,
+        "l1_components": [
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 79,
+            "literals": [
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 184,
+            "literals": [
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05399622023105621
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 51,
+        "l1_components": [
+          {
+            "l1_rule_idx": 104,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 186,
+            "literals": [
+              [
+                "foot_jump",
+                false
+              ],
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.051276884973049164
+      }
+    ]
+  },
+  {
+    "action_name": "throw",
+    "action_idx": 6,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 169,
+        "l1_components": [
+          {
+            "l1_rule_idx": 169,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_backward",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25650346279144287
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 147,
+        "l1_components": [
+          {
+            "l1_rule_idx": 147,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24693381786346436
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 202,
+        "l1_components": [
+          {
+            "l1_rule_idx": 202,
+            "literals": [
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24404428899288177
+      }
+    ]
+  },
+  {
+    "action_name": "sit_down",
+    "action_idx": 7,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 225,
+        "l1_components": [
+          {
+            "l1_rule_idx": 225,
+            "literals": [
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                true
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2575260400772095
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 105,
+        "l1_components": [
+          {
+            "l1_rule_idx": 105,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.252036988735199
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 6,
+        "l1_components": [
+          {
+            "l1_rule_idx": 6,
+            "literals": [
+              [
+                "interaction_two_person",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24080155789852142
+      }
+    ]
+  },
+  {
+    "action_name": "stand_up",
+    "action_idx": 8,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 253,
+        "l1_components": [
+          {
+            "l1_rule_idx": 253,
+            "literals": [
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3324815630912781
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 44,
+        "l1_components": [
+          {
+            "l1_rule_idx": 44,
+            "literals": [
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27848222851753235
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 164,
+        "l1_components": [
+          {
+            "l1_rule_idx": 164,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                true
+              ],
+              [
+                "arm_raise",
+                true
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "foot_slide",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26580607891082764
+      }
+    ]
+  },
+  {
+    "action_name": "clapping",
+    "action_idx": 9,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 202,
+        "l1_components": [
+          {
+            "l1_rule_idx": 202,
+            "literals": [
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.20629005134105682
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 95,
+        "l1_components": [
+          {
+            "l1_rule_idx": 95,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19739416241645813
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 197,
+        "l1_components": [
+          {
+            "l1_rule_idx": 197,
+            "literals": [
+              [
+                "temporal_sequence_seq_legs_first",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_alternating",
+                false
+              ],
+              [
+                "hip_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.18714989721775055
+      }
+    ]
+  },
+  {
+    "action_name": "reading",
+    "action_idx": 10,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 106,
+        "l1_components": [
+          {
+            "l1_rule_idx": 106,
+            "literals": [
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "leg_static_sit",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hip_rotate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2654266953468323
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 228,
+        "l1_components": [
+          {
+            "l1_rule_idx": 228,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "head_shake",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2623140513896942
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 119,
+        "l1_components": [
+          {
+            "l1_rule_idx": 119,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26039308309555054
+      }
+    ]
+  },
+  {
+    "action_name": "writing",
+    "action_idx": 11,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 228,
+        "l1_components": [
+          {
+            "l1_rule_idx": 228,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "head_shake",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2582201659679413
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 119,
+        "l1_components": [
+          {
+            "l1_rule_idx": 119,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2563183605670929
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 106,
+        "l1_components": [
+          {
+            "l1_rule_idx": 106,
+            "literals": [
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "leg_static_sit",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hip_rotate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24374112486839294
+      }
+    ]
+  },
+  {
+    "action_name": "tear_up_paper",
+    "action_idx": 12,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 229,
+        "l1_components": [
+          {
+            "l1_rule_idx": 229,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2888535261154175
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 69,
+        "l1_components": [
+          {
+            "l1_rule_idx": 69,
+            "literals": [
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "arm_overhead",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2630152106285095
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 209,
+        "l1_components": [
+          {
+            "l1_rule_idx": 209,
+            "literals": [
+              [
+                "leg_static_sit",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22128872573375702
+      }
+    ]
+  },
+  {
+    "action_name": "put_on_jacket",
+    "action_idx": 13,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 26,
+        "l1_components": [
+          {
+            "l1_rule_idx": 26,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2408255934715271
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 139,
+        "l1_components": [
+          {
+            "l1_rule_idx": 139,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22684450447559357
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 96,
+        "l1_components": [
+          {
+            "l1_rule_idx": 96,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "arm_raise",
+                true
+              ],
+              [
+                "temporal_dynamics_speed_decelerating",
+                false
+              ],
+              [
+                "interaction_two_person",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21861028671264648
+      }
+    ]
+  },
+  {
+    "action_name": "take_off_jacket",
+    "action_idx": 14,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 227,
+        "l1_components": [
+          {
+            "l1_rule_idx": 227,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "foot_step",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23635920882225037
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 230,
+        "l1_components": [
+          {
+            "l1_rule_idx": 230,
+            "literals": [
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "head_shake",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22836148738861084
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 10,
+        "l1_components": [
+          {
+            "l1_rule_idx": 10,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22510330379009247
+      }
+    ]
+  },
+  {
+    "action_name": "put_on_a_shoe",
+    "action_idx": 15,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 151,
+        "l1_components": [
+          {
+            "l1_rule_idx": 151,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23245647549629211
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 232,
+        "l1_components": [
+          {
+            "l1_rule_idx": 232,
+            "literals": [
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21806178987026215
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 54,
+        "l1_components": [
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21331942081451416
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 96,
+        "l1_components": [
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 66,
+            "literals": [
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ],
+              [
+                "hand_open",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 101,
+            "literals": [
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.052138201892375946
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 22,
+        "l1_components": [
+          {
+            "l1_rule_idx": 53,
+            "literals": [
+              [
+                "arm_cross",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 95,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 144,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05130978673696518
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 86,
+        "l1_components": [
+          {
+            "l1_rule_idx": 20,
+            "literals": [
+              [
+                "temporal_sequence_seq_alternating",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05113236606121063
+      }
+    ]
+  },
+  {
+    "action_name": "take_off_a_shoe",
+    "action_idx": 16,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 232,
+        "l1_components": [
+          {
+            "l1_rule_idx": 232,
+            "literals": [
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2760293483734131
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 151,
+        "l1_components": [
+          {
+            "l1_rule_idx": 151,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26015475392341614
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 162,
+        "l1_components": [
+          {
+            "l1_rule_idx": 162,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24785958230495453
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 78,
+        "l1_components": [
+          {
+            "l1_rule_idx": 91,
+            "literals": [
+              [
+                "arm_cross",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 220,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05815315619111061
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 11,
+        "l1_components": [
+          {
+            "l1_rule_idx": 16,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.0540313720703125
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 6,
+        "l1_components": [
+          {
+            "l1_rule_idx": 97,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05401824042201042
+      }
+    ]
+  },
+  {
+    "action_name": "put_on_glasses",
+    "action_idx": 17,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 152,
+        "l1_components": [
+          {
+            "l1_rule_idx": 152,
+            "literals": [
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "interaction_two_person",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2798300087451935
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 253,
+        "l1_components": [
+          {
+            "l1_rule_idx": 253,
+            "literals": [
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2760046124458313
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 49,
+        "l1_components": [
+          {
+            "l1_rule_idx": 49,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_decelerating",
+                false
+              ],
+              [
+                "hand_fist",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27341556549072266
+      }
+    ]
+  },
+  {
+    "action_name": "take_off_glasses",
+    "action_idx": 18,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 152,
+        "l1_components": [
+          {
+            "l1_rule_idx": 152,
+            "literals": [
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "interaction_two_person",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25688353180885315
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 80,
+        "l1_components": [
+          {
+            "l1_rule_idx": 80,
+            "literals": [
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ],
+              [
+                "foot_step",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24111710488796234
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 107,
+        "l1_components": [
+          {
+            "l1_rule_idx": 107,
+            "literals": [
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2345665991306305
+      }
+    ]
+  },
+  {
+    "action_name": "put_on_a_hat_cap",
+    "action_idx": 19,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 243,
+        "l1_components": [
+          {
+            "l1_rule_idx": 243,
+            "literals": [
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23306813836097717
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 57,
+        "l1_components": [
+          {
+            "l1_rule_idx": 57,
+            "literals": [
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22303448617458344
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 37,
+        "l1_components": [
+          {
+            "l1_rule_idx": 37,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "head_static",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2190815955400467
+      }
+    ]
+  },
+  {
+    "action_name": "take_off_a_hat_cap",
+    "action_idx": 20,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 71,
+        "l1_components": [
+          {
+            "l1_rule_idx": 71,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "arm_raise",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22865623235702515
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 123,
+        "l1_components": [
+          {
+            "l1_rule_idx": 123,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.18971066176891327
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 57,
+        "l1_components": [
+          {
+            "l1_rule_idx": 57,
+            "literals": [
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.17880618572235107
+      }
+    ]
+  },
+  {
+    "action_name": "cheer_up",
+    "action_idx": 21,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 244,
+        "l1_components": [
+          {
+            "l1_rule_idx": 244,
+            "literals": [
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_decelerating",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.29746487736701965
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 71,
+        "l1_components": [
+          {
+            "l1_rule_idx": 71,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "arm_raise",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2797931432723999
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 212,
+        "l1_components": [
+          {
+            "l1_rule_idx": 212,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_direction_motion_forward",
+                false
+              ],
+              [
+                "interaction_two_person",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25814440846443176
+      }
+    ]
+  },
+  {
+    "action_name": "hand_waving",
+    "action_idx": 22,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 193,
+        "l1_components": [
+          {
+            "l1_rule_idx": 193,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3089040517807007
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 20,
+        "l1_components": [
+          {
+            "l1_rule_idx": 20,
+            "literals": [
+              [
+                "temporal_sequence_seq_alternating",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.29245099425315857
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 37,
+        "l1_components": [
+          {
+            "l1_rule_idx": 37,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "head_static",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27760693430900574
+      }
+    ]
+  },
+  {
+    "action_name": "kicking_something",
+    "action_idx": 23,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 121,
+        "l1_components": [
+          {
+            "l1_rule_idx": 121,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "foot_static",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27035200595855713
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 169,
+        "l1_components": [
+          {
+            "l1_rule_idx": 169,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_backward",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2425430864095688
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 77,
+        "l1_components": [
+          {
+            "l1_rule_idx": 77,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.236989825963974
+      }
+    ]
+  },
+  {
+    "action_name": "reach_into_pocket",
+    "action_idx": 24,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 113,
+        "l1_components": [
+          {
+            "l1_rule_idx": 113,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "arm_swing",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25916555523872375
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 80,
+        "l1_components": [
+          {
+            "l1_rule_idx": 80,
+            "literals": [
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ],
+              [
+                "foot_step",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2515930235385895
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 107,
+        "l1_components": [
+          {
+            "l1_rule_idx": 107,
+            "literals": [
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23974497616291046
+      }
+    ]
+  },
+  {
+    "action_name": "hopping",
+    "action_idx": 25,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 118,
+        "l1_components": [
+          {
+            "l1_rule_idx": 118,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.30424270033836365
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 244,
+        "l1_components": [
+          {
+            "l1_rule_idx": 244,
+            "literals": [
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_decelerating",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.30143266916275024
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 110,
+        "l1_components": [
+          {
+            "l1_rule_idx": 110,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "hip_static_stand",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2944548726081848
+      }
+    ]
+  },
+  {
+    "action_name": "jump_up",
+    "action_idx": 26,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 71,
+        "l1_components": [
+          {
+            "l1_rule_idx": 71,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "arm_raise",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23840108513832092
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 220,
+        "l1_components": [
+          {
+            "l1_rule_idx": 220,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22203432023525238
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 22,
+        "l1_components": [
+          {
+            "l1_rule_idx": 22,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.20413751900196075
+      }
+    ]
+  },
+  {
+    "action_name": "phone_call",
+    "action_idx": 27,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 43,
+        "l1_components": [
+          {
+            "l1_rule_idx": 43,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "hand_grasp",
+                true
+              ],
+              [
+                "arm_raise",
+                true
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.28573715686798096
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 16,
+        "l1_components": [
+          {
+            "l1_rule_idx": 16,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2645716071128845
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 74,
+        "l1_components": [
+          {
+            "l1_rule_idx": 74,
+            "literals": [
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24799491465091705
+      }
+    ]
+  },
+  {
+    "action_name": "play_with_phone_tablet",
+    "action_idx": 28,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 73,
+        "l1_components": [
+          {
+            "l1_rule_idx": 73,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2600771188735962
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 106,
+        "l1_components": [
+          {
+            "l1_rule_idx": 106,
+            "literals": [
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "leg_static_sit",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hip_rotate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24698732793331146
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 68,
+        "l1_components": [
+          {
+            "l1_rule_idx": 68,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22961892187595367
+      }
+    ]
+  },
+  {
+    "action_name": "type_on_a_keyboard",
+    "action_idx": 29,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 181,
+        "l1_components": [
+          {
+            "l1_rule_idx": 181,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2636629045009613
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 73,
+        "l1_components": [
+          {
+            "l1_rule_idx": 73,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22575673460960388
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 106,
+        "l1_components": [
+          {
+            "l1_rule_idx": 106,
+            "literals": [
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "leg_static_sit",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hip_rotate",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22489632666110992
+      }
+    ]
+  },
+  {
+    "action_name": "point_to_something",
+    "action_idx": 30,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 175,
+        "l1_components": [
+          {
+            "l1_rule_idx": 175,
+            "literals": [
+              [
+                "head_static",
+                false
+              ],
+              [
+                "arm_extend",
+                true
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24522918462753296
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 41,
+        "l1_components": [
+          {
+            "l1_rule_idx": 41,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23670123517513275
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 85,
+        "l1_components": [
+          {
+            "l1_rule_idx": 85,
+            "literals": [
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22038544714450836
+      }
+    ]
+  },
+  {
+    "action_name": "taking_a_selfie",
+    "action_idx": 31,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 243,
+        "l1_components": [
+          {
+            "l1_rule_idx": 243,
+            "literals": [
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.18020443618297577
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 215,
+        "l1_components": [
+          {
+            "l1_rule_idx": 215,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.16773320734500885
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 175,
+        "l1_components": [
+          {
+            "l1_rule_idx": 175,
+            "literals": [
+              [
+                "head_static",
+                false
+              ],
+              [
+                "arm_extend",
+                true
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.16518522799015045
+      }
+    ]
+  },
+  {
+    "action_name": "check_time_(from_watch)",
+    "action_idx": 32,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 223,
+        "l1_components": [
+          {
+            "l1_rule_idx": 223,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24505965411663055
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 25,
+        "l1_components": [
+          {
+            "l1_rule_idx": 25,
+            "literals": [
+              [
+                "hip_bend",
+                false
+              ],
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "leg_alternating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2417672574520111
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 107,
+        "l1_components": [
+          {
+            "l1_rule_idx": 107,
+            "literals": [
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.235584557056427
+      }
+    ]
+  },
+  {
+    "action_name": "rub_two_hands",
+    "action_idx": 33,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 130,
+        "l1_components": [
+          {
+            "l1_rule_idx": 130,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2603096067905426
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 192,
+        "l1_components": [
+          {
+            "l1_rule_idx": 192,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2569873034954071
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 23,
+        "l1_components": [
+          {
+            "l1_rule_idx": 23,
+            "literals": [
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "leg_alternating",
+                false
+              ],
+              [
+                "arm_swing",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2453240156173706
+      }
+    ]
+  },
+  {
+    "action_name": "nod_head_bow",
+    "action_idx": 34,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 83,
+        "l1_components": [
+          {
+            "l1_rule_idx": 83,
+            "literals": [
+              [
+                "temporal_direction_motion_backward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22260646522045135
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 150,
+        "l1_components": [
+          {
+            "l1_rule_idx": 150,
+            "literals": [
+              [
+                "leg_jump",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.18248197436332703
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 129,
+        "l1_components": [
+          {
+            "l1_rule_idx": 129,
+            "literals": [
+              [
+                "arm_overhead",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_fast",
+                true
+              ],
+              [
+                "hip_static_stand",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.17595729231834412
+      }
+    ]
+  },
+  {
+    "action_name": "shake_head",
+    "action_idx": 35,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 125,
+        "l1_components": [
+          {
+            "l1_rule_idx": 125,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3045310378074646
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 5,
+        "l1_components": [
+          {
+            "l1_rule_idx": 5,
+            "literals": [
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "leg_jump",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3043408989906311
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 32,
+        "l1_components": [
+          {
+            "l1_rule_idx": 32,
+            "literals": [
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_dynamics_speed_slow",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3007892072200775
+      }
+    ]
+  },
+  {
+    "action_name": "wipe_face",
+    "action_idx": 36,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 241,
+        "l1_components": [
+          {
+            "l1_rule_idx": 241,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ],
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.29869046807289124
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 25,
+        "l1_components": [
+          {
+            "l1_rule_idx": 25,
+            "literals": [
+              [
+                "hip_bend",
+                false
+              ],
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "leg_alternating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2774154245853424
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 183,
+        "l1_components": [
+          {
+            "l1_rule_idx": 183,
+            "literals": [
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2692243158817291
+      }
+    ]
+  },
+  {
+    "action_name": "salute",
+    "action_idx": 37,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 203,
+        "l1_components": [
+          {
+            "l1_rule_idx": 203,
+            "literals": [
+              [
+                "temporal_dynamics_speed_slow",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.28296083211898804
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 71,
+        "l1_components": [
+          {
+            "l1_rule_idx": 71,
+            "literals": [
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "arm_raise",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2692129909992218
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 57,
+        "l1_components": [
+          {
+            "l1_rule_idx": 57,
+            "literals": [
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2628622353076935
+      }
+    ]
+  },
+  {
+    "action_name": "put_palms_together",
+    "action_idx": 38,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 67,
+        "l1_components": [
+          {
+            "l1_rule_idx": 67,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25052350759506226
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 46,
+        "l1_components": [
+          {
+            "l1_rule_idx": 46,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_legs_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2440970540046692
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 158,
+        "l1_components": [
+          {
+            "l1_rule_idx": 158,
+            "literals": [
+              [
+                "arm_overhead",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23512335121631622
+      }
+    ]
+  },
+  {
+    "action_name": "cross_hands_in_front",
+    "action_idx": 39,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 229,
+        "l1_components": [
+          {
+            "l1_rule_idx": 229,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.28089335560798645
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 95,
+        "l1_components": [
+          {
+            "l1_rule_idx": 95,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27432143688201904
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 203,
+        "l1_components": [
+          {
+            "l1_rule_idx": 203,
+            "literals": [
+              [
+                "temporal_dynamics_speed_slow",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24129338562488556
+      }
+    ]
+  },
+  {
+    "action_name": "sneeze_cough",
+    "action_idx": 40,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 83,
+        "l1_components": [
+          {
+            "l1_rule_idx": 83,
+            "literals": [
+              [
+                "temporal_direction_motion_backward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21043671667575836
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 147,
+        "l1_components": [
+          {
+            "l1_rule_idx": 147,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.17107416689395905
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 6,
+        "l1_components": [
+          {
+            "l1_rule_idx": 6,
+            "literals": [
+              [
+                "interaction_two_person",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.16315844655036926
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 17,
+        "l1_components": [
+          {
+            "l1_rule_idx": 121,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "foot_static",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05084363371133804
+      }
+    ]
+  },
+  {
+    "action_name": "staggering",
+    "action_idx": 41,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 144,
+        "l1_components": [
+          {
+            "l1_rule_idx": 144,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.33900904655456543
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 237,
+        "l1_components": [
+          {
+            "l1_rule_idx": 237,
+            "literals": [
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2930840849876404
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 73,
+        "l1_components": [
+          {
+            "l1_rule_idx": 73,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2924420237541199
+      }
+    ]
+  },
+  {
+    "action_name": "falling_down",
+    "action_idx": 42,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 105,
+        "l1_components": [
+          {
+            "l1_rule_idx": 105,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2888418138027191
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 93,
+        "l1_components": [
+          {
+            "l1_rule_idx": 93,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2608112394809723
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 224,
+        "l1_components": [
+          {
+            "l1_rule_idx": 224,
+            "literals": [
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2520396113395691
+      }
+    ]
+  },
+  {
+    "action_name": "headache",
+    "action_idx": 43,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 20,
+        "l1_components": [
+          {
+            "l1_rule_idx": 20,
+            "literals": [
+              [
+                "temporal_sequence_seq_alternating",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "foot_pivot",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26823171973228455
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 219,
+        "l1_components": [
+          {
+            "l1_rule_idx": 219,
+            "literals": [
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "foot_pivot",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25731292366981506
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 16,
+        "l1_components": [
+          {
+            "l1_rule_idx": 16,
+            "literals": [
+              [
+                "temporal_dynamics_duration_sustained",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25183922052383423
+      }
+    ]
+  },
+  {
+    "action_name": "chest_pain",
+    "action_idx": 44,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 125,
+        "l1_components": [
+          {
+            "l1_rule_idx": 125,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2648308575153351
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 194,
+        "l1_components": [
+          {
+            "l1_rule_idx": 194,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ],
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2566382884979248
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 186,
+        "l1_components": [
+          {
+            "l1_rule_idx": 186,
+            "literals": [
+              [
+                "foot_jump",
+                false
+              ],
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.25345227122306824
+      }
+    ]
+  },
+  {
+    "action_name": "back_pain",
+    "action_idx": 45,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 24,
+        "l1_components": [
+          {
+            "l1_rule_idx": 24,
+            "literals": [
+              [
+                "temporal_dynamics_speed_fast",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ],
+              [
+                "arm_raise",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24782966077327728
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 171,
+        "l1_components": [
+          {
+            "l1_rule_idx": 171,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_accelerating",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2404322624206543
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 125,
+        "l1_components": [
+          {
+            "l1_rule_idx": 125,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2238820344209671
+      }
+    ]
+  },
+  {
+    "action_name": "neck_pain",
+    "action_idx": 46,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 230,
+        "l1_components": [
+          {
+            "l1_rule_idx": 230,
+            "literals": [
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "head_shake",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2042401283979416
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 242,
+        "l1_components": [
+          {
+            "l1_rule_idx": 242,
+            "literals": [
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19789639115333557
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 165,
+        "l1_components": [
+          {
+            "l1_rule_idx": 165,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ],
+              [
+                "foot_static",
+                true
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19206267595291138
+      }
+    ]
+  },
+  {
+    "action_name": "nausea_vomiting",
+    "action_idx": 47,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 150,
+        "l1_components": [
+          {
+            "l1_rule_idx": 150,
+            "literals": [
+              [
+                "leg_jump",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21059943735599518
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 129,
+        "l1_components": [
+          {
+            "l1_rule_idx": 129,
+            "literals": [
+              [
+                "arm_overhead",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_fast",
+                true
+              ],
+              [
+                "hip_static_stand",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.13399973511695862
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 65,
+        "l1_components": [
+          {
+            "l1_rule_idx": 65,
+            "literals": [
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "temporal_sequence_seq_body_first",
+                true
+              ],
+              [
+                "head_tilt_up",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.12813951075077057
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 122,
+        "l1_components": [
+          {
+            "l1_rule_idx": 46,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_legs_first",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 132,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.050616003572940826
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 8,
+        "l1_components": [
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 167,
+            "literals": [
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 189,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "hand_fist",
+                false
+              ],
+              [
+                "hand_grasp",
+                true
+              ],
+              [
+                "leg_kick",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05040571093559265
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 59,
+        "l1_components": [
+          {
+            "l1_rule_idx": 4,
+            "literals": [
+              [
+                "head_shake",
+                false
+              ],
+              [
+                "interaction_two_person",
+                true
+              ],
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 60,
+            "literals": [
+              [
+                "leg_alternating",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.0502837710082531
+      }
+    ]
+  },
+  {
+    "action_name": "fan_self",
+    "action_idx": 48,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 197,
+        "l1_components": [
+          {
+            "l1_rule_idx": 197,
+            "literals": [
+              [
+                "temporal_sequence_seq_legs_first",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_alternating",
+                false
+              ],
+              [
+                "hip_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.3141005039215088
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 192,
+        "l1_components": [
+          {
+            "l1_rule_idx": 192,
+            "literals": [
+              [
+                "hip_static_stand",
+                true
+              ],
+              [
+                "leg_static_stand",
+                true
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2864265441894531
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 37,
+        "l1_components": [
+          {
+            "l1_rule_idx": 37,
+            "literals": [
+              [
+                "hip_rotate",
+                false
+              ],
+              [
+                "head_static",
+                false
+              ],
+              [
+                "foot_kick",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.27332547307014465
+      }
+    ]
+  },
+  {
+    "action_name": "punch_slap",
+    "action_idx": 49,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 169,
+        "l1_components": [
+          {
+            "l1_rule_idx": 169,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_backward",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2877688407897949
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 63,
+        "l1_components": [
+          {
+            "l1_rule_idx": 63,
+            "literals": [
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2494165003299713
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 97,
+        "l1_components": [
+          {
+            "l1_rule_idx": 97,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23543688654899597
+      }
+    ]
+  },
+  {
+    "action_name": "kicking",
+    "action_idx": 50,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 121,
+        "l1_components": [
+          {
+            "l1_rule_idx": 121,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ],
+              [
+                "foot_static",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2847898602485657
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 77,
+        "l1_components": [
+          {
+            "l1_rule_idx": 77,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2566518187522888
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 199,
+        "l1_components": [
+          {
+            "l1_rule_idx": 199,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.24825844168663025
+      }
+    ]
+  },
+  {
+    "action_name": "pushing",
+    "action_idx": 51,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 147,
+        "l1_components": [
+          {
+            "l1_rule_idx": 147,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2949106991291046
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 97,
+        "l1_components": [
+          {
+            "l1_rule_idx": 97,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "arm_hold",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.29329735040664673
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 44,
+        "l1_components": [
+          {
+            "l1_rule_idx": 44,
+            "literals": [
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_sustained",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2783098518848419
+      }
+    ]
+  },
+  {
+    "action_name": "pat_on_back",
+    "action_idx": 52,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 46,
+        "l1_components": [
+          {
+            "l1_rule_idx": 46,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_legs_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.26610082387924194
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 178,
+        "l1_components": [
+          {
+            "l1_rule_idx": 178,
+            "literals": [
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "leg_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19535142183303833
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 89,
+        "l1_components": [
+          {
+            "l1_rule_idx": 89,
+            "literals": [
+              [
+                "leg_static_sit",
+                false
+              ],
+              [
+                "hand_manipulate",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19386418163776398
+      }
+    ]
+  },
+  {
+    "action_name": "point_finger",
+    "action_idx": 53,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 175,
+        "l1_components": [
+          {
+            "l1_rule_idx": 175,
+            "literals": [
+              [
+                "head_static",
+                false
+              ],
+              [
+                "arm_extend",
+                true
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.23316077888011932
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 64,
+        "l1_components": [
+          {
+            "l1_rule_idx": 64,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22562991082668304
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 115,
+        "l1_components": [
+          {
+            "l1_rule_idx": 115,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "arm_alternating",
+                false
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2191152274608612
+      }
+    ]
+  },
+  {
+    "action_name": "hugging",
+    "action_idx": 54,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 249,
+        "l1_components": [
+          {
+            "l1_rule_idx": 249,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "leg_step",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2178611308336258
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 95,
+        "l1_components": [
+          {
+            "l1_rule_idx": 95,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.19707773625850677
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 8,
+        "l1_components": [
+          {
+            "l1_rule_idx": 8,
+            "literals": [
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "arm_overhead",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.1832018941640854
+      }
+    ]
+  },
+  {
+    "action_name": "giving_object",
+    "action_idx": 55,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 170,
+        "l1_components": [
+          {
+            "l1_rule_idx": 170,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "arm_extend",
+                true
+              ],
+              [
+                "temporal_dynamics_rhythm_irregular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2749005854129791
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 175,
+        "l1_components": [
+          {
+            "l1_rule_idx": 175,
+            "literals": [
+              [
+                "head_static",
+                false
+              ],
+              [
+                "arm_extend",
+                true
+              ],
+              [
+                "hip_static_sit",
+                false
+              ],
+              [
+                "foot_jump",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2706584930419922
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 132,
+        "l1_components": [
+          {
+            "l1_rule_idx": 132,
+            "literals": [
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2606220245361328
+      }
+    ]
+  },
+  {
+    "action_name": "touch_pocket",
+    "action_idx": 56,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 64,
+        "l1_components": [
+          {
+            "l1_rule_idx": 64,
+            "literals": [
+              [
+                "temporal_dynamics_rhythm_regular",
+                false
+              ],
+              [
+                "temporal_sequence_seq_simultaneous",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "hip_static_sit",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21930277347564697
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 39,
+        "l1_components": [
+          {
+            "l1_rule_idx": 39,
+            "literals": [
+              [
+                "leg_jump",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ],
+              [
+                "hand_circular",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2095784842967987
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 85,
+        "l1_components": [
+          {
+            "l1_rule_idx": 85,
+            "literals": [
+              [
+                "temporal_direction_motion_diverging",
+                false
+              ],
+              [
+                "leg_balance",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hand_clap",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.18843436241149902
+      }
+    ]
+  },
+  {
+    "action_name": "shaking_hands",
+    "action_idx": 57,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 229,
+        "l1_components": [
+          {
+            "l1_rule_idx": 229,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2666405439376831
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 248,
+        "l1_components": [
+          {
+            "l1_rule_idx": 248,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                true
+              ],
+              [
+                "temporal_direction_motion_reversible",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.20619827508926392
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 95,
+        "l1_components": [
+          {
+            "l1_rule_idx": 95,
+            "literals": [
+              [
+                "arm_raise",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                false
+              ],
+              [
+                "hip_extend",
+                false
+              ],
+              [
+                "hip_sway",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.20154410600662231
+      }
+    ]
+  },
+  {
+    "action_name": "walking_towards",
+    "action_idx": 58,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 208,
+        "l1_components": [
+          {
+            "l1_rule_idx": 208,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ],
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "leg_lift",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22101308405399323
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 179,
+        "l1_components": [
+          {
+            "l1_rule_idx": 179,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.21184870600700378
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 144,
+        "l1_components": [
+          {
+            "l1_rule_idx": 144,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.20992784202098846
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 82,
+        "l1_components": [
+          {
+            "l1_rule_idx": 68,
+            "literals": [
+              [
+                "arm_extend",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 84,
+            "literals": [
+              [
+                "arm_hold",
+                false
+              ],
+              [
+                "temporal_direction_motion_converging",
+                false
+              ],
+              [
+                "hand_touch",
+                false
+              ],
+              [
+                "temporal_direction_motion_upward",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.054156288504600525
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 31,
+        "l1_components": [
+          {
+            "l1_rule_idx": 22,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "leg_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "hand_release",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 105,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "head_tilt_up",
+                false
+              ],
+              [
+                "arm_lateral",
+                false
+              ],
+              [
+                "hand_point",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 244,
+            "literals": [
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_dynamics_speed_decelerating",
+                false
+              ],
+              [
+                "temporal_direction_motion_forward",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.05054540932178497
+      }
+    ]
+  },
+  {
+    "action_name": "walking_apart",
+    "action_idx": 59,
+    "clauses": [
+      {
+        "type": "and1",
+        "l1_rule_idx": 226,
+        "l1_components": [
+          {
+            "l1_rule_idx": 226,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.22642113268375397
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 179,
+        "l1_components": [
+          {
+            "l1_rule_idx": 179,
+            "literals": [
+              [
+                "temporal_dynamics_duration_brief",
+                false
+              ],
+              [
+                "temporal_dynamics_rhythm_regular",
+                true
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.2066744714975357
+      },
+      {
+        "type": "and1",
+        "l1_rule_idx": 144,
+        "l1_components": [
+          {
+            "l1_rule_idx": 144,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "temporal_direction_motion_downward",
+                false
+              ],
+              [
+                "temporal_sequence_seq_hands_first",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.203401118516922
+      },
+      {
+        "type": "or1",
+        "l2_rule_idx": 96,
+        "l1_components": [
+          {
+            "l1_rule_idx": 54,
+            "literals": [
+              [
+                "hip_static_stand",
+                false
+              ],
+              [
+                "hand_wave",
+                false
+              ],
+              [
+                "leg_kick",
+                false
+              ],
+              [
+                "arm_cross",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 66,
+            "literals": [
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "leg_squat",
+                false
+              ],
+              [
+                "hand_open",
+                false
+              ]
+            ]
+          },
+          {
+            "l1_rule_idx": 101,
+            "literals": [
+              [
+                "hand_lift_to_face",
+                false
+              ],
+              [
+                "arm_retract",
+                false
+              ],
+              [
+                "arm_lower",
+                false
+              ],
+              [
+                "head_tilt_down",
+                false
+              ]
+            ]
+          }
+        ],
+        "raw_weight": 0.051137641072273254
+      }
+    ]
+  }
+]
