@@ -330,7 +330,7 @@ class Processor:
 
         # Tự động load concept_names và concept_matrix từ dataset
         concept_dataset = self.data_loader.get("train", self.data_loader.get("test")).dataset
-        self.phase_step = 0
+        self.stage_step = 0
         self.load_model()
         # Khởi tạo phase mô hình: Pure Soft, Pure STE, hoặc 2-Phase Warm-up
         m = self.model.module if hasattr(self.model, "module") else self.model
@@ -369,16 +369,8 @@ class Processor:
             self.current_stage = 1
         else:
             self.current_stage = 2
+        self._apply_stage_freeze(self.current_stage)
         if self.current_stage == 1:
-            if hasattr(m, "reasoner"):
-                for p in m.reasoner.parameters():
-                    p.requires_grad = False
-            if hasattr(m, "action_head"):
-                for p in m.action_head.parameters():
-                    p.requires_grad = False
-            if getattr(m, "bypass_head", None) is not None:
-                for p in m.bypass_head.parameters():
-                    p.requires_grad = False
             self.print_log(f"[Training Stage] 🎯 STAGE 1: Concept Warm-up (Epoch {self.arg.start_epoch + 1} → {self.arg.concept_warmup_epochs}). Reasoner & ActionHead frozen.")
 
         if self.arg.phase == "train":
@@ -453,6 +445,44 @@ class Processor:
                 f"Missing={len(missing)}, Unexpected={len(unexpected)}"
             )
 
+    def _apply_stage_freeze(self, stage: int):
+        """Apply the trainable-module policy before building the optimizer."""
+        m = self.model.module if hasattr(self.model, "module") else self.model
+        for parameter in m.parameters():
+            parameter.requires_grad = False
+
+        multi_stage = (
+            getattr(self.arg, "concept_warmup_epochs", 0) > 0
+            or getattr(self.arg, "stage3_start_epoch", 0) > 0
+        )
+        if not multi_stage:
+            for parameter in m.parameters():
+                parameter.requires_grad = True
+            return
+
+        if stage == 1:
+            modules = (
+                m.backbone,
+                m.spatial_pool_score,
+                m.temporal_pool_score,
+                m.spatial_head,
+                m.temporal_head,
+            )
+        elif stage == 2:
+            modules = (m.reasoner,)
+            if getattr(m, "bypass_head", None) is not None:
+                modules += (m.bypass_head,)
+        else:
+            modules = (m,)
+
+        for module in modules:
+            for parameter in module.parameters():
+                parameter.requires_grad = True
+
+    @staticmethod
+    def _trainable_parameters(parameters):
+        return [parameter for parameter in parameters if parameter.requires_grad]
+
     def _get_param_groups(self):
         """Tạo parameter groups với per-group learning rates.
 
@@ -489,11 +519,15 @@ class Processor:
         stage3_crl_lr = getattr(self.arg, "stage3_crl_lr", crl_lr)
         stage3_update_cell_lr = getattr(self.arg, "stage3_update_cell_lr", update_cell_lr)
 
-        backbone_params = list(m.backbone.parameters()) + \
-                          list(m.spatial_pool_score.parameters()) + \
-                          list(m.temporal_pool_score.parameters())
-        head_params = list(m.spatial_head.parameters()) + \
-                      list(m.temporal_head.parameters())
+        backbone_params = self._trainable_parameters(
+            list(m.backbone.parameters())
+            + list(m.spatial_pool_score.parameters())
+            + list(m.temporal_pool_score.parameters())
+        )
+        head_params = self._trainable_parameters(
+            list(m.spatial_head.parameters())
+            + list(m.temporal_head.parameters())
+        )
 
         if getattr(self, "current_stage", 2) == 1:
             # Stage 1: Chỉ tối ưu hóa Backbone và Concept Heads
@@ -507,18 +541,20 @@ class Processor:
             self.current_training_phase == 1
             and not getattr(self, "is_pure_soft", False)
             and 0 < self.arg.phase1_epochs < self.arg.num_epoch
+            and getattr(self.arg, "concept_warmup_epochs", 0) <= 0
+            and getattr(self.arg, "stage3_start_epoch", 0) <= 0
         )
         if is_staged_phase1:
             # Phase 1 của Staged Training: single group, tất cả trainable
-            return [{"params": self.model.parameters(), "lr": base_lr}]
+            return [{"params": self._trainable_parameters(self.model.parameters()), "lr": base_lr}]
         # CRLReasoner includes the logic layers and ActionHead.
-        crl_params = list(m.reasoner.crl.parameters())
-        # A6 Ablation: Thêm bypass_head vào nhóm crl để được tối ưu.
+        crl_params = self._trainable_parameters(m.reasoner.crl.parameters())
         if getattr(m, "bypass_head", None) is not None:
-            crl_params += list(m.bypass_head.parameters())
+            crl_params += self._trainable_parameters(m.bypass_head.parameters())
 
-        uc_params  = list(m.reasoner.update_cell.parameters()) + \
-                     [m.reasoner.raw_beta]
+        uc_params = self._trainable_parameters(
+            list(m.reasoner.update_cell.parameters()) + [m.reasoner.raw_beta]
+        )
 
         if getattr(self, "current_stage", 2) == 3:
             return [
@@ -528,11 +564,17 @@ class Processor:
                 {"params": uc_params,       "lr": stage3_update_cell_lr, "name": "update_cell"},
             ]
 
+        if getattr(self.arg, "concept_warmup_epochs", 0) <= 0 and getattr(self.arg, "stage3_start_epoch", 0) <= 0:
+            return [
+                {"params": backbone_params, "lr": stage2_backbone_lr, "name": "backbone"},
+                {"params": head_params,     "lr": stage2_concept_heads_lr, "name": "concept_heads"},
+                {"params": crl_params,      "lr": crl_lr, "name": "crl"},
+                {"params": uc_params,       "lr": update_cell_lr, "name": "update_cell"},
+            ]
+
         return [
-            {"params": backbone_params, "lr": stage2_backbone_lr, "name": "backbone"},
-            {"params": head_params,     "lr": stage2_concept_heads_lr, "name": "concept_heads"},
-            {"params": crl_params,      "lr": crl_lr, "name": "crl"},
-            {"params": uc_params,       "lr": update_cell_lr, "name": "update_cell"},
+            {"params": crl_params, "lr": crl_lr, "name": "crl"},
+            {"params": uc_params, "lr": update_cell_lr, "name": "update_cell"},
         ]
 
     def load_optimizer(self):
@@ -555,6 +597,7 @@ class Processor:
             raise ValueError(f"Unsupported optimizer: {self.arg.optimizer}")
 
     def load_scheduler(self, n_iter_per_epoch):
+        self.stage_step = 0
         if getattr(self, "current_stage", 2) == 1:
             warmup_epochs = max(1, self.arg.concept_warmup_epochs - self.arg.start_epoch)
             num_steps = int(warmup_epochs * n_iter_per_epoch)
@@ -596,42 +639,9 @@ class Processor:
 
         if target_stage != self.current_stage:
             self.current_stage = target_stage
-            m = self.model.module if hasattr(self.model, "module") else self.model
 
             if target_stage in (2, 3):
-                # Mở khóa CRL/ActionHead cho Stage 2 và toàn bộ mô hình cho Stage 3.
-                if hasattr(m, "reasoner"):
-                    for p in m.reasoner.parameters():
-                        p.requires_grad = True
-                if target_stage == 3:
-                    for module in (
-                        m.backbone,
-                        m.spatial_pool_score,
-                        m.temporal_pool_score,
-                        m.spatial_head,
-                        m.temporal_head,
-                    ):
-                        for p in module.parameters():
-                            p.requires_grad = True
-                else:
-                    stage2_feature_lr = getattr(self.arg, "stage2_backbone_lr", 0.0)
-                    stage2_head_lr = getattr(self.arg, "stage2_concept_heads_lr", stage2_feature_lr)
-                    for module in (
-                        m.backbone,
-                        m.spatial_pool_score,
-                        m.temporal_pool_score,
-                    ):
-                        for p in module.parameters():
-                            p.requires_grad = stage2_feature_lr > 0.0
-                    for module in (m.spatial_head, m.temporal_head):
-                        for p in module.parameters():
-                            p.requires_grad = stage2_head_lr > 0.0
-                if hasattr(m, "action_head"):
-                    for p in m.action_head.parameters():
-                        p.requires_grad = True
-                if getattr(m, "bypass_head", None) is not None:
-                    for p in m.bypass_head.parameters():
-                        p.requires_grad = True
+                self._apply_stage_freeze(target_stage)
 
                 if target_stage == 2:
                     stage_title = "STAGE 2: Logic Reasoning"
@@ -661,7 +671,7 @@ class Processor:
                     cycle_limit=1,
                     t_in_epochs=False,
                 )
-                self.phase_step = 0
+                self.stage_step = 0
 
     def _maybe_switch_phase(self, epoch: int):
         """Kiểm tra và chuyển phase nếu cần."""
@@ -702,7 +712,7 @@ class Processor:
                 cycle_limit=1,
                 t_in_epochs=False,
             )
-            self.phase_step = 0
+            self.stage_step = 0
             self.print_log(
                 f"[Phase Switch] → Phase {new_phase} at epoch {epoch + 1}. "
                 f"Optimizer rebuilt with per-group LRs and CosineLRScheduler initialized for remaining {remaining_epochs} epochs."
@@ -876,11 +886,8 @@ class Processor:
                 data, index_t, label, index = batch
                 concept_targets = None
 
-            if is_stage1 or self.arg.phase1_epochs <= 0 or self.current_training_phase == 1:
-                self.lr_scheduler.step_update(self.global_step)
-            else:
-                self.lr_scheduler.step_update(self.phase_step)
-                self.phase_step += 1
+            self.lr_scheduler.step_update(self.stage_step)
+            self.stage_step += 1
             self.global_step += 1
 
             if self.use_cuda:
@@ -1105,7 +1112,7 @@ class Processor:
         top5_acc = np.mean([labels[i] in top5_preds[i] for i in range(len(labels))]) * 100.0
 
         # Chỉ lưu best_model.pt ở Stage 2 khi Action Classifier & Reasoner hoạt động thực sự
-        if (getattr(self, "current_stage", 2) == 2 or getattr(self.arg, "concept_warmup_epochs", 0) <= 0) and top1_acc > self.best_acc:
+        if (getattr(self, "current_stage", 2) in (2, 3) or getattr(self.arg, "concept_warmup_epochs", 0) <= 0) and top1_acc > self.best_acc:
             self.best_acc = top1_acc
             self.best_acc_epoch = epoch + 1
             # Save best checkpoint

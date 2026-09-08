@@ -528,7 +528,7 @@ class CLIRSkateFormer(nn.Module):
         targets:   torch.Tensor,
         mask:      Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
-        """Asymmetric BCE loss (Mục 8.1 — CLIR plan, chuẩn ASL Alibaba ICCV 2021).
+        """Modified asymmetric BCE with margin down-weighting.
 
         L_c(z, ĉ) = Σ r_ic [ĉ_ic · softplus(-z_ic)
                              + (1-ĉ_ic) · clamp(σ(z_ic) - m, 0)^γ- · softplus(z_ic)] / Σ r_ic
@@ -550,12 +550,21 @@ class CLIRSkateFormer(nn.Module):
         clip_m = getattr(self, "asymmetric_clip", 0.05)
         p_m = torch.clamp(probs - clip_m, min=0.0)
 
-        pos_loss = F.softplus(-logits) * targets
+        pos_loss = (
+            self.concept_pos_weight
+            * targets
+            * F.softplus(-logits)
+        )
         neg_loss = (
-            F.softplus(logits)
+            self.concept_neg_weight
+            * F.softplus(logits)
             * p_m.pow(self.gamma_neg)
             * (1.0 - targets)
         )
+        if mask is not None:
+            mask_f = mask.float()
+            pos_loss = pos_loss * mask_f
+            neg_loss = neg_loss * mask_f
 
         weights = (
             targets * self.concept_pos_weight
@@ -563,10 +572,8 @@ class CLIRSkateFormer(nn.Module):
         )
         if mask is not None:
             weights = weights * mask.float()
-
         loss = pos_loss + neg_loss
-        denom = weights.sum().clamp_min(1.0)
-        return (loss * weights).sum() / denom
+        return loss.sum() / weights.sum().clamp_min(1.0)
 
     def compute_sup_loss(
         self,

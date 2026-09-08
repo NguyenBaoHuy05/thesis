@@ -750,7 +750,7 @@ class LCRSkateFormer(nn.Module):
         positive_loss = F.softplus(-logits) * targets
         negative_loss = (
             F.softplus(logits)
-            * (1.0 - probabilities).pow(self.asymmetric_gamma_neg)
+            * probabilities.pow(self.asymmetric_gamma_neg)
             * (1.0 - targets)
         )
         weights = (
