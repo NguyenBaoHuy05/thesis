@@ -1,0 +1,6335 @@
+{
+  "rules": [
+    {
+      "action_idx": 0,
+      "action_name": "action_0",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 5,
+          "weight": 0.062114059925079346,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 233,
+          "weight": 0.06198725476861,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ],
+            [
+              "concept_44",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ],
+            [
+              "concept_39",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 123,
+          "weight": 0.060879696160554886,
+          "literals": [
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 78,
+          "weight": 0.0602261982858181,
+          "literals": [
+            [
+              "concept_69",
+              false
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_61",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 1,
+      "action_name": "action_1",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 192,
+          "weight": 0.05817140266299248,
+          "literals": [
+            [
+              "concept_25",
+              true
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 66,
+          "weight": 0.05761359632015228,
+          "literals": [
+            [
+              "concept_45",
+              true
+            ],
+            [
+              "concept_46",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 8,
+          "weight": 0.05744650214910507,
+          "literals": [
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 231,
+          "weight": 0.0572085827589035,
+          "literals": [
+            [
+              "concept_23",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 2,
+      "action_name": "action_2",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 69,
+          "weight": 0.0625511109828949,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 231,
+          "weight": 0.06231282651424408,
+          "literals": [
+            [
+              "concept_23",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 68,
+          "weight": 0.061118464916944504,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_45",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 32,
+          "weight": 0.06079234555363655,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_18",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 3,
+      "action_name": "action_3",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 4,
+          "weight": 0.05806322395801544,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 166,
+          "weight": 0.057534679770469666,
+          "literals": [
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_61",
+              true
+            ],
+            [
+              "concept_69",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 172,
+          "weight": 0.05708933249115944,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 130,
+          "weight": 0.056883279234170914,
+          "literals": [
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 4,
+      "action_name": "action_4",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 1,
+          "weight": 0.062326155602931976,
+          "literals": [
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 195,
+          "weight": 0.06177579611539841,
+          "literals": [
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ],
+            [
+              "concept_60",
+              false
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 118,
+          "weight": 0.06119475141167641,
+          "literals": [
+            [
+              "concept_22",
+              true
+            ],
+            [
+              "concept_33",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 123,
+          "weight": 0.060834743082523346,
+          "literals": [
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 5,
+      "action_name": "action_5",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 0,
+          "weight": 0.06305573135614395,
+          "literals": [
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 189,
+          "weight": 0.0630384162068367,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 182,
+          "weight": 0.06188805028796196,
+          "literals": [
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_12",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 170,
+          "weight": 0.06106690317392349,
+          "literals": [
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_10",
+              false
+            ],
+            [
+              "concept_61",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 6,
+      "action_name": "action_6",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 9,
+          "weight": 0.060937896370887756,
+          "literals": [
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 183,
+          "weight": 0.06018228828907013,
+          "literals": [
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_5",
+              false
+            ],
+            [
+              "concept_64",
+              false
+            ],
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_6",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 88,
+          "weight": 0.060092609375715256,
+          "literals": [
+            [
+              "concept_60",
+              false
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 49,
+          "weight": 0.05909550562500954,
+          "literals": [
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 7,
+      "action_name": "action_7",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 159,
+          "weight": 0.06068051606416702,
+          "literals": [
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_13",
+              false
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 179,
+          "weight": 0.06025736406445503,
+          "literals": [
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_10",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 161,
+          "weight": 0.059678107500076294,
+          "literals": [
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_46",
+              false
+            ],
+            [
+              "concept_48",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 171,
+          "weight": 0.059610627591609955,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 8,
+      "action_name": "action_8",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 5,
+          "weight": 0.061825379729270935,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 241,
+          "weight": 0.06172829866409302,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_45",
+              true
+            ],
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_63",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 202,
+          "weight": 0.06166286766529083,
+          "literals": [
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 190,
+          "weight": 0.06165146455168724,
+          "literals": [
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_61",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 9,
+      "action_name": "action_9",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 1,
+          "weight": 0.061609454452991486,
+          "literals": [
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 230,
+          "weight": 0.061436377465724945,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 135,
+          "weight": 0.060589876025915146,
+          "literals": [
+            [
+              "concept_17",
+              true
+            ],
+            [
+              "concept_24",
+              false
+            ],
+            [
+              "concept_26",
+              true
+            ],
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_66",
+              false
+            ],
+            [
+              "concept_54",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 133,
+          "weight": 0.05966871231794357,
+          "literals": [
+            [
+              "concept_51",
+              true
+            ],
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_13",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 10,
+      "action_name": "action_10",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 84,
+          "weight": 0.06487981230020523,
+          "literals": [
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_64",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 21,
+          "weight": 0.06468258798122406,
+          "literals": [
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_13",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 69,
+          "weight": 0.06438382714986801,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 121,
+          "weight": 0.06286846101284027,
+          "literals": [
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_16",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 11,
+      "action_name": "action_11",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 194,
+          "weight": 0.05495017021894455,
+          "literals": [
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_63",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_51",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 100,
+          "weight": 0.05484279617667198,
+          "literals": [
+            [
+              "concept_42",
+              true
+            ],
+            [
+              "concept_65",
+              true
+            ],
+            [
+              "concept_34",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 202,
+          "weight": 0.05479435995221138,
+          "literals": [
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 144,
+          "weight": 0.05476818606257439,
+          "literals": [
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_63",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 12,
+      "action_name": "action_12",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 130,
+          "weight": 0.06654723733663559,
+          "literals": [
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 58,
+          "weight": 0.0664639100432396,
+          "literals": [
+            [
+              "concept_38",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 30,
+          "weight": 0.06601229310035706,
+          "literals": [
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_19",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 59,
+          "weight": 0.06555642187595367,
+          "literals": [
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 13,
+      "action_name": "action_13",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 21,
+          "weight": 0.058664415031671524,
+          "literals": [
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_13",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 180,
+          "weight": 0.058242496103048325,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 238,
+          "weight": 0.058027684688568115,
+          "literals": [
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_28",
+              false
+            ],
+            [
+              "concept_60",
+              false
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 22,
+          "weight": 0.05797198787331581,
+          "literals": [
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 14,
+      "action_name": "action_14",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 102,
+          "weight": 0.06435249000787735,
+          "literals": [
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_12",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 147,
+          "weight": 0.06414728611707687,
+          "literals": [
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_11",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_71",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 130,
+          "weight": 0.06402140855789185,
+          "literals": [
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 214,
+          "weight": 0.06315403431653976,
+          "literals": [
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_12",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 15,
+      "action_name": "action_15",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 235,
+          "weight": 0.06002352014183998,
+          "literals": [
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_10",
+              false
+            ],
+            [
+              "concept_15",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 174,
+          "weight": 0.05980408564209938,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 84,
+          "weight": 0.059624265879392624,
+          "literals": [
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_64",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 79,
+          "weight": 0.059482891112565994,
+          "literals": [
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 16,
+      "action_name": "action_16",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 246,
+          "weight": 0.06282049417495728,
+          "literals": [
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_40",
+              false
+            ],
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 113,
+          "weight": 0.06270796805620193,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 104,
+          "weight": 0.06105056405067444,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 212,
+          "weight": 0.060559432953596115,
+          "literals": [
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_26",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 17,
+      "action_name": "action_17",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 86,
+          "weight": 0.06336019933223724,
+          "literals": [
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_63",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 92,
+          "weight": 0.0628572627902031,
+          "literals": [
+            [
+              "concept_61",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 255,
+          "weight": 0.06250880658626556,
+          "literals": [
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_67",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_56",
+              true
+            ],
+            [
+              "concept_60",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 104,
+          "weight": 0.0623079314827919,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 18,
+      "action_name": "action_18",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 128,
+          "weight": 0.06358383595943451,
+          "literals": [
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_67",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 48,
+          "weight": 0.06330308318138123,
+          "literals": [
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 10,
+          "weight": 0.06313753873109818,
+          "literals": [
+            [
+              "concept_4",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 103,
+          "weight": 0.06292098015546799,
+          "literals": [
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_1",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 19,
+      "action_name": "action_19",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 33,
+          "weight": 0.05495937541127205,
+          "literals": [
+            [
+              "concept_23",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 82,
+          "weight": 0.054723020642995834,
+          "literals": [
+            [
+              "concept_54",
+              false
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 197,
+          "weight": 0.053601764142513275,
+          "literals": [
+            [
+              "concept_54",
+              false
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_51",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 228,
+          "weight": 0.053243715316057205,
+          "literals": [
+            [
+              "concept_4",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 20,
+      "action_name": "action_20",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 37,
+          "weight": 0.06592829525470734,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_20",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 174,
+          "weight": 0.06547562032938004,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 201,
+          "weight": 0.06537290662527084,
+          "literals": [
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 98,
+          "weight": 0.06479611247777939,
+          "literals": [
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_5",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": false
+    },
+    {
+      "action_idx": 21,
+      "action_name": "action_21",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 194,
+          "weight": 0.059150613844394684,
+          "literals": [
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_63",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_51",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 7,
+          "weight": 0.05912601575255394,
+          "literals": [
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_4",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 139,
+          "weight": 0.05869494378566742,
+          "literals": [
+            [
+              "concept_26",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_70",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_64",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 189,
+          "weight": 0.05795430764555931,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 22,
+      "action_name": "action_22",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 239,
+          "weight": 0.06458086520433426,
+          "literals": [
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_7",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_14",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 73,
+          "weight": 0.06455287337303162,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 142,
+          "weight": 0.06452808529138565,
+          "literals": [
+            [
+              "concept_30",
+              false
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 49,
+          "weight": 0.06364598870277405,
+          "literals": [
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 23,
+      "action_name": "action_23",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 201,
+          "weight": 0.0652044266462326,
+          "literals": [
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 145,
+          "weight": 0.06496631354093552,
+          "literals": [
+            [
+              "concept_23",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_24",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 138,
+          "weight": 0.06488903611898422,
+          "literals": [
+            [
+              "concept_51",
+              true
+            ],
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 55,
+          "weight": 0.06384241580963135,
+          "literals": [
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_40",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 24,
+      "action_name": "action_24",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 113,
+          "weight": 0.06425920128822327,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 166,
+          "weight": 0.06416445970535278,
+          "literals": [
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_61",
+              true
+            ],
+            [
+              "concept_69",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 172,
+          "weight": 0.0622347854077816,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 182,
+          "weight": 0.062204509973526,
+          "literals": [
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_12",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 25,
+      "action_name": "action_25",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 134,
+          "weight": 0.060956988483667374,
+          "literals": [
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 192,
+          "weight": 0.06055941432714462,
+          "literals": [
+            [
+              "concept_25",
+              true
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 68,
+          "weight": 0.06039762496948242,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_45",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 67,
+          "weight": 0.060250937938690186,
+          "literals": [
+            [
+              "concept_46",
+              true
+            ],
+            [
+              "concept_47",
+              true
+            ],
+            [
+              "concept_47",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 26,
+      "action_name": "action_26",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 201,
+          "weight": 0.06188345327973366,
+          "literals": [
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 26,
+          "weight": 0.06164292246103287,
+          "literals": [
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_10",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 252,
+          "weight": 0.06148373708128929,
+          "literals": [
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_16",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 239,
+          "weight": 0.06088387221097946,
+          "literals": [
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_7",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_14",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 27,
+      "action_name": "action_27",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 84,
+          "weight": 0.0580001026391983,
+          "literals": [
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_64",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 1,
+          "weight": 0.05796436592936516,
+          "literals": [
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 105,
+          "weight": 0.057959724217653275,
+          "literals": [
+            [
+              "concept_13",
+              true
+            ],
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 230,
+          "weight": 0.057166967540979385,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 28,
+      "action_name": "action_28",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 73,
+          "weight": 0.06720933318138123,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 71,
+          "weight": 0.06659063696861267,
+          "literals": [
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_46",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 220,
+          "weight": 0.06657714396715164,
+          "literals": [
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_28",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 97,
+          "weight": 0.06608976423740387,
+          "literals": [
+            [
+              "concept_10",
+              true
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_71",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 29,
+      "action_name": "action_29",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 1,
+          "weight": 0.06227988004684448,
+          "literals": [
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 221,
+          "weight": 0.0606255829334259,
+          "literals": [
+            [
+              "concept_60",
+              false
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ],
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_23",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 243,
+          "weight": 0.05887049809098244,
+          "literals": [
+            [
+              "concept_56",
+              false
+            ],
+            [
+              "concept_68",
+              true
+            ],
+            [
+              "concept_54",
+              false
+            ],
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 93,
+          "weight": 0.058488909155130386,
+          "literals": [
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_70",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": false
+    },
+    {
+      "action_idx": 30,
+      "action_name": "action_30",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 185,
+          "weight": 0.06405984610319138,
+          "literals": [
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_38",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 55,
+          "weight": 0.062986820936203,
+          "literals": [
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_40",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 46,
+          "weight": 0.0621807686984539,
+          "literals": [
+            [
+              "concept_30",
+              false
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 58,
+          "weight": 0.06152493879199028,
+          "literals": [
+            [
+              "concept_38",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 31,
+      "action_name": "action_31",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 33,
+          "weight": 0.06602348387241364,
+          "literals": [
+            [
+              "concept_23",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 28,
+          "weight": 0.06528773903846741,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 24,
+          "weight": 0.06439170986413956,
+          "literals": [
+            [
+              "concept_15",
+              true
+            ],
+            [
+              "concept_14",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 80,
+          "weight": 0.06270263344049454,
+          "literals": [
+            [
+              "concept_61",
+              true
+            ],
+            [
+              "concept_69",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 32,
+      "action_name": "action_32",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 232,
+          "weight": 0.06217438727617264,
+          "literals": [
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 106,
+          "weight": 0.061932340264320374,
+          "literals": [
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 38,
+          "weight": 0.06131741777062416,
+          "literals": [
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 214,
+          "weight": 0.058613698929548264,
+          "literals": [
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_12",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 33,
+      "action_name": "action_33",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 92,
+          "weight": 0.06194893270730972,
+          "literals": [
+            [
+              "concept_61",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_69",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 189,
+          "weight": 0.061214834451675415,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 30,
+          "weight": 0.06093230098485947,
+          "literals": [
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_19",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 229,
+          "weight": 0.05999758094549179,
+          "literals": [
+            [
+              "concept_15",
+              true
+            ],
+            [
+              "concept_14",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 34,
+      "action_name": "action_34",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 38,
+          "weight": 0.05664202570915222,
+          "literals": [
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_17",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 180,
+          "weight": 0.05567562207579613,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 185,
+          "weight": 0.055108245462179184,
+          "literals": [
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_28",
+              true
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_38",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 69,
+          "weight": 0.055102765560150146,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 35,
+      "action_name": "action_35",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 239,
+          "weight": 0.06559266149997711,
+          "literals": [
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_7",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_14",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 11,
+          "weight": 0.06506545096635818,
+          "literals": [
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 112,
+          "weight": 0.06389211118221283,
+          "literals": [
+            [
+              "concept_44",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ],
+            [
+              "concept_39",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 37,
+          "weight": 0.06382661312818527,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_20",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": false
+    },
+    {
+      "action_idx": 36,
+      "action_name": "action_36",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 62,
+          "weight": 0.0631936639547348,
+          "literals": [
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 113,
+          "weight": 0.062465421855449677,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 233,
+          "weight": 0.06084798276424408,
+          "literals": [
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ],
+            [
+              "concept_44",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ],
+            [
+              "concept_39",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 5,
+          "weight": 0.060225702822208405,
+          "literals": [
+            [
+              "concept_3",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 37,
+      "action_name": "action_37",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 74,
+          "weight": 0.0619952492415905,
+          "literals": [
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_67",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 3,
+          "weight": 0.061220426112413406,
+          "literals": [
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 225,
+          "weight": 0.06081840768456459,
+          "literals": [
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 22,
+          "weight": 0.06064515933394432,
+          "literals": [
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 38,
+      "action_name": "action_38",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 244,
+          "weight": 0.06478610634803772,
+          "literals": [
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 161,
+          "weight": 0.0638730376958847,
+          "literals": [
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_46",
+              false
+            ],
+            [
+              "concept_48",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 69,
+          "weight": 0.06275718659162521,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 156,
+          "weight": 0.06218953803181648,
+          "literals": [
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_38",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 39,
+      "action_name": "action_39",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 119,
+          "weight": 0.06272509694099426,
+          "literals": [
+            [
+              "concept_70",
+              false
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_64",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 192,
+          "weight": 0.06269516795873642,
+          "literals": [
+            [
+              "concept_25",
+              true
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 83,
+          "weight": 0.06259642541408539,
+          "literals": [
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_63",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 16,
+          "weight": 0.06107144430279732,
+          "literals": [
+            [
+              "concept_13",
+              false
+            ],
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 40,
+      "action_name": "action_40",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 59,
+          "weight": 0.06003984063863754,
+          "literals": [
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 13,
+          "weight": 0.05985333397984505,
+          "literals": [
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_10",
+              false
+            ],
+            [
+              "concept_15",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 248,
+          "weight": 0.05967243015766144,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 81,
+          "weight": 0.05922548100352287,
+          "literals": [
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 41,
+      "action_name": "action_41",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 227,
+          "weight": 0.061026398092508316,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_61",
+              true
+            ],
+            [
+              "concept_59",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 154,
+          "weight": 0.06068531423807144,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_20",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_32",
+              false
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_28",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 14,
+          "weight": 0.06054706498980522,
+          "literals": [
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_9",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 157,
+          "weight": 0.060536447912454605,
+          "literals": [
+            [
+              "concept_46",
+              true
+            ],
+            [
+              "concept_47",
+              true
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 42,
+      "action_name": "action_42",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 93,
+          "weight": 0.05619442090392113,
+          "literals": [
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_70",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 250,
+          "weight": 0.055896904319524765,
+          "literals": [
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_66",
+              false
+            ],
+            [
+              "concept_54",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 218,
+          "weight": 0.05581821873784065,
+          "literals": [
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_15",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 22,
+          "weight": 0.05474260449409485,
+          "literals": [
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 43,
+      "action_name": "action_43",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 244,
+          "weight": 0.06192927435040474,
+          "literals": [
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 53,
+          "weight": 0.06155899912118912,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 6,
+          "weight": 0.06155623495578766,
+          "literals": [
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 113,
+          "weight": 0.06058307737112045,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 44,
+      "action_name": "action_44",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 62,
+          "weight": 0.06445059925317764,
+          "literals": [
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 61,
+          "weight": 0.06387215107679367,
+          "literals": [
+            [
+              "concept_41",
+              true
+            ],
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_38",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 156,
+          "weight": 0.0633525475859642,
+          "literals": [
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_38",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 237,
+          "weight": 0.062374234199523926,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_40",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 45,
+      "action_name": "action_45",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 248,
+          "weight": 0.056571114808321,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 43,
+          "weight": 0.056401584297418594,
+          "literals": [
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 57,
+          "weight": 0.05575964227318764,
+          "literals": [
+            [
+              "concept_44",
+              true
+            ],
+            [
+              "concept_40",
+              false
+            ],
+            [
+              "concept_44",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 90,
+          "weight": 0.05513728782534599,
+          "literals": [
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 46,
+      "action_name": "action_46",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 169,
+          "weight": 0.06067590415477753,
+          "literals": [
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 225,
+          "weight": 0.060624975711107254,
+          "literals": [
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_2",
+              false
+            ],
+            [
+              "concept_2",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 209,
+          "weight": 0.06016862392425537,
+          "literals": [
+            [
+              "concept_40",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_44",
+              true
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_65",
+              true
+            ],
+            [
+              "concept_59",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 90,
+          "weight": 0.059792179614305496,
+          "literals": [
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 47,
+      "action_name": "action_47",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 16,
+          "weight": 0.06541822105646133,
+          "literals": [
+            [
+              "concept_13",
+              false
+            ],
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 97,
+          "weight": 0.065150186419487,
+          "literals": [
+            [
+              "concept_10",
+              true
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_71",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 232,
+          "weight": 0.06447269767522812,
+          "literals": [
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 244,
+          "weight": 0.06432953476905823,
+          "literals": [
+            [
+              "concept_35",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 48,
+      "action_name": "action_48",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 97,
+          "weight": 0.06410427391529083,
+          "literals": [
+            [
+              "concept_10",
+              true
+            ],
+            [
+              "concept_57",
+              true
+            ],
+            [
+              "concept_71",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 219,
+          "weight": 0.06352780759334564,
+          "literals": [
+            [
+              "concept_7",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_14",
+              true
+            ],
+            [
+              "concept_14",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_8",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 39,
+          "weight": 0.06332120299339294,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 168,
+          "weight": 0.06280805915594101,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 49,
+      "action_name": "action_49",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 196,
+          "weight": 0.051470763981342316,
+          "literals": [
+            [
+              "concept_59",
+              false
+            ],
+            [
+              "concept_67",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 115,
+          "weight": 0.051409050822257996,
+          "literals": [
+            [
+              "concept_11",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ],
+            [
+              "concept_71",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 34,
+          "weight": 0.051085811108350754,
+          "literals": [
+            [
+              "concept_24",
+              true
+            ],
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 64,
+          "weight": 0.0501074381172657,
+          "literals": [
+            [
+              "concept_51",
+              true
+            ],
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 50,
+      "action_name": "action_50",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 68,
+          "weight": 0.06371516734361649,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_45",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 237,
+          "weight": 0.06369350850582123,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_0",
+              false
+            ],
+            [
+              "concept_8",
+              false
+            ],
+            [
+              "concept_39",
+              true
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_40",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 87,
+          "weight": 0.06366977095603943,
+          "literals": [
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_58",
+              true
+            ],
+            [
+              "concept_67",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 24,
+          "weight": 0.0632343664765358,
+          "literals": [
+            [
+              "concept_15",
+              true
+            ],
+            [
+              "concept_14",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 51,
+      "action_name": "action_51",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 72,
+          "weight": 0.058011677116155624,
+          "literals": [
+            [
+              "concept_61",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_60",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 6,
+          "weight": 0.05775962769985199,
+          "literals": [
+            [
+              "concept_1",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_2",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 30,
+          "weight": 0.05680655315518379,
+          "literals": [
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_19",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 114,
+          "weight": 0.05652255937457085,
+          "literals": [
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 52,
+      "action_name": "action_52",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 76,
+          "weight": 0.06040041148662567,
+          "literals": [
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ],
+            [
+              "concept_68",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 21,
+          "weight": 0.06038045138120651,
+          "literals": [
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_16",
+              false
+            ],
+            [
+              "concept_13",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 191,
+          "weight": 0.06003180518746376,
+          "literals": [
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_9",
+              true
+            ],
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 245,
+          "weight": 0.05902895703911781,
+          "literals": [
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_30",
+              true
+            ],
+            [
+              "concept_65",
+              true
+            ],
+            [
+              "concept_17",
+              true
+            ],
+            [
+              "concept_24",
+              false
+            ],
+            [
+              "concept_26",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 53,
+      "action_name": "action_53",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 156,
+          "weight": 0.06186246871948242,
+          "literals": [
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_5",
+              true
+            ],
+            [
+              "concept_38",
+              false
+            ],
+            [
+              "concept_42",
+              false
+            ],
+            [
+              "concept_36",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 189,
+          "weight": 0.061753928661346436,
+          "literals": [
+            [
+              "concept_62",
+              false
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_71",
+              true
+            ],
+            [
+              "concept_43",
+              false
+            ],
+            [
+              "concept_37",
+              false
+            ],
+            [
+              "concept_40",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 70,
+          "weight": 0.06143563985824585,
+          "literals": [
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 221,
+          "weight": 0.06121145933866501,
+          "literals": [
+            [
+              "concept_60",
+              false
+            ],
+            [
+              "concept_66",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ],
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_52",
+              false
+            ],
+            [
+              "concept_23",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 54,
+      "action_name": "action_54",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 165,
+          "weight": 0.05416576936841011,
+          "literals": [
+            [
+              "concept_12",
+              false
+            ],
+            [
+              "concept_21",
+              true
+            ],
+            [
+              "concept_28",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_36",
+              true
+            ],
+            [
+              "concept_63",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 213,
+          "weight": 0.053246404975652695,
+          "literals": [
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_59",
+              true
+            ],
+            [
+              "concept_68",
+              false
+            ],
+            [
+              "concept_1",
+              false
+            ],
+            [
+              "concept_0",
+              true
+            ],
+            [
+              "concept_4",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 28,
+          "weight": 0.052823737263679504,
+          "literals": [
+            [
+              "concept_19",
+              false
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 211,
+          "weight": 0.05245465412735939,
+          "literals": [
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ],
+            [
+              "concept_20",
+              false
+            ],
+            [
+              "concept_12",
+              true
+            ],
+            [
+              "concept_10",
+              false
+            ],
+            [
+              "concept_16",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 55,
+      "action_name": "action_55",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 227,
+          "weight": 0.05841339752078056,
+          "literals": [
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_61",
+              true
+            ],
+            [
+              "concept_59",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 24,
+          "weight": 0.05780865624547005,
+          "literals": [
+            [
+              "concept_15",
+              true
+            ],
+            [
+              "concept_14",
+              false
+            ],
+            [
+              "concept_6",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 187,
+          "weight": 0.057395633310079575,
+          "literals": [
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_5",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 68,
+          "weight": 0.05696888267993927,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              false
+            ],
+            [
+              "concept_45",
+              true
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 56,
+      "action_name": "action_56",
+      "clauses": [
+        {
+          "type": "or1_alt",
+          "conn_idx": 239,
+          "weight": 0.06203453987836838,
+          "literals": [
+            [
+              "concept_6",
+              false
+            ],
+            [
+              "concept_15",
+              false
+            ],
+            [
+              "concept_9",
+              false
+            ],
+            [
+              "concept_7",
+              true
+            ],
+            [
+              "concept_6",
+              true
+            ],
+            [
+              "concept_14",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 192,
+          "weight": 0.06179988384246826,
+          "literals": [
+            [
+              "concept_25",
+              true
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_57",
+              false
+            ],
+            [
+              "concept_67",
+              false
+            ],
+            [
+              "concept_20",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 16,
+          "weight": 0.06174281984567642,
+          "literals": [
+            [
+              "concept_13",
+              false
+            ],
+            [
+              "concept_16",
+              true
+            ],
+            [
+              "concept_8",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 130,
+          "weight": 0.06155088171362877,
+          "literals": [
+            [
+              "concept_37",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_3",
+              true
+            ],
+            [
+              "concept_4",
+              true
+            ],
+            [
+              "concept_5",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 57,
+      "action_name": "action_57",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 69,
+          "weight": 0.06000170856714249,
+          "literals": [
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_47",
+              false
+            ],
+            [
+              "concept_51",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 82,
+          "weight": 0.05929163098335266,
+          "literals": [
+            [
+              "concept_54",
+              false
+            ],
+            [
+              "concept_63",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 137,
+          "weight": 0.058946654200553894,
+          "literals": [
+            [
+              "concept_49",
+              true
+            ],
+            [
+              "concept_45",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ],
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_20",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 67,
+          "weight": 0.058893293142318726,
+          "literals": [
+            [
+              "concept_46",
+              true
+            ],
+            [
+              "concept_47",
+              true
+            ],
+            [
+              "concept_47",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 58,
+      "action_name": "action_58",
+      "clauses": [
+        {
+          "type": "and2_coord",
+          "conn_idx": 149,
+          "weight": 0.060800157487392426,
+          "literals": [
+            [
+              "concept_20",
+              true
+            ],
+            [
+              "concept_25",
+              false
+            ],
+            [
+              "concept_21",
+              false
+            ],
+            [
+              "concept_34",
+              true
+            ],
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_31",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 136,
+          "weight": 0.06025402992963791,
+          "literals": [
+            [
+              "concept_60",
+              true
+            ],
+            [
+              "concept_66",
+              false
+            ],
+            [
+              "concept_54",
+              true
+            ],
+            [
+              "concept_45",
+              true
+            ],
+            [
+              "concept_46",
+              false
+            ],
+            [
+              "concept_50",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 36,
+          "weight": 0.058926619589328766,
+          "literals": [
+            [
+              "concept_25",
+              true
+            ],
+            [
+              "concept_23",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 32,
+          "weight": 0.0587129145860672,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_18",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    },
+    {
+      "action_idx": 59,
+      "action_name": "action_59",
+      "clauses": [
+        {
+          "type": "and1_skip",
+          "conn_idx": 84,
+          "weight": 0.0642111524939537,
+          "literals": [
+            [
+              "concept_70",
+              true
+            ],
+            [
+              "concept_65",
+              false
+            ],
+            [
+              "concept_64",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "and2_coord",
+          "conn_idx": 148,
+          "weight": 0.06416719406843185,
+          "literals": [
+            [
+              "concept_19",
+              true
+            ],
+            [
+              "concept_22",
+              false
+            ],
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_41",
+              true
+            ],
+            [
+              "concept_40",
+              true
+            ],
+            [
+              "concept_38",
+              true
+            ]
+          ]
+        },
+        {
+          "type": "or1_alt",
+          "conn_idx": 201,
+          "weight": 0.06396879255771637,
+          "literals": [
+            [
+              "concept_29",
+              false
+            ],
+            [
+              "concept_32",
+              true
+            ],
+            [
+              "concept_31",
+              false
+            ],
+            [
+              "concept_62",
+              true
+            ],
+            [
+              "concept_52",
+              true
+            ],
+            [
+              "concept_53",
+              false
+            ]
+          ]
+        },
+        {
+          "type": "and1_skip",
+          "conn_idx": 43,
+          "weight": 0.06282967329025269,
+          "literals": [
+            [
+              "concept_18",
+              false
+            ],
+            [
+              "concept_27",
+              true
+            ],
+            [
+              "concept_26",
+              false
+            ]
+          ]
+        }
+      ],
+      "is_dead_rule": true
+    }
+  ],
+  "stats": {
+    "total_actions": 60,
+    "total_clauses": 240,
+    "clipped_clauses": 112,
+    "avg_literals_per_clause": 4.4,
+    "dead_rules_on_val": 57
+  }
+}
