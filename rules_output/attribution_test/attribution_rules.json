@@ -1,0 +1,5036 @@
+{
+  "0": {
+    "action_idx": 0,
+    "action_name": "action_0",
+    "bias": -0.025436881929636,
+    "optimal_tau": 4.479909896850586,
+    "clauses": [
+      {
+        "node_idx": 196,
+        "type": "L2_OR1",
+        "weight": 0.8343559503555298,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_1",
+            true
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_48",
+            true
+          ],
+          [
+            "concept_46",
+            false
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.781353771686554,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 195,
+        "type": "L2_OR1",
+        "weight": -0.7532458305358887,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_71",
+            false
+          ],
+          [
+            "concept_64",
+            true
+          ],
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -0.704149067401886,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      196,
+      195
+    ],
+    "num_clauses": 2
+  },
+  "1": {
+    "action_idx": 1,
+    "action_name": "action_1",
+    "bias": 0.006287534721195698,
+    "optimal_tau": -2.569366693496704,
+    "clauses": [
+      {
+        "node_idx": 201,
+        "type": "L2_OR1",
+        "weight": -0.9144054651260376,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_67",
+            true
+          ],
+          [
+            "concept_46",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -0.8556860685348511,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 254,
+        "type": "L2_OR1",
+        "weight": 0.7033578157424927,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_70",
+            true
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_22",
+            false
+          ],
+          [
+            "concept_16",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.6558824181556702,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      201,
+      254
+    ],
+    "num_clauses": 2
+  },
+  "2": {
+    "action_idx": 2,
+    "action_name": "action_2",
+    "bias": -0.03124350681900978,
+    "optimal_tau": 1.469724178314209,
+    "clauses": [
+      {
+        "node_idx": 105,
+        "type": "L1_AND",
+        "weight": 1.1344459056854248,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_7",
+            true
+          ],
+          [
+            "concept_56",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 1.0682824850082397,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 126,
+        "type": "L1_AND",
+        "weight": -0.7129662036895752,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_22",
+            false
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_56",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_71",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -0.6701186299324036,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      105,
+      126
+    ],
+    "num_clauses": 2
+  },
+  "3": {
+    "action_idx": 3,
+    "action_name": "action_3",
+    "bias": -0.013814480975270271,
+    "optimal_tau": 4.434727668762207,
+    "clauses": [
+      {
+        "node_idx": 239,
+        "type": "L2_OR1",
+        "weight": 0.8853033781051636,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_49",
+            false
+          ],
+          [
+            "concept_46",
+            true
+          ],
+          [
+            "concept_17",
+            false
+          ],
+          [
+            "concept_17",
+            true
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": 0.8287826180458069,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 233,
+        "type": "L2_OR1",
+        "weight": -0.701011598110199,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_22",
+            true
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_9",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": -0.6555074453353882,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      239,
+      233
+    ],
+    "num_clauses": 2
+  },
+  "4": {
+    "action_idx": 4,
+    "action_name": "action_4",
+    "bias": 0.006230873055756092,
+    "optimal_tau": -3.0110976696014404,
+    "clauses": [
+      {
+        "node_idx": 214,
+        "type": "L2_OR1",
+        "weight": -1.0954880714416504,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -1.0320528745651245,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 112,
+        "type": "L1_AND",
+        "weight": -0.9145717024803162,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -0.8572112917900085,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      214,
+      112
+    ],
+    "num_clauses": 2
+  },
+  "5": {
+    "action_idx": 5,
+    "action_name": "action_5",
+    "bias": -0.025738487020134926,
+    "optimal_tau": -6.566227912902832,
+    "clauses": [
+      {
+        "node_idx": 201,
+        "type": "L2_OR1",
+        "weight": -1.0130709409713745,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_67",
+            true
+          ],
+          [
+            "concept_46",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": -0.9480156302452087,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 111,
+        "type": "L1_AND",
+        "weight": -1.1225793361663818,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_70",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_23",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": -1.0575110912322998,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      201,
+      111
+    ],
+    "num_clauses": 2
+  },
+  "6": {
+    "action_idx": 6,
+    "action_name": "action_6",
+    "bias": 0.02069871686398983,
+    "optimal_tau": -1.606786847114563,
+    "clauses": [
+      {
+        "node_idx": 124,
+        "type": "L1_AND",
+        "weight": -0.8334643840789795,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ],
+          [
+            "concept_64",
+            true
+          ],
+          [
+            "concept_1",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -0.7815921306610107,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 198,
+        "type": "L2_OR1",
+        "weight": -0.7653648257255554,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_53",
+            true
+          ],
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_34",
+            true
+          ],
+          [
+            "concept_31",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -0.7164849638938904,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      124,
+      198
+    ],
+    "num_clauses": 2
+  },
+  "7": {
+    "action_idx": 7,
+    "action_name": "action_7",
+    "bias": -0.008456393145024776,
+    "optimal_tau": -0.4370122253894806,
+    "clauses": [
+      {
+        "node_idx": 115,
+        "type": "L1_AND",
+        "weight": -0.9965561032295227,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_8",
+            true
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_42",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": -0.9377864003181458,
+        "ablation_flips": 218,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 7,
+        "type": "L1_AND",
+        "weight": 1.28168785572052,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_1",
+            false
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_5",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_0",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.52596515417099,
+        "ablation_flips": 282,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      115,
+      7
+    ],
+    "num_clauses": 2
+  },
+  "8": {
+    "action_idx": 8,
+    "action_name": "action_8",
+    "bias": 0.16944867372512817,
+    "optimal_tau": 10.0770902633667,
+    "clauses": [
+      {
+        "node_idx": 194,
+        "type": "L2_OR1",
+        "weight": 1.07962965965271,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 1.0074100494384766,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 218,
+        "type": "L2_OR1",
+        "weight": -0.9370319247245789,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_52",
+            false
+          ],
+          [
+            "concept_62",
+            false
+          ],
+          [
+            "concept_54",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -0.8779802322387695,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      194,
+      218
+    ],
+    "num_clauses": 2
+  },
+  "9": {
+    "action_idx": 9,
+    "action_name": "action_9",
+    "bias": 0.16782350838184357,
+    "optimal_tau": 3.389080286026001,
+    "clauses": [
+      {
+        "node_idx": 213,
+        "type": "L2_OR1",
+        "weight": 0.5942668914794922,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_25",
+            false
+          ],
+          [
+            "concept_17",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.556956946849823,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 97,
+        "type": "L1_AND",
+        "weight": 0.8540685176849365,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_41",
+            true
+          ],
+          [
+            "concept_49",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.8016579747200012,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      213,
+      97
+    ],
+    "num_clauses": 2
+  },
+  "10": {
+    "action_idx": 10,
+    "action_name": "action_10",
+    "bias": -0.15133130550384521,
+    "optimal_tau": 8.977350234985352,
+    "clauses": [
+      {
+        "node_idx": 251,
+        "type": "L2_OR1",
+        "weight": 0.6389714479446411,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_1",
+            false
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_1",
+            true
+          ],
+          [
+            "concept_3",
+            false
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 0.6015563011169434,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 206,
+        "type": "L2_OR1",
+        "weight": 0.6537014842033386,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_14",
+            false
+          ],
+          [
+            "concept_7",
+            false
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_30",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 0.6166057586669922,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      251,
+      206
+    ],
+    "num_clauses": 2
+  },
+  "11": {
+    "action_idx": 11,
+    "action_name": "action_11",
+    "bias": -0.030384961515665054,
+    "optimal_tau": 4.2047834396362305,
+    "clauses": [
+      {
+        "node_idx": 211,
+        "type": "L2_OR1",
+        "weight": 0.7663924098014832,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_9",
+            true
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_62",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 0.721592903137207,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 113,
+        "type": "L1_AND",
+        "weight": 1.1375643014907837,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_50",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_68",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 1.0685234069824219,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      211,
+      113
+    ],
+    "num_clauses": 2
+  },
+  "12": {
+    "action_idx": 12,
+    "action_name": "action_12",
+    "bias": 0.005245496518909931,
+    "optimal_tau": 4.63901424407959,
+    "clauses": [
+      {
+        "node_idx": 224,
+        "type": "L2_OR1",
+        "weight": 0.835391640663147,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_61",
+            true
+          ],
+          [
+            "concept_61",
+            false
+          ],
+          [
+            "concept_50",
+            false
+          ],
+          [
+            "concept_49",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.7751113176345825,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 195,
+        "type": "L2_OR1",
+        "weight": -0.768110454082489,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_71",
+            false
+          ],
+          [
+            "concept_64",
+            true
+          ],
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -0.7180448770523071,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      224,
+      195
+    ],
+    "num_clauses": 2
+  },
+  "13": {
+    "action_idx": 13,
+    "action_name": "action_13",
+    "bias": 0.23335519433021545,
+    "optimal_tau": 5.125711441040039,
+    "clauses": [
+      {
+        "node_idx": 215,
+        "type": "L2_OR1",
+        "weight": 0.9593685269355774,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_0",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 0.8949111104011536,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 99,
+        "type": "L1_AND",
+        "weight": 1.5818328857421875,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_31",
+            false
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_50",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_19",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 1.490157961845398,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      215,
+      99
+    ],
+    "num_clauses": 2
+  },
+  "14": {
+    "action_idx": 14,
+    "action_name": "action_14",
+    "bias": -0.10753635317087173,
+    "optimal_tau": -1.8203059434890747,
+    "clauses": [
+      {
+        "node_idx": 106,
+        "type": "L1_AND",
+        "weight": -0.9947744607925415,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_14",
+            false
+          ],
+          [
+            "concept_12",
+            true
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_33",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.4,
+        "avg_contribution": -0.9279208779335022,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 100,
+        "type": "L1_AND",
+        "weight": -1.0072941780090332,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_19",
+            false
+          ],
+          [
+            "concept_49",
+            true
+          ],
+          [
+            "concept_52",
+            false
+          ],
+          [
+            "concept_69",
+            true
+          ],
+          [
+            "concept_9",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.4,
+        "avg_contribution": -0.9455407857894897,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      106,
+      100
+    ],
+    "num_clauses": 2
+  },
+  "15": {
+    "action_idx": 15,
+    "action_name": "action_15",
+    "bias": -0.19587700068950653,
+    "optimal_tau": -1.380521535873413,
+    "clauses": [
+      {
+        "node_idx": 109,
+        "type": "L1_AND",
+        "weight": -0.9774729609489441,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_51",
+            true
+          ],
+          [
+            "concept_44",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": -0.9205342531204224,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 242,
+        "type": "L2_OR1",
+        "weight": 0.7212299108505249,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_4",
+            true
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": 0.678716778755188,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      109,
+      242
+    ],
+    "num_clauses": 2
+  },
+  "16": {
+    "action_idx": 16,
+    "action_name": "action_16",
+    "bias": -0.026979932561516762,
+    "optimal_tau": 3.6207921504974365,
+    "clauses": [
+      {
+        "node_idx": 216,
+        "type": "L2_OR1",
+        "weight": 0.7166994214057922,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.6746773719787598,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 113,
+        "type": "L1_AND",
+        "weight": 0.6573699116706848,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_50",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_68",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.6174730062484741,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      216,
+      113
+    ],
+    "num_clauses": 2
+  },
+  "17": {
+    "action_idx": 17,
+    "action_name": "action_17",
+    "bias": -0.04081941023468971,
+    "optimal_tau": -1.0240851640701294,
+    "clauses": [
+      {
+        "node_idx": 116,
+        "type": "L1_AND",
+        "weight": -0.8363174796104431,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_28",
+            true
+          ],
+          [
+            "concept_67",
+            false
+          ],
+          [
+            "concept_27",
+            true
+          ],
+          [
+            "concept_42",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": -0.7861480712890625,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 225,
+        "type": "L2_OR1",
+        "weight": 0.5436714291572571,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_70",
+            true
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_59",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.5041289329528809,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      116,
+      225
+    ],
+    "num_clauses": 2
+  },
+  "18": {
+    "action_idx": 18,
+    "action_name": "action_18",
+    "bias": -0.03356116637587547,
+    "optimal_tau": 8.506662368774414,
+    "clauses": [
+      {
+        "node_idx": 235,
+        "type": "L2_OR1",
+        "weight": 1.0830177068710327,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": 1.020965576171875,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 245,
+        "type": "L2_OR1",
+        "weight": -0.7525719404220581,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_27",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_54",
+            true
+          ],
+          [
+            "concept_67",
+            true
+          ],
+          [
+            "concept_46",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": -0.7044229507446289,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      235,
+      245
+    ],
+    "num_clauses": 2
+  },
+  "19": {
+    "action_idx": 19,
+    "action_name": "action_19",
+    "bias": 0.13397692143917084,
+    "optimal_tau": 1.8019905090332031,
+    "clauses": [
+      {
+        "node_idx": 100,
+        "type": "L1_AND",
+        "weight": 0.8542001247406006,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_19",
+            false
+          ],
+          [
+            "concept_49",
+            true
+          ],
+          [
+            "concept_52",
+            false
+          ],
+          [
+            "concept_69",
+            true
+          ],
+          [
+            "concept_9",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.8018322587013245,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 239,
+        "type": "L2_OR1",
+        "weight": 0.7610233426094055,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_49",
+            false
+          ],
+          [
+            "concept_46",
+            true
+          ],
+          [
+            "concept_17",
+            false
+          ],
+          [
+            "concept_17",
+            true
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.7124369144439697,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      100,
+      239
+    ],
+    "num_clauses": 2
+  },
+  "20": {
+    "action_idx": 20,
+    "action_name": "action_20",
+    "bias": -0.0025713013019412756,
+    "optimal_tau": 11.295260429382324,
+    "clauses": [
+      {
+        "node_idx": 204,
+        "type": "L2_OR1",
+        "weight": 0.938961923122406,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_35",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.8789916634559631,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 228,
+        "type": "L2_OR1",
+        "weight": 0.7685417532920837,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_67",
+            false
+          ],
+          [
+            "concept_57",
+            false
+          ],
+          [
+            "concept_24",
+            true
+          ],
+          [
+            "concept_18",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.7218286991119385,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      204,
+      228
+    ],
+    "num_clauses": 2
+  },
+  "21": {
+    "action_idx": 21,
+    "action_name": "action_21",
+    "bias": -0.1098715290427208,
+    "optimal_tau": 0.6329529285430908,
+    "clauses": [
+      {
+        "node_idx": 109,
+        "type": "L1_AND",
+        "weight": 0.6000699400901794,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_51",
+            true
+          ],
+          [
+            "concept_44",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.5651153326034546,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 122,
+        "type": "L1_AND",
+        "weight": 0.5987904667854309,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_33",
+            false
+          ],
+          [
+            "concept_27",
+            true
+          ],
+          [
+            "concept_6",
+            true
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_39",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.5598993897438049,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      109,
+      122
+    ],
+    "num_clauses": 2
+  },
+  "22": {
+    "action_idx": 22,
+    "action_name": "action_22",
+    "bias": -0.06956043839454651,
+    "optimal_tau": 4.055712699890137,
+    "clauses": [
+      {
+        "node_idx": 208,
+        "type": "L2_OR1",
+        "weight": 1.0427184104919434,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_8",
+            true
+          ],
+          [
+            "concept_10",
+            true
+          ],
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_11",
+            false
+          ],
+          [
+            "concept_7",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.9757392406463623,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 250,
+        "type": "L2_OR1",
+        "weight": -0.8053192496299744,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_32",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": -0.7569298148155212,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      208,
+      250
+    ],
+    "num_clauses": 2
+  },
+  "23": {
+    "action_idx": 23,
+    "action_name": "action_23",
+    "bias": -0.3178832530975342,
+    "optimal_tau": 1.032791018486023,
+    "clauses": [
+      {
+        "node_idx": 121,
+        "type": "L1_AND",
+        "weight": 0.7341113686561584,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_23",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.6904827952384949,
+        "ablation_flips": 498,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 107,
+        "type": "L1_AND",
+        "weight": 0.7685080766677856,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_68",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_12",
+            true
+          ],
+          [
+            "concept_6",
+            false
+          ],
+          [
+            "concept_1",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.7242396473884583,
+        "ablation_flips": 498,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      121,
+      107
+    ],
+    "num_clauses": 2
+  },
+  "24": {
+    "action_idx": 24,
+    "action_name": "action_24",
+    "bias": 0.01157138217240572,
+    "optimal_tau": 1.2580205202102661,
+    "clauses": [
+      {
+        "node_idx": 109,
+        "type": "L1_AND",
+        "weight": 0.7360561490058899,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_51",
+            true
+          ],
+          [
+            "concept_44",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.69318026304245,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 123,
+        "type": "L1_AND",
+        "weight": 0.780606746673584,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_23",
+            false
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_42",
+            false
+          ],
+          [
+            "concept_20",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.7347480058670044,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      109,
+      123
+    ],
+    "num_clauses": 2
+  },
+  "25": {
+    "action_idx": 25,
+    "action_name": "action_25",
+    "bias": 0.11391092836856842,
+    "optimal_tau": 11.053114891052246,
+    "clauses": [
+      {
+        "node_idx": 248,
+        "type": "L2_OR1",
+        "weight": 0.7715038061141968,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_55",
+            true
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_4",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 0.8,
+        "avg_contribution": 0.7194113731384277,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 205,
+        "type": "L2_OR1",
+        "weight": -0.7890154123306274,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_34",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 0.8,
+        "avg_contribution": -0.7366811037063599,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      248,
+      205
+    ],
+    "num_clauses": 2
+  },
+  "26": {
+    "action_idx": 26,
+    "action_name": "action_26",
+    "bias": 0.15173634886741638,
+    "optimal_tau": 6.039433479309082,
+    "clauses": [
+      {
+        "node_idx": 249,
+        "type": "L2_OR1",
+        "weight": 0.8727315664291382,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_9",
+            true
+          ],
+          [
+            "concept_6",
+            false
+          ],
+          [
+            "concept_7",
+            true
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_32",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.8175577521324158,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 252,
+        "type": "L2_OR1",
+        "weight": -0.8136692047119141,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_38",
+            false
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_48",
+            true
+          ],
+          [
+            "concept_46",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -0.7603567242622375,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      249,
+      252
+    ],
+    "num_clauses": 2
+  },
+  "27": {
+    "action_idx": 27,
+    "action_name": "action_27",
+    "bias": -0.16354721784591675,
+    "optimal_tau": -2.848390579223633,
+    "clauses": [
+      {
+        "node_idx": 196,
+        "type": "L2_OR1",
+        "weight": -0.9750243425369263,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_1",
+            true
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_48",
+            true
+          ],
+          [
+            "concept_46",
+            false
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 0.6,
+        "avg_contribution": -0.9130862951278687,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 246,
+        "type": "L2_OR1",
+        "weight": 1.0393739938735962,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_66",
+            false
+          ],
+          [
+            "concept_64",
+            true
+          ],
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_16",
+            false
+          ],
+          [
+            "concept_19",
+            false
+          ],
+          [
+            "concept_49",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 0.6,
+        "avg_contribution": 0.974981427192688,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      196,
+      246
+    ],
+    "num_clauses": 2
+  },
+  "28": {
+    "action_idx": 28,
+    "action_name": "action_28",
+    "bias": -0.09936980158090591,
+    "optimal_tau": -2.2127223014831543,
+    "clauses": [
+      {
+        "node_idx": 111,
+        "type": "L1_AND",
+        "weight": -1.2055323123931885,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_70",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_23",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -1.1356557607650757,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 120,
+        "type": "L1_AND",
+        "weight": 0.6830685138702393,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_47",
+            true
+          ],
+          [
+            "concept_29",
+            false
+          ],
+          [
+            "concept_32",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.6430267691612244,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      111,
+      120
+    ],
+    "num_clauses": 2
+  },
+  "29": {
+    "action_idx": 29,
+    "action_name": "action_29",
+    "bias": -0.10911836475133896,
+    "optimal_tau": 0.4269309341907501,
+    "clauses": [
+      {
+        "node_idx": 8,
+        "type": "L1_AND",
+        "weight": 1.5406914949417114,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_0",
+            true
+          ],
+          [
+            "concept_4",
+            true
+          ],
+          [
+            "concept_1",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.7254481315612793,
+        "ablation_flips": 63,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 115,
+        "type": "L1_AND",
+        "weight": 0.6481092572212219,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_8",
+            true
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_42",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.6098884344100952,
+        "ablation_flips": 63,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 243,
+        "type": "L2_OR1",
+        "weight": -1.0199023485183716,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_34",
+            true
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_32",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": -0.9571303725242615,
+        "ablation_flips": 437,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      8,
+      115,
+      243
+    ],
+    "num_clauses": 3
+  },
+  "30": {
+    "action_idx": 30,
+    "action_name": "action_30",
+    "bias": -0.02541233040392399,
+    "optimal_tau": 1.817221760749817,
+    "clauses": [
+      {
+        "node_idx": 96,
+        "type": "L1_AND",
+        "weight": 0.6368319988250732,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_69",
+            true
+          ],
+          [
+            "concept_8",
+            true
+          ],
+          [
+            "concept_36",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.5961759090423584,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 121,
+        "type": "L1_AND",
+        "weight": 0.9883598685264587,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_23",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.929621160030365,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      96,
+      121
+    ],
+    "num_clauses": 2
+  },
+  "31": {
+    "action_idx": 31,
+    "action_name": "action_31",
+    "bias": -0.03469245508313179,
+    "optimal_tau": -0.993470311164856,
+    "clauses": [
+      {
+        "node_idx": 103,
+        "type": "L1_AND",
+        "weight": -0.7501003742218018,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_7",
+            true
+          ],
+          [
+            "concept_28",
+            false
+          ],
+          [
+            "concept_43",
+            false
+          ],
+          [
+            "concept_68",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -0.7026869058609009,
+        "ablation_flips": 419,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 100,
+        "type": "L1_AND",
+        "weight": -0.9904543161392212,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_19",
+            false
+          ],
+          [
+            "concept_49",
+            true
+          ],
+          [
+            "concept_52",
+            false
+          ],
+          [
+            "concept_69",
+            true
+          ],
+          [
+            "concept_9",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -0.9297332763671875,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      103,
+      100
+    ],
+    "num_clauses": 2
+  },
+  "32": {
+    "action_idx": 32,
+    "action_name": "action_32",
+    "bias": 0.1260731965303421,
+    "optimal_tau": 1.597269892692566,
+    "clauses": [
+      {
+        "node_idx": 100,
+        "type": "L1_AND",
+        "weight": 0.7532312870025635,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_19",
+            false
+          ],
+          [
+            "concept_49",
+            true
+          ],
+          [
+            "concept_52",
+            false
+          ],
+          [
+            "concept_69",
+            true
+          ],
+          [
+            "concept_9",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.4,
+        "avg_contribution": 0.7070536017417908,
+        "ablation_flips": 11,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 119,
+        "type": "L1_AND",
+        "weight": 0.7553374171257019,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_67",
+            true
+          ],
+          [
+            "concept_46",
+            true
+          ],
+          [
+            "concept_40",
+            true
+          ],
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_56",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.4,
+        "avg_contribution": 0.7058797478675842,
+        "ablation_flips": 11,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      100,
+      119
+    ],
+    "num_clauses": 2
+  },
+  "33": {
+    "action_idx": 33,
+    "action_name": "action_33",
+    "bias": 0.20573575794696808,
+    "optimal_tau": -3.7384579181671143,
+    "clauses": [
+      {
+        "node_idx": 242,
+        "type": "L2_OR1",
+        "weight": -0.8787217736244202,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_4",
+            true
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -0.8269252777099609,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 232,
+        "type": "L2_OR1",
+        "weight": 0.5793308019638062,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_2",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.541968584060669,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      242,
+      232
+    ],
+    "num_clauses": 2
+  },
+  "34": {
+    "action_idx": 34,
+    "action_name": "action_34",
+    "bias": -0.029114311560988426,
+    "optimal_tau": 5.672056674957275,
+    "clauses": [
+      {
+        "node_idx": 213,
+        "type": "L2_OR1",
+        "weight": 0.6591613292694092,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_25",
+            false
+          ],
+          [
+            "concept_17",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": 0.6177771091461182,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 243,
+        "type": "L2_OR1",
+        "weight": -0.5285229682922363,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_34",
+            true
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_32",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.8000000000000003,
+        "avg_contribution": -0.49599388241767883,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      213,
+      243
+    ],
+    "num_clauses": 2
+  },
+  "35": {
+    "action_idx": 35,
+    "action_name": "action_35",
+    "bias": -0.04002721235156059,
+    "optimal_tau": 6.735925197601318,
+    "clauses": [
+      {
+        "node_idx": 205,
+        "type": "L2_OR1",
+        "weight": 1.0169956684112549,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_34",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.9497603178024292,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 230,
+        "type": "L2_OR1",
+        "weight": -0.8371269702911377,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_69",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_1",
+            false
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_4",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -0.7848154306411743,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      205,
+      230
+    ],
+    "num_clauses": 2
+  },
+  "36": {
+    "action_idx": 36,
+    "action_name": "action_36",
+    "bias": 0.13259412348270416,
+    "optimal_tau": -3.9363956451416016,
+    "clauses": [
+      {
+        "node_idx": 194,
+        "type": "L2_OR1",
+        "weight": -0.9163290858268738,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -0.8550330996513367,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 250,
+        "type": "L2_OR1",
+        "weight": 0.6658976078033447,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_32",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.6258856058120728,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      194,
+      250
+    ],
+    "num_clauses": 2
+  },
+  "37": {
+    "action_idx": 37,
+    "action_name": "action_37",
+    "bias": 0.018032392486929893,
+    "optimal_tau": -9.27366828918457,
+    "clauses": [
+      {
+        "node_idx": 210,
+        "type": "L2_OR1",
+        "weight": -1.0900250673294067,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -1.0209699869155884,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 215,
+        "type": "L2_OR1",
+        "weight": 0.770100474357605,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_0",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.7183594703674316,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      210,
+      215
+    ],
+    "num_clauses": 2
+  },
+  "38": {
+    "action_idx": 38,
+    "action_name": "action_38",
+    "bias": 0.05085740610957146,
+    "optimal_tau": 2.016441583633423,
+    "clauses": [
+      {
+        "node_idx": 127,
+        "type": "L1_AND",
+        "weight": 0.7360959053039551,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_70",
+            true
+          ],
+          [
+            "concept_36",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.6909195780754089,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 126,
+        "type": "L1_AND",
+        "weight": 0.6385528445243835,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_22",
+            false
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_56",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_71",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.6001772880554199,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      127,
+      126
+    ],
+    "num_clauses": 2
+  },
+  "39": {
+    "action_idx": 39,
+    "action_name": "action_39",
+    "bias": -0.08687891066074371,
+    "optimal_tau": 1.7698980569839478,
+    "clauses": [
+      {
+        "node_idx": 114,
+        "type": "L1_AND",
+        "weight": 1.1809462308883667,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_63",
+            false
+          ],
+          [
+            "concept_44",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 1.1093509197235107,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 109,
+        "type": "L1_AND",
+        "weight": 0.9968332648277283,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_51",
+            true
+          ],
+          [
+            "concept_44",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.9387667775154114,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      114,
+      109
+    ],
+    "num_clauses": 2
+  },
+  "40": {
+    "action_idx": 40,
+    "action_name": "action_40",
+    "bias": -0.06927528232336044,
+    "optimal_tau": 5.3717427253723145,
+    "clauses": [
+      {
+        "node_idx": 221,
+        "type": "L2_OR1",
+        "weight": 0.5914937853813171,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_54",
+            true
+          ],
+          [
+            "concept_6",
+            false
+          ],
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_16",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.5559897422790527,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 253,
+        "type": "L2_OR1",
+        "weight": 0.9369747638702393,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_0",
+            true
+          ],
+          [
+            "concept_8",
+            true
+          ],
+          [
+            "concept_10",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.8799929618835449,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      221,
+      253
+    ],
+    "num_clauses": 2
+  },
+  "41": {
+    "action_idx": 41,
+    "action_name": "action_41",
+    "bias": 0.023086747154593468,
+    "optimal_tau": 3.1947779655456543,
+    "clauses": [
+      {
+        "node_idx": 97,
+        "type": "L1_AND",
+        "weight": 1.5157502889633179,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_41",
+            true
+          ],
+          [
+            "concept_49",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 0.8,
+        "avg_contribution": 1.422735333442688,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 104,
+        "type": "L1_AND",
+        "weight": 0.6530121564865112,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_62",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_66",
+            true
+          ],
+          [
+            "concept_64",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 0.8,
+        "avg_contribution": 0.6146765351295471,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      97,
+      104
+    ],
+    "num_clauses": 2
+  },
+  "42": {
+    "action_idx": 42,
+    "action_name": "action_42",
+    "bias": -0.016310790553689003,
+    "optimal_tau": 2.5546510219573975,
+    "clauses": [
+      {
+        "node_idx": 119,
+        "type": "L1_AND",
+        "weight": 1.0922049283981323,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_67",
+            true
+          ],
+          [
+            "concept_46",
+            true
+          ],
+          [
+            "concept_40",
+            true
+          ],
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_56",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 1.0206899642944336,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 118,
+        "type": "L1_AND",
+        "weight": 0.8790165781974792,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_31",
+            false
+          ],
+          [
+            "concept_62",
+            false
+          ],
+          [
+            "concept_24",
+            true
+          ],
+          [
+            "concept_71",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.8250946998596191,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      119,
+      118
+    ],
+    "num_clauses": 2
+  },
+  "43": {
+    "action_idx": 43,
+    "action_name": "action_43",
+    "bias": 0.057287443429231644,
+    "optimal_tau": 2.099989652633667,
+    "clauses": [
+      {
+        "node_idx": 102,
+        "type": "L1_AND",
+        "weight": 0.7748582363128662,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_54",
+            true
+          ],
+          [
+            "concept_23",
+            true
+          ],
+          [
+            "concept_53",
+            true
+          ],
+          [
+            "concept_13",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.7319085597991943,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 105,
+        "type": "L1_AND",
+        "weight": 0.7071729898452759,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_12",
+            false
+          ],
+          [
+            "concept_37",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_7",
+            true
+          ],
+          [
+            "concept_56",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.6659291982650757,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      102,
+      105
+    ],
+    "num_clauses": 2
+  },
+  "44": {
+    "action_idx": 44,
+    "action_name": "action_44",
+    "bias": -0.035665806382894516,
+    "optimal_tau": 6.310580730438232,
+    "clauses": [
+      {
+        "node_idx": 233,
+        "type": "L2_OR1",
+        "weight": 0.9937768578529358,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_22",
+            true
+          ],
+          [
+            "concept_4",
+            false
+          ],
+          [
+            "concept_9",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": 0.9292685985565186,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 98,
+        "type": "L1_AND",
+        "weight": 1.1248282194137573,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_32",
+            false
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_45",
+            true
+          ],
+          [
+            "concept_44",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": 1.0570776462554932,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      233,
+      98
+    ],
+    "num_clauses": 2
+  },
+  "45": {
+    "action_idx": 45,
+    "action_name": "action_45",
+    "bias": -0.12077315151691437,
+    "optimal_tau": -7.304536819458008,
+    "clauses": [
+      {
+        "node_idx": 237,
+        "type": "L2_OR1",
+        "weight": -1.5091475248336792,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_4",
+            true
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_35",
+            true
+          ],
+          [
+            "concept_31",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 0.6,
+        "avg_contribution": -1.4089020490646362,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 223,
+        "type": "L2_OR1",
+        "weight": 0.7621932029724121,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_65",
+            true
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_32",
+            true
+          ],
+          [
+            "concept_32",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ],
+          [
+            "concept_48",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 0.6,
+        "avg_contribution": 0.7150711417198181,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      237,
+      223
+    ],
+    "num_clauses": 2
+  },
+  "46": {
+    "action_idx": 46,
+    "action_name": "action_46",
+    "bias": 0.079280324280262,
+    "optimal_tau": -7.136898517608643,
+    "clauses": [
+      {
+        "node_idx": 211,
+        "type": "L2_OR1",
+        "weight": -1.273875117301941,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_9",
+            true
+          ],
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_62",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -1.1994109153747559,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 222,
+        "type": "L2_OR1",
+        "weight": 0.5564224123954773,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_48",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_20",
+            false
+          ],
+          [
+            "concept_22",
+            false
+          ],
+          [
+            "concept_51",
+            false
+          ],
+          [
+            "concept_47",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": 0.5197485089302063,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      211,
+      222
+    ],
+    "num_clauses": 2
+  },
+  "47": {
+    "action_idx": 47,
+    "action_name": "action_47",
+    "bias": -0.11969878524541855,
+    "optimal_tau": -0.9471150636672974,
+    "clauses": [
+      {
+        "node_idx": 114,
+        "type": "L1_AND",
+        "weight": -1.1056957244873047,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_63",
+            false
+          ],
+          [
+            "concept_44",
+            false
+          ],
+          [
+            "concept_66",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": -1.0386625528335571,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 112,
+        "type": "L1_AND",
+        "weight": 0.6272074580192566,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.5878700017929077,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      114,
+      112
+    ],
+    "num_clauses": 2
+  },
+  "48": {
+    "action_idx": 48,
+    "action_name": "action_48",
+    "bias": -0.01719866320490837,
+    "optimal_tau": -2.848876476287842,
+    "clauses": [
+      {
+        "node_idx": 123,
+        "type": "L1_AND",
+        "weight": -1.404556155204773,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_23",
+            false
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_42",
+            false
+          ],
+          [
+            "concept_20",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -1.3220419883728027,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 226,
+        "type": "L2_OR1",
+        "weight": -0.8201445937156677,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_50",
+            false
+          ],
+          [
+            "concept_48",
+            true
+          ],
+          [
+            "concept_46",
+            false
+          ],
+          [
+            "concept_67",
+            false
+          ],
+          [
+            "concept_57",
+            false
+          ],
+          [
+            "concept_64",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.7999999999999998,
+        "avg_contribution": -0.7641604542732239,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      123,
+      226
+    ],
+    "num_clauses": 2
+  },
+  "49": {
+    "action_idx": 49,
+    "action_name": "action_49",
+    "bias": 0.05611797794699669,
+    "optimal_tau": 0.9159901738166809,
+    "clauses": [
+      {
+        "node_idx": 112,
+        "type": "L1_AND",
+        "weight": 0.8877021670341492,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.8320269584655762,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 118,
+        "type": "L1_AND",
+        "weight": 0.7475472092628479,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_31",
+            false
+          ],
+          [
+            "concept_62",
+            false
+          ],
+          [
+            "concept_24",
+            true
+          ],
+          [
+            "concept_71",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.7016901969909668,
+        "ablation_flips": 413,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      112,
+      118
+    ],
+    "num_clauses": 2
+  },
+  "50": {
+    "action_idx": 50,
+    "action_name": "action_50",
+    "bias": 0.000477466091979295,
+    "optimal_tau": -2.751788854598999,
+    "clauses": [
+      {
+        "node_idx": 116,
+        "type": "L1_AND",
+        "weight": -1.184099793434143,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_28",
+            true
+          ],
+          [
+            "concept_67",
+            false
+          ],
+          [
+            "concept_27",
+            true
+          ],
+          [
+            "concept_42",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -1.1130675077438354,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 113,
+        "type": "L1_AND",
+        "weight": -0.6951969861984253,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_50",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_68",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": -0.6530042886734009,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      116,
+      113
+    ],
+    "num_clauses": 2
+  },
+  "51": {
+    "action_idx": 51,
+    "action_name": "action_51",
+    "bias": 0.09470739215612411,
+    "optimal_tau": 3.8400278091430664,
+    "clauses": [
+      {
+        "node_idx": 113,
+        "type": "L1_AND",
+        "weight": 0.7539388537406921,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_50",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_68",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.7081810235977173,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 220,
+        "type": "L2_OR1",
+        "weight": 0.7289409637451172,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_66",
+            false
+          ],
+          [
+            "concept_64",
+            true
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_39",
+            true
+          ],
+          [
+            "concept_39",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.2,
+        "avg_contribution": 0.6803429126739502,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      113,
+      220
+    ],
+    "num_clauses": 2
+  },
+  "52": {
+    "action_idx": 52,
+    "action_name": "action_52",
+    "bias": 0.059826482087373734,
+    "optimal_tau": -2.3622426986694336,
+    "clauses": [
+      {
+        "node_idx": 113,
+        "type": "L1_AND",
+        "weight": -0.8440985679626465,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_50",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_25",
+            true
+          ],
+          [
+            "concept_5",
+            false
+          ],
+          [
+            "concept_68",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": -0.7928687930107117,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 194,
+        "type": "L2_OR1",
+        "weight": -0.851176917552948,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_59",
+            true
+          ],
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.0,
+        "avg_contribution": -0.7942391633987427,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      113,
+      194
+    ],
+    "num_clauses": 2
+  },
+  "53": {
+    "action_idx": 53,
+    "action_name": "action_53",
+    "bias": -0.08598523586988449,
+    "optimal_tau": 5.903204441070557,
+    "clauses": [
+      {
+        "node_idx": 203,
+        "type": "L2_OR1",
+        "weight": 0.7997943162918091,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_35",
+            false
+          ],
+          [
+            "concept_34",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_54",
+            true
+          ],
+          [
+            "concept_24",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.7469282150268555,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 247,
+        "type": "L2_OR1",
+        "weight": 0.9159870147705078,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_36",
+            false
+          ],
+          [
+            "concept_43",
+            false
+          ],
+          [
+            "concept_23",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_59",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.8536171317100525,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      203,
+      247
+    ],
+    "num_clauses": 2
+  },
+  "54": {
+    "action_idx": 54,
+    "action_name": "action_54",
+    "bias": 0.14218460023403168,
+    "optimal_tau": -5.561252117156982,
+    "clauses": [
+      {
+        "node_idx": 210,
+        "type": "L2_OR1",
+        "weight": -0.9335631728172302,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_55",
+            false
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_36",
+            true
+          ],
+          [
+            "concept_34",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": -0.874420166015625,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 229,
+        "type": "L2_OR1",
+        "weight": 0.6634944677352905,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_32",
+            false
+          ],
+          [
+            "concept_34",
+            false
+          ],
+          [
+            "concept_26",
+            false
+          ],
+          [
+            "concept_22",
+            false
+          ],
+          [
+            "concept_69",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.6201247572898865,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      210,
+      229
+    ],
+    "num_clauses": 2
+  },
+  "55": {
+    "action_idx": 55,
+    "action_name": "action_55",
+    "bias": -0.06882382929325104,
+    "optimal_tau": 2.574491500854492,
+    "clauses": [
+      {
+        "node_idx": 122,
+        "type": "L1_AND",
+        "weight": 0.8370855450630188,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_33",
+            false
+          ],
+          [
+            "concept_27",
+            true
+          ],
+          [
+            "concept_6",
+            true
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_39",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.7827174067497253,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 123,
+        "type": "L1_AND",
+        "weight": 0.6014361381530762,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_56",
+            false
+          ],
+          [
+            "concept_23",
+            false
+          ],
+          [
+            "concept_58",
+            false
+          ],
+          [
+            "concept_42",
+            false
+          ],
+          [
+            "concept_20",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.1999999999999997,
+        "avg_contribution": 0.5661032795906067,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      122,
+      123
+    ],
+    "num_clauses": 2
+  },
+  "56": {
+    "action_idx": 56,
+    "action_name": "action_56",
+    "bias": -0.08544350415468216,
+    "optimal_tau": -2.0492336750030518,
+    "clauses": [
+      {
+        "node_idx": 104,
+        "type": "L1_AND",
+        "weight": -1.284763216972351,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_62",
+            false
+          ],
+          [
+            "concept_45",
+            false
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_66",
+            true
+          ],
+          [
+            "concept_64",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": -1.2093400955200195,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 248,
+        "type": "L2_OR1",
+        "weight": -1.0689438581466675,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_2",
+            false
+          ],
+          [
+            "concept_2",
+            true
+          ],
+          [
+            "concept_52",
+            true
+          ],
+          [
+            "concept_55",
+            true
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_4",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.0,
+        "avg_contribution": -0.9969497323036194,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      104,
+      248
+    ],
+    "num_clauses": 2
+  },
+  "57": {
+    "action_idx": 57,
+    "action_name": "action_57",
+    "bias": -0.09275738894939423,
+    "optimal_tau": 9.910712242126465,
+    "clauses": [
+      {
+        "node_idx": 231,
+        "type": "L2_OR1",
+        "weight": 0.9799569845199585,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_41",
+            false
+          ],
+          [
+            "concept_43",
+            true
+          ],
+          [
+            "concept_65",
+            false
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_15",
+            true
+          ],
+          [
+            "concept_16",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 0.9149522185325623,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 230,
+        "type": "L2_OR1",
+        "weight": 1.2950788736343384,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_69",
+            false
+          ],
+          [
+            "concept_53",
+            false
+          ],
+          [
+            "concept_1",
+            false
+          ],
+          [
+            "concept_3",
+            true
+          ],
+          [
+            "concept_0",
+            false
+          ],
+          [
+            "concept_4",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.4000000000000001,
+        "avg_contribution": 1.2141504287719727,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      231,
+      230
+    ],
+    "num_clauses": 2
+  },
+  "58": {
+    "action_idx": 58,
+    "action_name": "action_58",
+    "bias": 0.13228003680706024,
+    "optimal_tau": 0.8040918111801147,
+    "clauses": [
+      {
+        "node_idx": 112,
+        "type": "L1_AND",
+        "weight": 0.8567821383476257,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 0.8030461072921753,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      },
+      {
+        "node_idx": 101,
+        "type": "L1_AND",
+        "weight": 1.5363177061080933,
+        "is_inhibitor": false,
+        "literals": [
+          [
+            "concept_20",
+            true
+          ],
+          [
+            "concept_63",
+            true
+          ],
+          [
+            "concept_14",
+            true
+          ],
+          [
+            "concept_7",
+            true
+          ],
+          [
+            "concept_55",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 1.6,
+        "avg_contribution": 1.4455307722091675,
+        "ablation_flips": 0,
+        "is_dead_clause": true
+      }
+    ],
+    "selected_node_indices": [
+      112,
+      101
+    ],
+    "num_clauses": 2
+  },
+  "59": {
+    "action_idx": 59,
+    "action_name": "action_59",
+    "bias": 0.07599025964736938,
+    "optimal_tau": -1.1315996646881104,
+    "clauses": [
+      {
+        "node_idx": 112,
+        "type": "L1_AND",
+        "weight": -0.794147253036499,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_11",
+            true
+          ],
+          [
+            "concept_57",
+            true
+          ],
+          [
+            "concept_27",
+            false
+          ],
+          [
+            "concept_18",
+            false
+          ],
+          [
+            "concept_65",
+            true
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -0.7443395853042603,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      },
+      {
+        "node_idx": 202,
+        "type": "L2_OR1",
+        "weight": -0.8162057399749756,
+        "is_inhibitor": true,
+        "literals": [
+          [
+            "concept_38",
+            true
+          ],
+          [
+            "concept_40",
+            false
+          ],
+          [
+            "concept_31",
+            false
+          ],
+          [
+            "concept_33",
+            false
+          ],
+          [
+            "concept_61",
+            true
+          ],
+          [
+            "concept_61",
+            false
+          ]
+        ],
+        "support": 500,
+        "precision": 2.6,
+        "avg_contribution": -0.7652086019515991,
+        "ablation_flips": 500,
+        "is_dead_clause": false
+      }
+    ],
+    "selected_node_indices": [
+      112,
+      202
+    ],
+    "num_clauses": 2
+  }
+}

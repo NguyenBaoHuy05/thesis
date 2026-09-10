@@ -1,0 +1,40 @@
+{
+  "baseline": {
+    "accuracy": 2.9999999329447746,
+    "benchmark": {
+      "tier1_exact": {
+        "fidelity": 100.0,
+        "acc": 2.9999999329447746
+      },
+      "tier2_fuzzy": {
+        "fidelity": 62.00000047683716,
+        "acc": 2.9999999329447746
+      },
+      "tier3_bool": {
+        "fidelity": 23.000000417232513,
+        "acc": 0.0
+      }
+    },
+    "avg_literals_per_clause": 5.633744855967078,
+    "not_literal_percentage": 46.60336011687363
+  },
+  "ablation_no_not": {
+    "accuracy": 0.0,
+    "benchmark": {
+      "tier1_exact": {
+        "fidelity": 100.0,
+        "acc": 0.0
+      },
+      "tier2_fuzzy": {
+        "fidelity": 60.00000238418579,
+        "acc": 0.0
+      },
+      "tier3_bool": {
+        "fidelity": 0.0,
+        "acc": 0.0
+      }
+    },
+    "avg_literals_per_clause": 5.678294573643411,
+    "not_literal_percentage": 0.0
+  }
+}
