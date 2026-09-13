@@ -127,6 +127,12 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--concept-checkpoint",    default=None)
     p.add_argument("--kg-s-weight",           type=float, default=0.02)
     p.add_argument("--kg-c-weight",           type=float, default=0.01)
+    p.add_argument("--use-concept-gcn",       action="store_true", default=True,
+                   help="Enable Concept-GCN layer using C_KG adjacency matrix in forward pass")
+    p.add_argument("--no-concept-gcn",        dest="use_concept_gcn", action="store_false",
+                   help="Disable Concept-GCN layer for ablation")
+    p.add_argument("--concept-gcn-dropout",   type=float, default=0.1,
+                   help="Dropout rate inside Concept-GCN layer")
 
     # ── Training Hyperparameters ─────────────────────────────────────────────
     p.add_argument("--epochs",            type=int,   default=30)
@@ -260,6 +266,8 @@ def build_model_from_args(args, device: torch.device) -> JointSpatialTemporalCBM
         kg_s_weight             = args.kg_s_weight,
         kg_c_weight             = args.kg_c_weight,
         fusion_alpha            = args.fusion_start_alpha,
+        use_concept_gcn         = getattr(args, "use_concept_gcn", True),
+        concept_gcn_dropout     = getattr(args, "concept_gcn_dropout", 0.1),
     )
 
     if args.resume_checkpoint:

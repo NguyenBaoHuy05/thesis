@@ -21,6 +21,10 @@ concept_negative_weight: 0.10
 concept_checkpoint: null
 kg_s_weight: 0.02
 kg_c_weight: 0.01
+
+# Concept-GCN Architecture (C_KG Graph Adjacency Prior)
+use_concept_gcn: true
+concept_gcn_dropout: 0.1
 symbolic_temperature: 0.70
 symbolic_margin: 0.15
 symbolic_weight: 0.50
