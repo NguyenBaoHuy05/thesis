@@ -93,8 +93,16 @@ class JointSymbolicActionCompatibility(nn.Module):
             self.register_buffer(f"positive_count_{gi}", template.sum(-1).clamp_min(1.0))
             self.register_buffer(f"active_{gi}", (template.sum(-1) > 0).float())
 
-        self.group_logit = nn.Parameter(torch.zeros(len(group_order)))
+        # Class-specific group attention logits: (num_class, len(group_order))
+        self.group_logit = nn.Parameter(torch.zeros(self.num_class, len(group_order)))
         self.class_bias = nn.Parameter(torch.zeros(self.num_class))
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs):
+        key = prefix + "group_logit"
+        if key in state_dict and state_dict[key].dim() == 1 and state_dict[key].shape[0] == len(self.group_order):
+            # Backward compatibility: expand 1D group_logit (9,) to (num_class, 9)
+            state_dict[key] = state_dict[key].unsqueeze(0).repeat(self.num_class, 1)
+        super()._load_from_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
 
     def _group_tensors(self, probs: List[torch.Tensor], gi: int):
         template = getattr(self, f"template_{gi}")
@@ -112,8 +120,8 @@ class JointSymbolicActionCompatibility(nn.Module):
             active.append(m)
         score = torch.stack(scores, dim=-1)
         active = torch.stack(active, dim=-1)
-        weights = torch.softmax(self.group_logit, dim=0)
-        weighted_active = active * weights[None, None]
+        weights = torch.softmax(self.group_logit, dim=-1)
+        weighted_active = (active * weights).unsqueeze(0)
         score = (score * weighted_active).sum(-1) / weighted_active.sum(-1).clamp_min(1e-6)
         return score / max(self.temperature, 1e-4) + self.class_bias
 
@@ -132,8 +140,8 @@ class JointSymbolicActionCompatibility(nn.Module):
             active_parts.append(m)
         all_scores = torch.stack(score_parts, dim=-1)
         active = torch.stack(active_parts, dim=-1)
-        weights = torch.softmax(self.group_logit, dim=0)
-        weighted_active = active * weights[None, None]
+        weights = torch.softmax(self.group_logit, dim=-1)
+        weighted_active = (active * weights).unsqueeze(0)
         class_scores = (all_scores * weighted_active).sum(-1) / weighted_active.sum(-1).clamp_min(1e-6)
         target_score = class_scores.gather(1, labels[:, None]).squeeze(1)
 
@@ -169,15 +177,22 @@ class JointSymbolicActionCompatibility(nn.Module):
         k_groups: int = 9,
     ) -> List[dict]:
         out = []
+        if self.group_logit.dim() == 2:
+            group_weights = torch.softmax(self.group_logit[action_idx], dim=-1)
+        else:
+            group_weights = torch.softmax(self.group_logit, dim=0)
+
         for gi, group_name in enumerate(self.group_order[:k_groups]):
             p = probs[gi][sample_idx]
             indices = getattr(self, f"indices_{gi}")
             names = [concept_names[i] for i in indices.tolist()]
             vals = p
+            gw = round(float(group_weights[gi]), 4)
             target_template = getattr(self, f"template_{gi}")[action_idx]
             if not bool((target_template > 0).any()):
                 out.append({
                     "group": group_name,
+                    "group_weight": gw,
                     "positive": "NONE",
                     "positive_score": round(float(1.0 - vals.max()), 6),
                     "negative": None,
@@ -197,12 +212,35 @@ class JointSymbolicActionCompatibility(nn.Module):
                 negative, negative_score = None, None
             out.append({
                 "group": group_name,
+                "group_weight": gw,
                 "positive": names[pos_idx],
                 "positive_score": round(float(vals[pos_idx]), 6),
                 "negative": negative,
                 "negative_score": negative_score,
             })
         return out
+
+
+class ConceptGCN(nn.Module):
+    """
+    Graph Convolution Layer propagating messages between concept logits
+    based on the normalized co-activation matrix A_concept (derived from C_KG).
+    Includes a residual connection to preserve raw concept predictions.
+    """
+
+    def __init__(self, num_concepts: int = 74, dropout: float = 0.10):
+        super().__init__()
+        self.weight = nn.Parameter(torch.ones(num_concepts))
+        self.bias = nn.Parameter(torch.zeros(num_concepts))
+        self.act = nn.GELU()
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, z: torch.Tensor, adj_norm: torch.Tensor) -> torch.Tensor:
+        # z: (B, num_concepts)
+        # adj_norm: (num_concepts, num_concepts)
+        msg = torch.matmul(z, adj_norm.t())          # Message passing over concept graph
+        refined = self.act(msg * self.weight + self.bias)
+        return z + self.drop(refined)                 # Residual connection
 
 
 class JointSpatialTemporalCBM(nn.Module):
@@ -224,6 +262,8 @@ class JointSpatialTemporalCBM(nn.Module):
         symbolic_temperature: float = 0.7,
         symbolic_margin: float = 0.15,
         concepts_csv: Optional[str] = None,
+        use_concept_gcn: bool = True,
+        concept_gcn_dropout: float = 0.10,
         **kwargs,
     ):
         super().__init__()
@@ -265,6 +305,18 @@ class JointSpatialTemporalCBM(nn.Module):
         self.register_buffer("S_KG_static", S_KG)
         self.register_buffer("C_KG_static", C_KG)
 
+        # Concept-GCN: Graph-conditioned message passing over C_KG
+        self.use_concept_gcn = bool(use_concept_gcn)
+        if self.use_concept_gcn:
+            deg = C_KG.sum(dim=-1).clamp_min(1e-6)
+            deg_inv_sqrt = deg.pow(-0.5)
+            A_norm = deg_inv_sqrt[:, None] * C_KG * deg_inv_sqrt[None, :]
+            self.register_buffer("A_concept", A_norm.float())
+            self.concept_gcn = ConceptGCN(num_concepts=self.num_concepts, dropout=float(concept_gcn_dropout))
+        else:
+            self.register_buffer("A_concept", None)
+            self.concept_gcn = None
+
         concept_pos = concept_matrix.float().sum(dim=0)
         concept_neg = float(num_class) - concept_pos
         pos_weight = (concept_neg / concept_pos.clamp_min(1.0)).clamp(1.0, 20.0)
@@ -300,11 +352,26 @@ class JointSpatialTemporalCBM(nn.Module):
         return self.backbone_adapter(x, index_t)
 
     def encode_group_concepts(self, feat: torch.Tensor):
-        logits, probs = [], []
+        raw_logits = []
         for name in self.group_order:
-            z = self.group_heads[name](feat)
-            logits.append(z)
-            probs.append(torch.sigmoid(z))
+            raw_logits.append(self.group_heads[name](feat))
+
+        z_all = torch.cat(raw_logits, dim=-1)
+
+        if self.use_concept_gcn and self.concept_gcn is not None and getattr(self, "A_concept", None) is not None:
+            A = self.A_concept.to(z_all.device).float()
+            z_refined = self.concept_gcn(z_all, A)
+        else:
+            z_refined = z_all
+
+        logits, probs = [], []
+        start = 0
+        for name in self.group_order:
+            n = len(self.concept_groups[name])
+            z_group = z_refined[:, start : start + n]
+            logits.append(z_group)
+            probs.append(torch.sigmoid(z_group))
+            start += n
         return logits, probs
 
     def freeze_backbone(self) -> Tuple[int, int]:
@@ -349,12 +416,12 @@ class JointSpatialTemporalCBM(nn.Module):
             group_probs, label, logits=group_logits
         )
 
-        # S_KG loss
-        s = self.S_KG_static.to(action_logits.device).float()
+        # S_KG loss: Guided directly on symbolic_logits (REFINEMENT_SKG_LOSS.md)
+        s = self.S_KG_static.to(symbolic_logits.device).float()
         s_target = s[label]
         s_target = s_target / s_target.sum(-1, keepdim=True).clamp_min(1e-6)
         loss_s = F.kl_div(
-            F.log_softmax(action_logits.float(), dim=-1),
+            F.log_softmax(symbolic_logits.float(), dim=-1),
             s_target,
             reduction="batchmean",
         )
@@ -452,6 +519,9 @@ def build_joint_model(
     kg_s_weight: float = 0.05,
     kg_c_weight: float = 0.05,
     fusion_alpha: float = 0.30,
+    use_concept_gcn: bool = True,
+    concept_gcn_dropout: float = 0.10,
+    **kwargs,
 ) -> JointSpatialTemporalCBM:
     """
     Factory to construct JointSpatialTemporalCBM with SkateFormer and load pretrained weights.
@@ -484,6 +554,8 @@ def build_joint_model(
         fusion_alpha=fusion_alpha,
         symbolic_temperature=symbolic_temperature,
         symbolic_margin=symbolic_margin,
+        use_concept_gcn=use_concept_gcn,
+        concept_gcn_dropout=concept_gcn_dropout,
     )
 
     # 1. Load Pretrained Backbone
