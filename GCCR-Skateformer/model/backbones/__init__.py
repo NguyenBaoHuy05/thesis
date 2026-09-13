@@ -12,10 +12,12 @@ import torch.nn as nn
 
 from model.backbones.base_adapter import BaseBackboneAdapter
 from model.backbones.skateformer_adapter import SkateFormerAdapter
+from model.backbones.hypergcn_adapter import HyperGCNAdapter
 
 
 BACKBONE_REGISTRY: Dict[str, Type[BaseBackboneAdapter]] = {
     "skateformer": SkateFormerAdapter,
+    "hypergcn": HyperGCNAdapter,
 }
 
 

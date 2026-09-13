@@ -128,7 +128,7 @@ class HYPERGC(nn.Module):
         h_x = (h_x.T).unsqueeze(1)
         x = torch.cat([x, h_x.repeat(N, 1, T, 1)], dim=-1)
         V += self.virtual_num
-        A = self.PA.cuda(x.get_device())
+        A = self.PA.to(x.device)
         A = self.edge_importance * A
         A = self.a_norm(A)
 
