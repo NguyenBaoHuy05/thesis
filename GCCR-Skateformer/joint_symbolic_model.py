@@ -25,8 +25,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model.backbones.base_adapter import BaseBackboneAdapter
-from model.backbones.skateformer_adapter import SkateFormerAdapter, DEFAULT_SKATEFORMER_CFG
+from model.backbones import build_backbone, BaseBackboneAdapter
+from model.backbones.skateformer_adapter import DEFAULT_SKATEFORMER_CFG
 from knowledge_graph import (
     load_concept_matrix,
     build_semantic_similarity_from_concepts,
@@ -269,8 +269,7 @@ class JointSpatialTemporalCBM(nn.Module):
         super().__init__()
         if isinstance(backbone, str):
             cfg = dict(backbone_cfg or {})
-            cfg["num_classes"] = num_class
-            self.backbone_adapter = SkateFormerAdapter(**cfg)
+            self.backbone_adapter = build_backbone(backbone, backbone_cfg=cfg, num_class=num_class)
         elif isinstance(backbone, (BaseBackboneAdapter, nn.Module)):
             self.backbone_adapter = backbone
         else:

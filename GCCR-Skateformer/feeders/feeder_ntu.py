@@ -8,7 +8,7 @@ from feeders import tools
 class Feeder(Dataset):
     def __init__(self, data_path, label_path=None, p_interval=1, split='train', data_type='j',
                  aug_method='z', intra_p=0.5, inter_p=0.0, window_size=-1,
-                 debug=False, thres=64, uniform=False, partition=False):
+                 debug=False, thres=64, uniform=False, partition=False, center=False):
 
         self.debug = debug
         self.data_path = data_path
@@ -23,6 +23,7 @@ class Feeder(Dataset):
         self.thres = thres
         self.uniform = uniform
         self.partition = partition
+        self.center = center
         self.load_data()
         if partition:
             self.right_arm = np.array([7, 8, 22, 23]) - 1
@@ -132,6 +133,13 @@ class Feeder(Dataset):
             data_numpy = tools.to_motion(data_numpy)
         else:
             data_numpy = data_numpy.copy()
+            if self.center:
+                # Center joint coordinates around joint 21 (spine base), keeping
+                # its own trajectory — matches the original Hyper-GCN preprocessing
+                # the pretrained backbone was trained with.
+                trajectory = data_numpy[:, :, 20].copy()
+                data_numpy = data_numpy - data_numpy[:, :, 20:21]
+                data_numpy[:, :, 20] = trajectory
 
         if self.partition:
             data_numpy = data_numpy[:, :, self.new_idx]

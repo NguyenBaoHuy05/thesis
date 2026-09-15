@@ -20,8 +20,8 @@ kg_s_weight: 0.02
 kg_c_weight: 0.01
 
 # Concept-GCN Architecture (C_KG Graph Adjacency Prior)
-use_concept_gcn: true
-concept_gcn_dropout: 0.1
+use_concept_gcn: False
+concept_gcn_dropout: 0.2
 symbolic_temperature: 0.70
 symbolic_margin: 0.15
 symbolic_weight: 0.50
@@ -37,7 +37,7 @@ fusion_final_alpha: 0.50
 epochs: 30
 lr: 0.001
 weight_decay: 0.0001
-batch_size: 64
+batch_size: 32
 num_workers: 4
 device: 0
 seed: 42

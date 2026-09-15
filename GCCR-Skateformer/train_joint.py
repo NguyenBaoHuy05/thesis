@@ -55,8 +55,8 @@ from joint_symbolic_model import (
     freeze_backbone,
     unfreeze_backbone,
 )
-from model.backbones import BACKBONE_REGISTRY
 from feeders.feeder_ntu import Feeder
+from model.backbones import BACKBONE_REGISTRY
 
 # ── NTU-60 class names ────────────────────────────────────────────────────────
 NTU60_NAMES = [
@@ -155,6 +155,7 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--explain-every",    type=int, default=5)
     p.add_argument("--n-explain-actions", type=int, default=10)
     p.add_argument("--save-score",       action="store_true")
+    p.add_argument("--no-amp",           action="store_true", help="Disable AMP and train in full FP32")
     return p
 
 
@@ -186,6 +187,11 @@ def build_loaders(args) -> Tuple[DataLoader, DataLoader]:
     # SkateFormer uses 24 joints (partition=True drops joint 21).
     # All GCN backbones (CTR-GCN, ST-GCN, Hyper-GCN, SK-GCN) use standard 25 joints (partition=False).
     partition = (args.backbone.lower() == "skateformer")
+    # Hyper-GCN's pretrained backbone was trained on joint coordinates centered
+    # around joint 21 (spine base) -- see hypergcn/feeders/feeder_ntu.py. The
+    # shared feeder must reproduce that or the frozen backbone sees out-of-
+    # distribution (uncentered) input.
+    center = (args.backbone.lower() == "hypergcn")
 
     common = dict(
         data_path   = args.data,
@@ -194,6 +200,7 @@ def build_loaders(args) -> Tuple[DataLoader, DataLoader]:
         thres       = args.window_size,
         uniform     = True,
         partition   = partition,
+        center      = center,
         data_type   = args.data_type,
     )
     train_ds = Feeder(
@@ -297,9 +304,10 @@ def train_epoch(
     scaler,
     use_amp: bool,
     symbolic_weight: float,
+    train_backbone: bool = False,
 ) -> Tuple[float, float, float, float, float]:
     model.train()
-    if hasattr(model.backbone, "eval"):
+    if not train_backbone and hasattr(model.backbone, "eval"):
         model.backbone.eval()
 
     losses, acts, syms, kgs, accs = [], [], [], [], []
@@ -320,7 +328,12 @@ def train_epoch(
             loss = total + (symbolic_weight - 1.0) * ld["symbolic_raw"]
 
         if not torch.isfinite(loss).all():
-            print("[JOINT][WARN] Non-finite loss; skipping batch")
+            non_finites = {
+                k: round(float(v.item()), 4)
+                for k, v in ld.items()
+                if isinstance(v, torch.Tensor) and not torch.isfinite(v).all()
+            }
+            print(f"[JOINT][WARN] Non-finite loss; skipping batch. Bad terms: {non_finites or 'loss sum overflow'}")
             optimizer.zero_grad(set_to_none=True)
             continue
 
@@ -352,10 +365,10 @@ def evaluate(
     loader: DataLoader,
     device: torch.device,
     use_amp: bool,
-) -> Tuple[float, float, float]:
-    """Returns (val_loss, top1_acc, top5_acc)."""
+) -> Tuple[float, float, float, float]:
+    """Returns (val_loss, top1_acc, top5_acc, neural_only_acc)."""
     model.eval()
-    losses, logits_all, labels_all = [], [], []
+    losses, logits_all, neural_logits_all, labels_all = [], [], [], []
 
     for batch in loader:
         if len(batch) == 4:
@@ -370,19 +383,24 @@ def evaluate(
         with torch.amp.autocast("cuda", enabled=use_amp):
             logits = model(data, index_t=index_t)
             loss   = F.cross_entropy(logits, label)
+            feat   = model.extract_feat(data, index_t)
+            neural_logits = model.direct_action(feat)
 
         losses.append(loss.item())
         logits_all.append(logits.cpu())
+        neural_logits_all.append(neural_logits.cpu())
         labels_all.append(label.cpu())
 
     all_logits = torch.cat(logits_all)
+    all_neural_logits = torch.cat(neural_logits_all)
     all_labels = torch.cat(labels_all)
     acc1 = top1_acc(all_logits, all_labels)
+    neural_acc = top1_acc(all_neural_logits, all_labels)
 
     _, preds_top5 = torch.topk(all_logits, k=min(5, all_logits.shape[1]), dim=1)
     acc5 = (preds_top5 == all_labels.unsqueeze(1)).any(dim=1).float().mean().item()
 
-    return float(np.mean(losses)), acc1, acc5
+    return float(np.mean(losses)), acc1, acc5, neural_acc
 
 
 @torch.no_grad()
@@ -502,7 +520,7 @@ def run_joint(args, device, use_amp, log):
 
     best_acc = 0.0
     if args.resume_checkpoint:
-        _, best_acc, _ = evaluate(model, test_loader, device, use_amp)
+        _, best_acc, _, _ = evaluate(model, test_loader, device, use_amp)
         log(f"  Resumed baseline val_acc={best_acc*100:.2f}% (epoch {args.start_epoch - 1})")
 
     for epoch in range(args.start_epoch, args.epochs + 1):
@@ -520,9 +538,10 @@ def run_joint(args, device, use_amp, log):
         model.fusion_alpha = alpha
 
         loss, act, sym, kg, tr_acc = train_epoch(
-            model, train_loader, optimizer, device, scaler, use_amp, sym_w
+            model, train_loader, optimizer, device, scaler, use_amp, sym_w,
+            train_backbone=args.train_backbone,
         )
-        val_loss, val_acc, val_acc5 = evaluate(model, test_loader, device, use_amp)
+        val_loss, val_acc, val_acc5, val_neural_acc = evaluate(model, test_loader, device, use_amp)
         scheduler.step()
 
         log(
@@ -530,6 +549,7 @@ def run_joint(args, device, use_amp, log):
             f"loss={loss:.4f}  action={act:.4f}  symbolic={sym:.4f}  kg={kg:.4f}  "
             f"sym_w={sym_w:.2f}  a={alpha:.2f}  "
             f"tr={tr_acc*100:.2f}%  val={val_acc*100:.2f}% (Top5: {val_acc5*100:.2f}%)  "
+            f"neural={val_neural_acc*100:.2f}%  "
             f"({time.time()-t0:.1f}s)"
         )
 
@@ -583,8 +603,8 @@ def run_score(args, device, use_amp, log):
     log(f"  Checkpoint loaded: missing={len(missing)}, unexpected={len(unexpected)}")
 
     _, test_loader = build_loaders(args)
-    val_loss, val_acc, val_acc5 = evaluate(model, test_loader, device, use_amp)
-    log(f"  Eval: val_loss={val_loss:.4f}  val_acc={val_acc*100:.2f}%  top5={val_acc5*100:.2f}%")
+    val_loss, val_acc, val_acc5, val_neural_acc = evaluate(model, test_loader, device, use_amp)
+    log(f"  Eval: val_loss={val_loss:.4f}  val_acc={val_acc*100:.2f}%  top5={val_acc5*100:.2f}%  neural={val_neural_acc*100:.2f}%")
 
     score_path = os.path.join(args.work_dir, f"{args.data_type}_test_score.pkl")
     save_scores(model, test_loader, device, use_amp, score_path)
@@ -606,7 +626,7 @@ def main():
 
     args = parser.parse_args()
     device = torch.device(f"cuda:{args.device}" if torch.cuda.is_available() else "cpu")
-    use_amp = device.type == "cuda"
+    use_amp = (device.type == "cuda") and (not args.no_amp)
 
     os.makedirs(args.work_dir, exist_ok=True)
     log = Logger(os.path.join(args.work_dir, f"log_{args.phase}_{args.backbone}.txt"))

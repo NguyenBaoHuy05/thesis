@@ -107,19 +107,24 @@ class HYPERGC(nn.Module):
         conv_init(self.conv_d)
 
     def hyper_norm(self, H, W):
-        w = torch.diag_embed(W)
-        norm_w = torch.norm(H, 1, dim=2, keepdim=True) + 1e-8
+        orig_dtype = H.dtype
+        H_f = H.float()
+        W_f = W.float()
+        w = torch.diag_embed(W_f)
+        norm_w = torch.norm(H_f, 1, dim=2, keepdim=True).clamp_min(1e-5)
         w_ = w / norm_w
 
-        H_w = H @ w
-        norm_v = torch.norm(H_w, 1, dim=3, keepdim=True) + 1e-8
+        H_w = H_f @ w
+        norm_v = torch.norm(H_w, 1, dim=3, keepdim=True).clamp_min(1e-5)
         h_ = H_w / norm_v
-        A = h_ @ w_ @ H.transpose(3, 2)
-        return A
+        A = h_ @ w_ @ H_f.transpose(3, 2)
+        return A.to(orig_dtype)
 
     def a_norm(self, A):
-        d_r = torch.norm(A, 1, dim=2, keepdim=True) + 1e-8
-        return A / d_r
+        orig_dtype = A.dtype
+        A_f = A.float()
+        d_r = torch.norm(A_f, 1, dim=2, keepdim=True).clamp_min(1e-5)
+        return (A_f / d_r).to(orig_dtype)
 
     def forward(self, x):
         N, C, T, V = x.size()
@@ -138,7 +143,7 @@ class HYPERGC(nn.Module):
             v_x = self.to_V(t_x)
 
             dis_v_x = v_x.view(N, self.num_subset, self.hidden_channels, V)
-            dis_v_x = dis_v_x.permute(0, 1, 3, 2).contiguous()
+            dis_v_x = dis_v_x.permute(0, 1, 3, 2).contiguous().float()
             distance_x = torch.cdist(dis_v_x, dis_v_x)
             H = torch.zeros_like(distance_x)
 

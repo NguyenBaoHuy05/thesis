@@ -36,11 +36,20 @@ _HYPERGCN_ROOT = os.path.normpath(
     )
 )
 _GRAPH_DIR = os.path.join(_HYPERGCN_ROOT, "graph")
-if _HYPERGCN_ROOT not in sys.path:
-    sys.path.insert(0, _HYPERGCN_ROOT)
-
-# hypergcn/graph must be importable by import_class('graph.ntu_rgb_d.Graph')
-# Adding _HYPERGCN_ROOT is sufficient (it contains the graph/ package).
+# hypergcn/graph must be importable as `graph` for HyperGCNModel's import_class().
+# Load it directly into sys.modules to avoid adding _HYPERGCN_ROOT to sys.path,
+# which would inadvertently shadow project-level packages like `feeders` or `model`.
+if "graph" not in sys.modules and os.path.isdir(_GRAPH_DIR):
+    _graph_init = os.path.join(_GRAPH_DIR, "__init__.py")
+    _spec = importlib.util.spec_from_file_location(
+        "graph",
+        _graph_init,
+        submodule_search_locations=[_GRAPH_DIR],
+    )
+    if _spec and _spec.loader:
+        _graph_pkg = importlib.util.module_from_spec(_spec)
+        sys.modules["graph"] = _graph_pkg
+        _spec.loader.exec_module(_graph_pkg)
 
 def _load_module_from_path(module_name: str, file_path: str):
     """Import a Python file as a module with the given name."""

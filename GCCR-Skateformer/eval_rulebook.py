@@ -33,7 +33,10 @@ import yaml
 import torch
 import torch.nn.functional as F
 import numpy as np
-from sklearn.cluster import KMeans
+try:
+    from sklearn.cluster import KMeans
+except ImportError:
+    KMeans = None
 from torch.utils.data import DataLoader
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -85,6 +88,7 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--max-per-class", type=int, default=100,
                    help="Max samples/class khi build KMeans (0 = khong gioi han)")
     p.add_argument("--use-amp",     action="store_true", default=True)
+    p.add_argument("--no-amp",      dest="use_amp", action="store_false", help="Disable AMP and evaluate in full FP32")
     p.add_argument("--rulebook-split", choices=["train", "test"], default="train",
                    help="Split de build KMeans prototypes")
     p.add_argument("--eval-split",  choices=["train", "test"], default="test",
@@ -92,6 +96,9 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--kmeans-k",    type=int, default=3,
                    help="So clusters K moi action (K=1 = mean, K>1 = capture variation)")
     # Model hyperparams (overridden by yaml)
+    p.add_argument("--use-concept-gcn", action="store_true", default=True)
+    p.add_argument("--no-concept-gcn",  dest="use_concept_gcn", action="store_false")
+    p.add_argument("--concept-gcn-dropout", type=float, default=0.1)
     p.add_argument("--symbolic-temperature",    type=float, default=0.7)
     p.add_argument("--symbolic-margin",         type=float, default=0.15)
     p.add_argument("--concept-loss-weight",     type=float, default=0.20)
@@ -99,10 +106,24 @@ def get_parser() -> argparse.ArgumentParser:
     p.add_argument("--kg-s-weight",             type=float, default=0.02)
     p.add_argument("--kg-c-weight",             type=float, default=0.01)
     p.add_argument("--fusion-start-alpha",      type=float, default=0.50)
+    p.add_argument("--fusion-alpha", "--alpha", dest="fusion_alpha", type=float, default=None,
+                   help="Alpha dung cho coupled fusion: (1-a)*neural + a*symbolic. "
+                        "Neu khong truyen, se dung fusion_final_alpha tu config (mac dinh 0.50).")
+    p.add_argument("--fusion-alpha-sweep", "--alpha-sweep", dest="fusion_alpha_sweep",
+                   action="store_true", default=False,
+                   help="Tu dong sweep alpha tu 0.0 den 1.0 cho Neural + Symbolic")
     p.add_argument("--km-alpha",    type=float, default=0.5,
                    help="Beta: ty le kmeans_rb trong fusion neural+kmeans (0=pure neural, 1=pure kmeans)")
     p.add_argument("--km-alpha-sweep", action="store_true", default=False,
                    help="Tu dong sweep beta tu 0.0 den 1.0 tim best fusion")
+    p.add_argument("--sym-km-gamma", type=float, default=0.5,
+                   help="Gamma: ty le kmeans_rb trong fusion symbolic+kmeans (0=pure symbolic KG, 1=pure kmeans)")
+    p.add_argument("--sym-km-sweep", action="store_true", default=False,
+                   help="Tu dong sweep gamma tu 0.0 den 1.0 cho Symbolic (KG) + KMeans")
+    p.add_argument("--sweep", action="store_true", default=False,
+                   help="Tu dong sweep ca 3 loai fusion (Neural+Symbolic, Neural+KMeans, Symbolic+KMeans)")
+    p.add_argument("--tri-sweep", action="store_true", default=False,
+                   help="Tu dong sweep 3-way fusion (Neural + Symbolic + KMeans) tren simplex")
     return p
 
 
@@ -122,6 +143,7 @@ def load_args(p: argparse.ArgumentParser) -> argparse.Namespace:
 
 def build_loader(args, split: str) -> DataLoader:
     partition = (args.backbone.lower() == "skateformer")
+    center = (args.backbone.lower() == "hypergcn")
     ds = Feeder(
         data_path   = args.data,
         split       = split,
@@ -130,6 +152,7 @@ def build_loader(args, split: str) -> DataLoader:
         thres       = args.window_size,
         uniform     = True,
         partition   = partition,
+        center      = center,
         data_type   = args.data_type,
         p_interval  = [0.5, 1] if split == "train" else [0.95],
         aug_method  = "z",
@@ -160,6 +183,10 @@ def build_model(args, device: torch.device) -> JointSpatialTemporalCBM:
             num_person=args.num_people, in_channels=3,
         )
 
+    target_alpha = args.fusion_alpha
+    if target_alpha is None:
+        target_alpha = getattr(args, "fusion_final_alpha", getattr(args, "fusion_start_alpha", 0.50))
+
     model = build_joint_model(
         checkpoint_path=None, backbone_name=backbone_name,
         backbone_cfg=backbone_cfg, num_class=args.num_class,
@@ -168,7 +195,9 @@ def build_model(args, device: torch.device) -> JointSpatialTemporalCBM:
         symbolic_temperature=args.symbolic_temperature,
         symbolic_margin=args.symbolic_margin, device=device,
         kg_s_weight=args.kg_s_weight, kg_c_weight=args.kg_c_weight,
-        fusion_alpha=args.fusion_start_alpha,
+        fusion_alpha=target_alpha,
+        use_concept_gcn=getattr(args, "use_concept_gcn", True),
+        concept_gcn_dropout=getattr(args, "concept_gcn_dropout", 0.1),
     )
     raw = torch.load(args.checkpoint, map_location="cpu")
     state = raw.get("state_dict", raw) if isinstance(raw, dict) else raw
@@ -242,6 +271,30 @@ def collect_concept_vectors(
 # KMeans Rule Book Classifier
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _fit_kmeans(X: np.ndarray, k: int, max_iter: int = 20, seed: int = 42) -> np.ndarray:
+    """Fit KMeans using sklearn if available, else lightweight numpy fallback."""
+    if KMeans is not None:
+        km = KMeans(n_clusters=k, random_state=seed, n_init="auto")
+        km.fit(X)
+        return km.cluster_centers_
+    # Lightweight numpy fallback for environments without scikit-learn
+    np.random.seed(seed)
+    n = len(X)
+    idx = np.random.choice(n, size=k, replace=False)
+    centers = X[idx].copy()
+    for _ in range(max_iter):
+        dists = np.linalg.norm(X[:, None, :] - centers[None, :, :], axis=-1)
+        labels = dists.argmin(axis=-1)
+        new_centers = np.array([
+            X[labels == j].mean(axis=0) if (labels == j).any() else centers[j]
+            for j in range(k)
+        ])
+        if np.allclose(centers, new_centers, atol=1e-4):
+            break
+        centers = new_centers
+    return centers
+
+
 class KMeansRuleBookClassifier:
     """
     Moi action duoc dai dien boi K cluster centroids (rule prototypes).
@@ -273,9 +326,7 @@ class KMeansRuleBookClassifier:
             if k_actual == 1 or n <= k_actual:
                 center = X.mean(axis=0, keepdims=True)          # (1, D)
             else:
-                km = KMeans(n_clusters=k_actual, random_state=42, n_init="auto")
-                km.fit(X)
-                center = km.cluster_centers_                     # (K, D)
+                center = _fit_kmeans(X, k_actual)               # (K, D)
 
             # L2-normalize -> cosine similarity = dot product
             norms = np.linalg.norm(center, axis=1, keepdims=True).clip(min=1e-8)
@@ -347,11 +398,12 @@ def evaluate(
     device: torch.device,
     use_amp: bool,
     num_class: int,
+    sym_km_gamma: float = 0.5,
 ) -> tuple[Dict[str, float], Dict[str, Dict[int, float]], dict]:
     """
     Single-pass evaluation.
     Returns: (overall_acc, per_class_acc, raw_logits)
-        raw_logits keys: 'neural', 'symbolic', 'kmeans_rb', 'labels'
+        raw_logits keys: 'neural', 'symbolic', 'fused', 'kmeans_rb', 'sym_km', 'labels'
     """
     model.eval()
     amp_enabled = use_amp and device.type == "cuda"
@@ -361,14 +413,7 @@ def evaluate(
         "neural": [], "symbolic": [], "fused": [], "kmeans_rb": []
     }
     labels_all = []
-
-    # Per-class accumulators
-    correct = {
-        "neural": defaultdict(int),
-        "symbolic": defaultdict(int),
-        "kmeans_rb": defaultdict(int),
-    }
-    counts  = defaultdict(int)
+    counts = defaultdict(int)
 
     total = len(loader)
     for bi, batch in enumerate(loader):
@@ -402,18 +447,8 @@ def evaluate(
         raw["kmeans_rb"].append(km_logits.cpu())
         labels_all.append(label.cpu())
 
-        # Per-class
-        neu_pred = neural_logits.argmax(1).cpu()
-        sym_pred = sym_logits.argmax(1).cpu()
-        km_pred  = km_logits.argmax(1).cpu()
-        for i, cls in enumerate(label.tolist()):
+        for cls in label.tolist():
             counts[cls] += 1
-            if neu_pred[i] == cls:
-                correct["neural"][cls] += 1
-            if sym_pred[i] == cls:
-                correct["symbolic"][cls] += 1
-            if km_pred[i] == cls:
-                correct["kmeans_rb"][cls] += 1
 
     print()
 
@@ -422,13 +457,22 @@ def evaluate(
     cat_raw = {k: torch.cat(v, dim=0) for k, v in raw.items()}  # (N, num_class)
     cat_raw["labels"] = all_labels
 
+    # Fusion Symbolic (Ontology KG) + KMeans-RB (Data Prototypes) - Pure Concept Reasoning (0% Neural)
+    sym_n = F.normalize(cat_raw["symbolic"],  dim=-1)
+    km_n  = F.normalize(cat_raw["kmeans_rb"], dim=-1)
+    cat_raw["sym_km"] = (1.0 - sym_km_gamma) * sym_n + sym_km_gamma * km_n
+
+    modes = ["neural", "symbolic", "fused", "kmeans_rb", "sym_km"]
     overall = {
         mode: (cat_raw[mode].argmax(1) == all_labels).float().mean().item()
-        for mode in ["neural", "symbolic", "fused", "kmeans_rb"]
+        for mode in modes
     }
     per_class = {
-        mode: {cls: correct[mode][cls] / counts[cls] for cls in sorted(counts)}
-        for mode in correct
+        mode: {
+            cls: ((cat_raw[mode].argmax(1) == cls) & (all_labels == cls)).sum().item() / counts[cls]
+            for cls in sorted(counts) if counts[cls] > 0
+        }
+        for mode in modes
     }
     return overall, per_class, cat_raw
 
@@ -456,6 +500,84 @@ def fusion_sweep(
         acc   = (fused.argmax(1) == labels).float().mean().item()
         results.append((beta, acc))
     return sorted(results, key=lambda x: -x[1])
+
+
+def neural_symbolic_sweep(
+    cat_raw: dict,
+    alphas: List[float],
+) -> List[tuple[float, float]]:
+    """
+    Sweep alpha: fused = (1-alpha)*neural + alpha*symbolic
+    Tra ve: [(alpha, acc), ...] sorted by acc desc
+    """
+    neural   = cat_raw["neural"]    # (N, C)
+    symbolic = cat_raw["symbolic"]  # (N, C)
+    labels   = cat_raw["labels"]    # (N,)
+
+    results = []
+    for a in alphas:
+        fused = (1.0 - a) * neural + a * symbolic
+        acc   = (fused.argmax(1) == labels).float().mean().item()
+        results.append((a, acc))
+    return sorted(results, key=lambda x: -x[1])
+
+
+def symbolic_kmeans_sweep(
+    cat_raw: dict,
+    gammas: List[float],
+) -> List[tuple[float, float]]:
+    """
+    Sweep gamma: sym_km = (1-gamma)*symbolic + gamma*kmeans_rb
+    (Pure Concept/Symbolic reasoning combining Ontology KG + KMeans prototypes, 0% Neural)
+    Tra ve: [(gamma, acc), ...] sorted by acc desc
+    """
+    sym    = cat_raw["symbolic"]   # (N, C)
+    km     = cat_raw["kmeans_rb"]  # (N, C)
+    labels = cat_raw["labels"]     # (N,)
+
+    # Normalize logit scales truoc khi fuse
+    sym_n = F.normalize(sym, dim=-1)
+    km_n  = F.normalize(km,  dim=-1)
+
+    results = []
+    for g in gammas:
+        fused = (1.0 - g) * sym_n + g * km_n
+        acc   = (fused.argmax(1) == labels).float().mean().item()
+        results.append((g, acc))
+    return sorted(results, key=lambda x: -x[1])
+
+
+def tri_fusion_sweep(
+    cat_raw: dict,
+    step: float = 0.05,
+) -> List[tuple[float, float, float, float]]:
+    """
+    Grid sweep 3-way fusion on 2-simplex:
+    fused = w_neu * neural_n + w_sym * sym_n + w_km * km_n
+    where w_neu + w_sym + w_km = 1.0
+    Tra ve: [(w_neu, w_sym, w_km, acc), ...] sorted by acc desc
+    """
+    neural_n = F.normalize(cat_raw["neural"],    dim=-1)
+    sym_n    = F.normalize(cat_raw["symbolic"],  dim=-1)
+    km_n     = F.normalize(cat_raw["kmeans_rb"], dim=-1)
+    labels   = cat_raw["labels"]
+
+    results = []
+    steps = int(round(1.0 / step))
+    for i in range(steps + 1):
+        w_neu = round(i * step, 2)
+        for j in range(steps + 1 - i):
+            w_sym = round(j * step, 2)
+            w_km  = round(1.0 - w_neu - w_sym, 2)
+            if w_km < -1e-5:
+                continue
+            w_km = max(0.0, w_km)
+
+            fused = w_neu * neural_n + w_sym * sym_n + w_km * km_n
+            acc   = (fused.argmax(1) == labels).float().mean().item()
+            results.append((w_neu, w_sym, w_km, acc))
+
+    return sorted(results, key=lambda x: -x[3])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -503,7 +625,9 @@ def main():
     eval_loader = (rb_loader if args.eval_split == args.rulebook_split
                    else build_loader(args, args.eval_split))
     print(f"\n[Step 4] Evaluating on '{args.eval_split}' split ({len(eval_loader.dataset)} samples)...")
-    results, per_class, cat_raw = evaluate(model, kmeans_clf, eval_loader, device, use_amp, args.num_class)
+    results, per_class, cat_raw = evaluate(
+        model, kmeans_clf, eval_loader, device, use_amp, args.num_class, sym_km_gamma=args.sym_km_gamma
+    )
 
     # ── Print summary ──────────────────────────────────────────────────────────
     sep = "=" * 65
@@ -514,24 +638,41 @@ def main():
     print(sep)
     labels_col = {
         "neural":    "",
-        "symbolic":  "",
+        "symbolic":  "  <- Ontology Knowledge Graph (Deductive, 0% Neural)",
         "fused":     f"  <- (1-a)*neural + a*symbolic, a={model.fusion_alpha:.2f}",
-        "kmeans_rb": f"  <- K-means K={K} prototypes (pure symbolic)",
+        "kmeans_rb": f"  <- K-means K={K} prototypes (Inductive, 0% Neural)",
+        "sym_km":    f"  <- (1-g)*symbolic + g*kmeans, g={args.sym_km_gamma:.2f} (Pure Concept, 0% Neural)",
     }
     print(f"  {'Mode':<16}  {'Top-1 Acc':>10}")
     print(f"  {'-'*16}  {'-'*10}")
     for mode, acc in results.items():
         print(f"  {mode:<16}  {acc*100:>9.2f}%{labels_col.get(mode, '')}")
 
+    do_all_sweep = getattr(args, "sweep", False)
+
+    # ── Neural + Symbolic coupled fusion sweep ─────────────────────────────────
+    do_ns_sweep = getattr(args, "fusion_alpha_sweep", False) or getattr(args, "km_alpha_sweep", False) or do_all_sweep
+    if do_ns_sweep:
+        alphas = [round(a * 0.05, 2) for a in range(21)]  # 0.00, 0.05, ..., 1.00
+        ns_results = neural_symbolic_sweep(cat_raw, alphas)
+        best_a, best_ns_acc = ns_results[0]
+        print(f"\n  Neural + Symbolic Fusion Sweep ((1-a)*neural + a*symbolic):")
+        print(f"  {'Alpha':>6}  {'Acc':>9}")
+        print(f"  {'-'*6}  {'-'*9}")
+        for a, acc in sorted(ns_results, key=lambda x: x[0]):
+            flag = "  <- BEST" if a == best_a else ""
+            print(f"  {a:>6.2f}  {acc*100:>8.2f}%{flag}")
+        print(f"\n  Best alpha={best_a:.2f} -> Acc={best_ns_acc*100:.2f}%")
+
     # ── Neural + KMeans fusion sweep ───────────────────────────────────────────
     km_alpha = getattr(args, "km_alpha", 0.5)
-    do_sweep = getattr(args, "km_alpha_sweep", False)
+    do_km_sweep = getattr(args, "km_alpha_sweep", False) or do_all_sweep
 
-    if do_sweep:
+    if do_km_sweep:
         alphas = [round(a * 0.05, 2) for a in range(21)]  # 0.00, 0.05, ..., 1.00
         sweep_results = fusion_sweep(cat_raw, alphas)
         best_beta, best_acc = sweep_results[0]
-        print(f"\n  Neural + KMeans Fusion Sweep:")
+        print(f"\n  Neural + KMeans Fusion Sweep ((1-b)*neural + b*kmeans_rb):")
         print(f"  {'Beta':>6}  {'Acc':>9}")
         print(f"  {'-'*6}  {'-'*9}")
         for beta, acc in sorted(sweep_results, key=lambda x: x[0]):
@@ -540,7 +681,6 @@ def main():
         print(f"\n  Best beta={best_beta:.2f}  -> Acc={best_acc*100:.2f}%")
     else:
         # Single beta evaluation
-        from torch.nn import functional as F2
         neural_n = F.normalize(cat_raw["neural"],    dim=-1)
         km_n     = F.normalize(cat_raw["kmeans_rb"], dim=-1)
         labels   = cat_raw["labels"]
@@ -548,28 +688,71 @@ def main():
         km_fused_acc = (fused_km.argmax(1) == labels).float().mean().item()
         print(f"  {'km_fused':<16}  {km_fused_acc*100:>9.2f}%  <- (1-{km_alpha})*neural + {km_alpha}*kmeans")
 
+    # ── Symbolic (KG) + KMeans-RB fusion sweep (Pure Concept / Symbolic, 0% Neural) ─────────
+    active_gamma = args.sym_km_gamma
+    do_sk_sweep = getattr(args, "sym_km_sweep", False) or getattr(args, "km_alpha_sweep", False) or do_all_sweep
+    if do_sk_sweep:
+        gammas = [round(g * 0.05, 2) for g in range(21)]  # 0.00, 0.05, ..., 1.00
+        sk_results = symbolic_kmeans_sweep(cat_raw, gammas)
+        best_gamma, best_sk_acc = sk_results[0]
+        active_gamma = best_gamma
+        print(f"\n  Symbolic (KG) + KMeans-RB Fusion Sweep ((1-g)*symbolic + g*kmeans_rb, 0% Neural):")
+        print(f"  {'Gamma':>6}  {'Acc':>9}")
+        print(f"  {'-'*6}  {'-'*9}")
+        for g, acc in sorted(sk_results, key=lambda x: x[0]):
+            flag = "  <- BEST" if g == best_gamma else ""
+            print(f"  {g:>6.2f}  {acc*100:>8.2f}%{flag}")
+        print(f"\n  Best gamma={best_gamma:.2f} -> Acc={best_sk_acc*100:.2f}% (Pure Concept Reasoning)")
+
+        # Cap nhat per_class["sym_km"] theo best_gamma de bang per-class phan anh mo hinh toi uu
+        sym_n = F.normalize(cat_raw["symbolic"],  dim=-1)
+        km_n  = F.normalize(cat_raw["kmeans_rb"], dim=-1)
+        labels = cat_raw["labels"]
+        sym_km_opt = (1.0 - best_gamma) * sym_n + best_gamma * km_n
+        opt_preds = sym_km_opt.argmax(1)
+        per_class["sym_km"] = {
+            cls: ((opt_preds == cls) & (labels == cls)).sum().item() / max(((labels == cls).sum().item()), 1)
+            for cls in sorted(per_class["symbolic"])
+        }
+
+    # ── Tri-Fusion Grid Sweep (Neural + Symbolic + KMeans) ─────────────────────
+    do_tri_sweep = getattr(args, "tri_sweep", False) or do_all_sweep
+    if do_tri_sweep:
+        tri_results = tri_fusion_sweep(cat_raw, step=0.05)
+        best_w_neu, best_w_sym, best_w_km, best_tri_acc = tri_results[0]
+        print(f"\n  Tri-Fusion Grid Sweep (w_neu*Neural + w_sym*Symbolic + w_km*KMeans):")
+        print(f"  {'w_neu':>6}  {'w_sym':>6}  {'w_km':>6}  {'Acc':>9}")
+        print(f"  {'-'*6}  {'-'*6}  {'-'*6}  {'-'*9}")
+        for w_n, w_s, w_k, acc in tri_results[:8]:
+            flag = "  <- BEST" if (w_n == best_w_neu and w_s == best_w_sym and w_k == best_w_km) else ""
+            print(f"  {w_n:>6.2f}  {w_s:>6.2f}  {w_k:>6.2f}  {acc*100:>8.2f}%{flag}")
+        print(f"\n  Best Tri-Fusion: w_neu={best_w_neu:.2f}, w_sym={best_w_sym:.2f}, w_km={best_w_km:.2f} -> Acc={best_tri_acc*100:.2f}%")
+
     print(sep)
 
     # ── Per-class breakdown ────────────────────────────────────────────────────
     neu_cls = per_class["neural"]
     sym_cls = per_class["symbolic"]
     km_cls  = per_class["kmeans_rb"]
-    print(f"\n  Per-class accuracy — Neural vs Symbolic vs KMeans K={K}:")
-    print(f"  {'Cls':<4}  {'Action':<26}  {'Neural':>7}  {'Symbolic':>8}  {'KMeans':>7}  {'d(KM-Neu)':>9}")
-    print(f"  {'-'*4}  {'-'*26}  {'-'*7}  {'-'*8}  {'-'*7}  {'-'*9}")
+    sk_cls  = per_class.get("sym_km", {})
+    print(f"\n  Per-class accuracy — Neural vs Symbolic vs KMeans K={K} vs Sym+KM (g={active_gamma:.2f}):")
+    print(f"  {'Cls':<4}  {'Action':<26}  {'Neural':>7}  {'Symbolic':>8}  {'KMeans':>7}  {'Sym+KM':>7}  {'d(SK-Neu)':>9}")
+    print(f"  {'-'*4}  {'-'*26}  {'-'*7}  {'-'*8}  {'-'*7}  {'-'*7}  {'-'*9}")
     for cls in sorted(sym_cls):
-        name  = NTU60_NAMES[cls] if cls < len(NTU60_NAMES) else str(cls)
-        n_acc = neu_cls.get(cls, 0.0) * 100
-        s_acc = sym_cls[cls] * 100
-        k_acc = km_cls.get(cls, 0.0) * 100
-        delta = k_acc - n_acc
+        name   = NTU60_NAMES[cls] if cls < len(NTU60_NAMES) else str(cls)
+        n_acc  = neu_cls.get(cls, 0.0) * 100
+        s_acc  = sym_cls.get(cls, 0.0) * 100
+        k_acc  = km_cls.get(cls, 0.0) * 100
+        sk_acc = sk_cls.get(cls, 0.0) * 100
+        delta  = sk_acc - n_acc
         marker = " +" if delta > 1 else (" --" if delta < -3 else "")
-        print(f"  {cls:>3}   {name:<26}  {n_acc:>6.1f}%  {s_acc:>7.1f}%  {k_acc:>6.1f}%  {delta:>+8.1f}%{marker}")
+        print(f"  {cls:>3}   {name:<26}  {n_acc:>6.1f}%  {s_acc:>7.1f}%  {k_acc:>6.1f}%  {sk_acc:>6.1f}%  {delta:>+8.1f}%{marker}")
 
     neu_mean = np.mean(list(neu_cls.values())) * 100
     sym_mean = np.mean(list(sym_cls.values())) * 100
     km_mean  = np.mean(list(km_cls.values())) * 100
-    print(f"  {'':4}   {'Mean per-class':<26}  {neu_mean:>6.1f}%  {sym_mean:>7.1f}%  {km_mean:>6.1f}%  {km_mean-neu_mean:>+8.1f}%")
+    sk_mean  = np.mean(list(sk_cls.values())) * 100
+    print(f"  {'':4}   {'Mean per-class':<26}  {neu_mean:>6.1f}%  {sym_mean:>7.1f}%  {km_mean:>6.1f}%  {sk_mean:>6.1f}%  {sk_mean-neu_mean:>+8.1f}%")
     print(f"\n{sep}\n")
 
 
