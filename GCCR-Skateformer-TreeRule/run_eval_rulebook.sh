@@ -24,6 +24,10 @@ DATA_PATH=${4:-"/kaggle/input/datasets/nguyenbaohuy05/ntu60csfull/NTU60_CS.npz"}
 CONFIG_PATH="config/ntu/${BACKBONE}/ntu_cs_${MODALITY}.yaml"
 CHECKPOINT_PATH=${3:-"work_dir/ntu_cs/${BACKBONE}_${MODALITY}_symbolic/joint_best.pt"}
 
+# Drop positional args 1-4 (already consumed above) so "$@" below holds only
+# extra pass-through args. Portable across bash/dash (avoids bash-only ${@:5}).
+shift 4 2>/dev/null || shift $#
+
 # Kiểm tra nếu đường dẫn checkpoint mặc định dạng joint
 if [ ! -f "$CHECKPOINT_PATH" ] && [ "$MODALITY" = "j" ]; then
     CHECKPOINT_PATH="work_dir/ntu_cs/${BACKBONE}_joint_symbolic/joint_best.pt"
@@ -45,5 +49,6 @@ python eval_rulebook.py \
     --device 0 \
     --kmeans-k 3 \
     --max-per-class 100 \
-    --sweep \
-    "${@:5}"
+    --tree-km-sweep \
+    --case-study --n-case-per-class 2 \
+    "$@"

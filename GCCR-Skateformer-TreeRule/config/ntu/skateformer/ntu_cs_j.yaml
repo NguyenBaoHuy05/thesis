@@ -1,0 +1,37 @@
+# SkateFormer Joint Modality + Joint Spatial-Temporal Concept Bottleneck & Fuzzy AND/OR Logic Tree
+phase: joint
+backbone: skateformer
+pretrained_checkpoint: ./pretrained/ntu_cs/SkateFormer_j.pth
+checkpoint: ./pretrained/ntu_cs/SkateFormer_j.pth
+data: ./data/ntu/NTU60_CS.npz
+work_dir: ./work_dir/ntu_cs/skateformer_joint_symbolic
+
+data_type: j
+num_class: 60
+num_points: 24
+num_people: 2
+window_size: 64
+
+# Neuro-Symbolic & Concept Bottleneck Parameters
+concept_loss_weight: 0.20
+concept_negative_weight: 0.10
+concept_checkpoint: null
+group_hidden_dim: 128
+concept_collapse_weight: 0.02
+
+# Fuzzy AND/OR Logic Tree
+tree_depth: 4
+tree_entropy_weight: 0.01
+tree_diversity_weight: 0.05
+tree_temp_start: 1.0
+tree_temp_end: 0.05
+tree_kg_neighbor_k: 8
+
+epochs: 30
+lr: 0.001
+weight_decay: 0.0001
+batch_size: 32
+num_workers: 4
+device: 0
+seed: 42
+save_score: true
