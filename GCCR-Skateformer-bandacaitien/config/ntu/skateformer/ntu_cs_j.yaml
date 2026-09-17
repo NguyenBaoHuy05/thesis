@@ -24,7 +24,21 @@ concept_gcn_dropout: 0.2
 symbolic_temperature: 0.70
 symbolic_margin: 0.15
 symbolic_weight: 0.50
-action_loss_weight: 0.50
+action_loss_weight: 1.00
+
+# Stage 1: learned prototype centers -- cosine match between a per-sample
+# embedding (concept probs combined with a shared, learned concept-embedding
+# table) and a learnable per-class center, warm-started from and anchored to
+# the KG template (see train_joint.py --use-learned-centers help text).
+use_learned_centers: true
+concept_embed_dim: 32
+center_anchor_weight: 0.10
+
+# Stage 2: smooth the concept-embedding table (2a) and/or class centers (2b)
+# with a small GCN over KG adjacency before matching. Reuses concept_gcn_dropout
+# above as the dropout rate inside these GCNs. Requires use_learned_centers.
+use_concept_embed_graph: true
+use_center_graph: true
 
 epochs: 30
 lr: 0.001

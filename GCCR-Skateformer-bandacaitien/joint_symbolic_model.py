@@ -77,6 +77,14 @@ class JointSymbolicActionCompatibility(nn.Module):
         group_order: List[str],
         temperature: float = 0.7,
         margin: float = 0.15,
+        embed_dim: int = 32,
+        use_learned_centers: bool = False,
+        center_anchor_weight: float = 0.10,
+        concept_adj: Optional[torch.Tensor] = None,
+        use_concept_embed_graph: bool = False,
+        class_adj: Optional[torch.Tensor] = None,
+        use_center_graph: bool = False,
+        graph_dropout: float = 0.10,
     ):
         super().__init__()
         self.num_class = concept_matrix.size(0)
@@ -84,6 +92,51 @@ class JointSymbolicActionCompatibility(nn.Module):
         self.temperature = float(temperature)
         self.margin = float(margin)
         self.register_buffer("concept_matrix", concept_matrix.float())
+
+        # ── Stage 1/2 (learned prototype centers) ────────────────────────────
+        # Alternative to the fixed 0/1 template match in _group_tensors():
+        # each sample's group concept-probability vector is combined with a
+        # shared, learned per-concept embedding table into a continuous
+        # "sample embedding", matched via cosine similarity against a
+        # learnable per-class "center" in that same space (Stage 1). Stage 2
+        # optionally smooths the concept embeddings / class centers with a
+        # GCN over KG-derived adjacency before matching.
+        # use_learned_centers=False (default) keeps _group_tensors() exactly
+        # equivalent to the original template-matching score.
+        self.use_learned_centers = bool(use_learned_centers)
+        self.center_anchor_weight = float(center_anchor_weight)
+        self.use_concept_embed_graph = bool(use_concept_embed_graph)
+        self.use_center_graph = bool(use_center_graph)
+        self.num_concepts = concept_matrix.size(1)
+        self.register_buffer("concept_adj", concept_adj.float() if concept_adj is not None else None)
+        self.register_buffer("class_adj", class_adj.float() if class_adj is not None else None)
+
+        if self.use_learned_centers:
+            self.embed_dim = int(embed_dim)
+            # One embedding vector per concept, shared across all groups.
+            self.concept_embed = nn.Parameter(torch.randn(self.num_concepts, self.embed_dim) * 0.02)
+            if self.use_concept_embed_graph:
+                # Stage 2a: smooth concept embeddings using concept-concept
+                # co-activation from the KG (self.concept_adj) -- concepts
+                # that tend to co-occur get pulled toward each other.
+                self.concept_embed_gcn = nn.Sequential(nn.Linear(self.embed_dim, self.embed_dim), nn.GELU())
+                # Zero-init so this is a no-op at t=0 (GCN correction starts
+                # at exactly 0, output == self.concept_embed unchanged).
+                # Without this, resuming a Stage-1-only checkpoint into a
+                # Stage-2 config instantly corrupts concept_embed with a
+                # standard-random-scale perturbation before any training.
+                nn.init.zeros_(self.concept_embed_gcn[0].weight)
+                nn.init.zeros_(self.concept_embed_gcn[0].bias)
+                self.concept_embed_drop = nn.Dropout(graph_dropout)
+            if self.use_center_graph:
+                # Stage 2b: smooth class centers using class-class semantic
+                # similarity from the KG (self.class_adj), shared across
+                # groups (embedding space is the same dimension per group).
+                self.center_gcn = nn.Sequential(nn.Linear(self.embed_dim, self.embed_dim), nn.GELU())
+                # Same zero-init reasoning as concept_embed_gcn above.
+                nn.init.zeros_(self.center_gcn[0].weight)
+                nn.init.zeros_(self.center_gcn[0].bias)
+                self.center_drop = nn.Dropout(graph_dropout)
 
         for gi, name in enumerate(group_order):
             idx = torch.tensor(groups[name], dtype=torch.long)
@@ -93,6 +146,17 @@ class JointSymbolicActionCompatibility(nn.Module):
             self.register_buffer(f"positive_count_{gi}", template.sum(-1).clamp_min(1.0))
             self.register_buffer(f"negative_count_{gi}", (1.0 - template).sum(-1).clamp_min(1.0))
             self.register_buffer(f"active_{gi}", (template.sum(-1) > 0).float())
+
+            if self.use_learned_centers:
+                # Warm start: a class's center starts as the average embedding
+                # of the concepts the KG says that class exhibits, so day-0
+                # behavior is grounded in the same prior as the template
+                # match. The frozen snapshot backs the anchor loss below.
+                ref = template / template.sum(-1, keepdim=True).clamp_min(1.0)
+                with torch.no_grad():
+                    center_init = ref @ self.concept_embed[idx]
+                self.register_buffer(f"center_init_{gi}", center_init.clone())
+                self.register_parameter(f"center_{gi}", nn.Parameter(center_init.clone()))
 
         # Class-specific group attention logits: (num_class, len(group_order))
         self.group_logit = nn.Parameter(torch.zeros(self.num_class, len(group_order)))
@@ -105,7 +169,45 @@ class JointSymbolicActionCompatibility(nn.Module):
             state_dict[key] = state_dict[key].unsqueeze(0).repeat(self.num_class, 1)
         super()._load_from_state_dict(state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs)
 
+    def _refined_concept_embed(self) -> torch.Tensor:
+        """Stage 2a: GCN-smoothed concept embedding table (or the raw table)."""
+        if not self.use_concept_embed_graph or self.concept_adj is None:
+            return self.concept_embed
+        msg = self.concept_adj @ self.concept_embed
+        return self.concept_embed + self.concept_embed_drop(self.concept_embed_gcn(msg))
+
+    def _refined_center(self, gi: int) -> torch.Tensor:
+        """Stage 2b: GCN-smoothed class centers for group gi (or the raw centers)."""
+        center = getattr(self, f"center_{gi}")
+        if not self.use_center_graph or self.class_adj is None:
+            return center
+        msg = self.class_adj @ center
+        return center + self.center_drop(self.center_gcn(msg))
+
+    def center_anchor_loss(self) -> torch.Tensor:
+        """Pulls learned centers back toward their KG-derived warm-start value."""
+        if not self.use_learned_centers or self.center_anchor_weight <= 0:
+            return torch.zeros((), device=self.class_bias.device)
+        losses = []
+        for gi in range(len(self.group_order)):
+            center = getattr(self, f"center_{gi}")
+            center_init = getattr(self, f"center_init_{gi}")
+            losses.append(F.mse_loss(center, center_init))
+        return self.center_anchor_weight * torch.stack(losses).mean()
+
     def _group_tensors(self, probs: List[torch.Tensor], gi: int):
+        active = getattr(self, f"active_{gi}")
+
+        if self.use_learned_centers:
+            idx = getattr(self, f"indices_{gi}")
+            concept_embed = self._refined_concept_embed()
+            sample_embed = probs[gi] @ concept_embed[idx]          # (B, embed_dim)
+            center = self._refined_center(gi)                      # (num_class, embed_dim)
+            score = F.cosine_similarity(
+                sample_embed.unsqueeze(1), center.unsqueeze(0), dim=-1
+            )                                                        # (B, num_class)
+            return score, active
+
         template = getattr(self, f"template_{gi}")
         pos_count = getattr(self, f"positive_count_{gi}")
         neg_count = getattr(self, f"negative_count_{gi}")
@@ -115,7 +217,6 @@ class JointSymbolicActionCompatibility(nn.Module):
         # Reward matching the class's expected concepts, penalize activating
         # concepts the class's template marks irrelevant (false positives).
         score = pos_score - neg_score
-        active = getattr(self, f"active_{gi}")
         return score, active
 
     def forward(self, probs: List[torch.Tensor]) -> torch.Tensor:
@@ -275,6 +376,11 @@ class JointSpatialTemporalCBM(nn.Module):
         use_concept_gcn: bool = True,
         concept_gcn_dropout: float = 0.10,
         refine_steps: int = 1,
+        concept_embed_dim: int = 32,
+        use_learned_centers: bool = False,
+        center_anchor_weight: float = 0.10,
+        use_concept_embed_graph: bool = False,
+        use_center_graph: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -316,16 +422,27 @@ class JointSpatialTemporalCBM(nn.Module):
         self.register_buffer("S_KG_static", S_KG)
         self.register_buffer("C_KG_static", C_KG)
 
+        # Symmetric degree-normalized adjacency over concepts (from C_KG) and
+        # over classes (from S_KG). Computed unconditionally -- cheap (74x74
+        # and 60x60) -- so they're available both to the existing ConceptGCN
+        # (gated by use_concept_gcn below) and to the Stage-2 concept-embedding
+        # / class-center graphs in JointSymbolicActionCompatibility (gated by
+        # use_concept_embed_graph / use_center_graph).
+        concept_deg = C_KG.sum(dim=-1).clamp_min(1e-6)
+        concept_deg_inv_sqrt = concept_deg.pow(-0.5)
+        A_norm = concept_deg_inv_sqrt[:, None] * C_KG * concept_deg_inv_sqrt[None, :]
+        self.register_buffer("A_concept", A_norm.float())
+
+        class_deg = S_KG.sum(dim=-1).clamp_min(1e-6)
+        class_deg_inv_sqrt = class_deg.pow(-0.5)
+        S_norm = class_deg_inv_sqrt[:, None] * S_KG * class_deg_inv_sqrt[None, :]
+        self.register_buffer("S_KG_norm", S_norm.float())
+
         # Concept-GCN: Graph-conditioned message passing over C_KG
         self.use_concept_gcn = bool(use_concept_gcn)
         if self.use_concept_gcn:
-            deg = C_KG.sum(dim=-1).clamp_min(1e-6)
-            deg_inv_sqrt = deg.pow(-0.5)
-            A_norm = deg_inv_sqrt[:, None] * C_KG * deg_inv_sqrt[None, :]
-            self.register_buffer("A_concept", A_norm.float())
             self.concept_gcn = ConceptGCN(num_concepts=self.num_concepts, dropout=float(concept_gcn_dropout))
         else:
-            self.register_buffer("A_concept", None)
             self.concept_gcn = None
 
         concept_pos = concept_matrix.float().sum(dim=0)
@@ -359,6 +476,14 @@ class JointSpatialTemporalCBM(nn.Module):
             self.group_order,
             temperature=symbolic_temperature,
             margin=symbolic_margin,
+            embed_dim=concept_embed_dim,
+            use_learned_centers=use_learned_centers,
+            center_anchor_weight=center_anchor_weight,
+            concept_adj=self.A_concept,
+            use_concept_embed_graph=use_concept_embed_graph,
+            class_adj=self.S_KG_norm,
+            use_center_graph=use_center_graph,
+            graph_dropout=concept_gcn_dropout,
         )
 
         self.direct_action = nn.Linear(self.feat_dim, num_class)
@@ -517,16 +642,19 @@ class JointSpatialTemporalCBM(nn.Module):
 
         action_loss = F.cross_entropy(action_logits, label)
         neural_action_loss = F.cross_entropy(neural_logits, label)
+        center_anchor = self.symbolic_action.center_anchor_loss()
         total = (
             self.action_loss_weight * action_loss
             + 0.20 * neural_action_loss
             + self.concept_loss_weight * concept_bce
             + symbolic
             + kg
+            + center_anchor
         )
         return total, {
             "action": action_loss.detach(),
             "action_raw": action_loss,
+            "center_anchor": center_anchor.detach(),
             "neural_action": neural_action_loss.detach(),
             "symbolic": symbolic.detach(),
             "symbolic_raw": symbolic,
@@ -586,6 +714,11 @@ def build_joint_model(
     use_concept_gcn: bool = True,
     concept_gcn_dropout: float = 0.10,
     refine_steps: int = 1,
+    concept_embed_dim: int = 32,
+    use_learned_centers: bool = False,
+    center_anchor_weight: float = 0.10,
+    use_concept_embed_graph: bool = False,
+    use_center_graph: bool = False,
     **kwargs,
 ) -> JointSpatialTemporalCBM:
     """
@@ -622,6 +755,11 @@ def build_joint_model(
         use_concept_gcn=use_concept_gcn,
         concept_gcn_dropout=concept_gcn_dropout,
         refine_steps=refine_steps,
+        concept_embed_dim=concept_embed_dim,
+        use_learned_centers=use_learned_centers,
+        center_anchor_weight=center_anchor_weight,
+        use_concept_embed_graph=use_concept_embed_graph,
+        use_center_graph=use_center_graph,
     )
 
     # 1. Load Pretrained Backbone

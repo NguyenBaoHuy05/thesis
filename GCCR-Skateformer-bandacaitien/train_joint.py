@@ -122,6 +122,29 @@ def get_parser() -> argparse.ArgumentParser:
                         "single bottom-up pass. >1 adds top-down feedback: the action "
                         "belief from pass k nudges concept logits before pass k+1.")
 
+    # ── Learned prototype centers (Stage 1/2) ────────────────────────────────
+    p.add_argument("--use-learned-centers",   action="store_true", default=False,
+                   help="Stage 1: replace the fixed 0/1 KG-template match in _group_tensors() "
+                        "with cosine similarity between a per-sample embedding (concept "
+                        "probabilities combined with a shared, learned concept-embedding table) "
+                        "and a learnable per-class center. Default off -- keeps the original "
+                        "template-matching symbolic score unchanged.")
+    p.add_argument("--concept-embed-dim",     type=int, default=32,
+                   help="Dimensionality of the shared per-concept embedding table (only used "
+                        "when --use-learned-centers is set).")
+    p.add_argument("--center-anchor-weight",  type=float, default=0.10,
+                   help="Weight pulling each learned class center back toward its KG-derived "
+                        "warm-start value, so it doesn't drift into an unconstrained per-class "
+                        "lookup table and overfit (only used when --use-learned-centers is set).")
+    p.add_argument("--use-concept-embed-graph", action="store_true", default=False,
+                   help="Stage 2a: smooth the shared concept-embedding table with a GCN over "
+                        "the KG concept co-activation graph (A_concept) before matching. "
+                        "Requires --use-learned-centers.")
+    p.add_argument("--use-center-graph",      action="store_true", default=False,
+                   help="Stage 2b: smooth per-class centers with a GCN over the KG class-class "
+                        "semantic similarity graph (S_KG) before matching. "
+                        "Requires --use-learned-centers.")
+
     # ── Training Hyperparameters ─────────────────────────────────────────────
     p.add_argument("--epochs",            type=int,   default=30)
     p.add_argument("--lr",                type=float, default=1e-3)
@@ -245,6 +268,11 @@ def build_model_from_args(args, device: torch.device) -> JointSpatialTemporalCBM
         use_concept_gcn         = getattr(args, "use_concept_gcn", True),
         concept_gcn_dropout     = getattr(args, "concept_gcn_dropout", 0.1),
         refine_steps            = getattr(args, "refine_steps", 1),
+        concept_embed_dim       = getattr(args, "concept_embed_dim", 32),
+        use_learned_centers     = getattr(args, "use_learned_centers", False),
+        center_anchor_weight    = getattr(args, "center_anchor_weight", 0.10),
+        use_concept_embed_graph = getattr(args, "use_concept_embed_graph", False),
+        use_center_graph        = getattr(args, "use_center_graph", False),
     )
 
     if args.resume_checkpoint:
@@ -275,12 +303,12 @@ def train_epoch(
     use_amp: bool,
     symbolic_weight: float,
     train_backbone: bool = False,
-) -> Tuple[float, float, float, float, float]:
+) -> Tuple[float, float, float, float, float, float]:
     model.train()
     if not train_backbone and hasattr(model.backbone, "eval"):
         model.backbone.eval()
 
-    losses, acts, syms, kgs, accs = [], [], [], [], []
+    losses, acts, syms, kgs, anchors, accs = [], [], [], [], [], []
 
     for batch in loader:
         if len(batch) == 4:
@@ -320,12 +348,13 @@ def train_epoch(
         acts.append(ld["action"].item())
         syms.append(ld["symbolic"].item())
         kgs.append(ld["kg"].item())
+        anchors.append(ld["center_anchor"].item())
         accs.append(top1_acc(logits, label))
 
     return (
         float(np.mean(losses)), float(np.mean(acts)),
         float(np.mean(syms)),   float(np.mean(kgs)),
-        float(np.mean(accs)),
+        float(np.mean(anchors)), float(np.mean(accs)),
     )
 
 
@@ -457,6 +486,8 @@ def run_joint(args, device, use_amp, log):
     log(f"  Groups      : 6 spatial + 3 temporal = 9")
     log(f"  Symbolic    : temp={args.symbolic_temperature} | margin={args.symbolic_margin} | weight={args.symbolic_weight}")
     log(f"  Weights     : Action w={args.action_loss_weight} | BCE w={args.concept_loss_weight} | S_KG={args.kg_s_weight} | C_KG={args.kg_c_weight}")
+    log(f"  Centers     : learned={args.use_learned_centers} dim={args.concept_embed_dim} anchor_w={args.center_anchor_weight} "
+        f"| concept_graph={args.use_concept_embed_graph} | center_graph={args.use_center_graph}")
     log(f"  Prediction  : symbolic_logits only (neural branch is auxiliary loss only)")
     log(f"  Epochs      : {args.start_epoch}->{args.epochs} | lr={args.lr} | wd={args.weight_decay}")
     if args.resume_checkpoint:
@@ -496,7 +527,7 @@ def run_joint(args, device, use_amp, log):
     for epoch in range(args.start_epoch, args.epochs + 1):
         t0 = time.time()
 
-        loss, act, sym, kg, tr_acc = train_epoch(
+        loss, act, sym, kg, anchor, tr_acc = train_epoch(
             model, train_loader, optimizer, device, scaler, use_amp, args.symbolic_weight,
             train_backbone=args.train_backbone,
         )
@@ -505,7 +536,7 @@ def run_joint(args, device, use_amp, log):
 
         log(
             f"Epoch {epoch:3d}/{args.epochs}  "
-            f"loss={loss:.4f}  action={act:.4f}  symbolic={sym:.4f}  kg={kg:.4f}  "
+            f"loss={loss:.4f}  action={act:.4f}  symbolic={sym:.4f}  kg={kg:.4f}  anchor={anchor:.4f}  "
             f"tr={tr_acc*100:.2f}%  val={val_acc*100:.2f}% (Top5: {val_acc5*100:.2f}%)  "
             f"neural={val_neural_acc*100:.2f}%  "
             f"({time.time()-t0:.1f}s)"
