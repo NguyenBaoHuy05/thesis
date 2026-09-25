@@ -1,0 +1,344 @@
+"""Evaluate an HCG-NS-SkateFormer checkpoint on the configured test split.
+
+This evaluator uses the same HCG-NS model, ontology, sparse labels and test
+preprocessing as ``main_hcg_ns.py``.  It loads a full checkpoint such as
+``work_dir/.../final_model.pt`` and does not retrain the model.
+
+Example (run from the SkateFormer repository root)::
+
+    python eval_hcg_concepts.py \
+        --config config/train/HCG_NS_SkateFormer_ntu60_cs.yaml \
+        --checkpoint work_dir/hcg_ns/ntu60_cs_v22_interaction/final_model.pt
+
+The evaluator writes ``concept_metrics.json`` and
+``concept_metrics_per_concept.csv`` next to the checkpoint unless
+``--output-dir`` is supplied.
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import torch
+import yaml
+
+from main_hcg_ns import (
+    HCGNSSkateFormer,
+    device_from_config,
+    load_hard_negative_pairs,
+    make_dataset,
+    make_loader,
+    move_batch,
+    resolve,
+    set_seed,
+    validate_paths,
+)
+
+
+def load_full_checkpoint(model: HCGNSSkateFormer, path: Path, device: torch.device) -> None:
+    payload = torch.load(path, map_location=device)
+    if isinstance(payload, dict):
+        for key in ("model_state", "state_dict", "model"):
+            if key in payload and isinstance(payload[key], dict):
+                payload = payload[key]
+                break
+    if not isinstance(payload, dict):
+        raise ValueError(f"Unsupported checkpoint format: {path}")
+
+    state = {}
+    for key, value in payload.items():
+        clean = str(key)
+        while clean.startswith(("module.", "model.")):
+            clean = clean.split(".", 1)[1]
+        state[clean] = value
+
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    print(f"Loaded HCG-NS checkpoint: {path}")
+    print(f"Missing keys: {len(missing)}; unexpected keys: {len(unexpected)}")
+    if missing:
+        print(f"First missing keys: {missing[:5]}")
+    if unexpected:
+        print(f"First unexpected keys: {unexpected[:5]}")
+
+
+def safe_div(num: np.ndarray, den: np.ndarray) -> np.ndarray:
+    return np.divide(num, den, out=np.zeros_like(num, dtype=np.float64), where=den != 0)
+
+
+def per_label_metrics(
+    probabilities: np.ndarray,
+    targets: np.ndarray,
+    names: list[str],
+    threshold: float,
+) -> tuple[list[dict[str, Any]], dict[str, float]]:
+    target = targets.astype(bool)
+    prediction = probabilities >= threshold
+    total = np.full(probabilities.shape[1], probabilities.shape[0], dtype=np.float64)
+    correct = (prediction == target).sum(axis=0).astype(np.float64)
+    tp = np.logical_and(prediction, target).sum(axis=0).astype(np.float64)
+    fp = np.logical_and(prediction, ~target).sum(axis=0).astype(np.float64)
+    fn = np.logical_and(~prediction, target).sum(axis=0).astype(np.float64)
+    positive = target.sum(axis=0).astype(np.float64)
+
+    accuracy = safe_div(correct, total)
+    precision = safe_div(tp, tp + fp)
+    recall = safe_div(tp, tp + fn)
+    f1 = safe_div(2.0 * precision * recall, precision + recall)
+
+    rows = []
+    for index in range(probabilities.shape[1]):
+        rows.append({
+            "concept_id": index,
+            "concept_name": names[index] if index < len(names) else f"concept_{index}",
+            "accuracy": float(accuracy[index]),
+            "precision": float(precision[index]),
+            "recall": float(recall[index]),
+            "f1": float(f1[index]),
+            "positive_support": int(positive[index]),
+            "predicted_positive": int(prediction[:, index].sum()),
+            "true_positive": int(tp[index]),
+            "false_positive": int(fp[index]),
+            "false_negative": int(fn[index]),
+            "mean_probability": float(probabilities[:, index].mean()),
+        })
+
+    flat_target = target.reshape(-1)
+    flat_prediction = prediction.reshape(-1)
+    flat_tp = float(np.logical_and(flat_prediction, flat_target).sum())
+    flat_fp = float(np.logical_and(flat_prediction, ~flat_target).sum())
+    flat_fn = float(np.logical_and(~flat_prediction, flat_target).sum())
+    micro_precision = flat_tp / max(flat_tp + flat_fp, 1.0)
+    micro_recall = flat_tp / max(flat_tp + flat_fn, 1.0)
+    micro_f1 = 2.0 * micro_precision * micro_recall / max(
+        micro_precision + micro_recall, 1e-12
+    )
+    aggregate = {
+        "accuracy": float(accuracy.mean()),
+        "macro_precision": float(precision.mean()),
+        "macro_recall": float(recall.mean()),
+        "macro_f1": float(f1.mean()),
+        "micro_precision": float(micro_precision),
+        "micro_recall": float(micro_recall),
+        "micro_f1": float(micro_f1),
+        "exact_match": float(np.all(prediction == target, axis=1).mean()),
+        "sparsity": float(prediction.mean()),
+        "brier": float(np.mean((probabilities - targets) ** 2)),
+    }
+    return rows, aggregate
+
+
+@torch.no_grad()
+def evaluate(
+    model: HCGNSSkateFormer,
+    loader,
+    device: torch.device,
+    threshold: float,
+) -> tuple[dict[str, Any], list[str]]:
+    model.eval()
+    action_scores = []
+    labels = []
+    concept_probs = []
+    concept_targets = []
+    parent_probs = []
+    parent_targets = []
+    raw_concept_probs = []
+    parent_for_child = []
+    # The decoder returns the exact scope contribution it added to the
+    # prototype logits ("fixed" or "bounded" fusion); it is broadcast over T.
+    decoder = model.concept_decoder
+    scope_logit_scale = decoder.scope_scale if decoder.scope_fusion == "fixed" else None
+    logit_accumulators = {
+        name: {"sum": 0.0, "sum_sq": 0.0, "sum_abs": 0.0, "count": 0}
+        for name in ("base_time_logits", "scaled_scope_logits", "combined_time_logits")
+    }
+    saturated_low = 0
+    saturated_high = 0
+    sigmoid_count = 0
+
+    for batch in loader:
+        data, index_t, label, _, _ = move_batch(batch, device)
+        output = model(data, index_t)
+        action_scores.append(output["action_scores"].cpu().numpy())
+        labels.append(label.cpu().numpy())
+        concept_probs.append(output["sequence_probs"].cpu().numpy())
+        concept_targets.append(model.symbolic.support[label].cpu().numpy())
+        parent_probs.append(output["parent_probs"].cpu().numpy())
+        parent_targets.append(model.symbolic.parent_support[label].cpu().numpy())
+        raw_concept_probs.append(output["raw_sequence_probs"].cpu().numpy())
+        parent_for_child.append(output["parent_for_child"].cpu().numpy())
+
+        combined_logits = output["time_logits"].float()
+        scaled_scope_logits = output["scope_term"].float().unsqueeze(1)
+        base_logits = combined_logits - scaled_scope_logits
+        for name, values in (
+            ("base_time_logits", base_logits),
+            ("scaled_scope_logits", scaled_scope_logits),
+            ("combined_time_logits", combined_logits),
+        ):
+            values = values.detach()
+            accumulator = logit_accumulators[name]
+            accumulator["sum"] += values.sum().item()
+            accumulator["sum_sq"] += values.square().sum().item()
+            accumulator["sum_abs"] += values.abs().sum().item()
+            accumulator["count"] += values.numel()
+
+        combined_probs = torch.sigmoid(combined_logits)
+        saturated_low += int((combined_probs < 0.01).sum().item())
+        saturated_high += int((combined_probs > 0.99).sum().item())
+        sigmoid_count += combined_probs.numel()
+
+    scores = np.concatenate(action_scores)
+    action_labels = np.concatenate(labels)
+    probs = np.concatenate(concept_probs)
+    targets = np.concatenate(concept_targets)
+    parent = np.concatenate(parent_probs)
+    parent_target = np.concatenate(parent_targets)
+    raw = np.concatenate(raw_concept_probs)
+    parent_child = np.concatenate(parent_for_child)
+
+    logit_summaries = {}
+    for name, accumulator in logit_accumulators.items():
+        count = max(accumulator["count"], 1)
+        mean = accumulator["sum"] / count
+        variance = max(accumulator["sum_sq"] / count - mean * mean, 0.0)
+        logit_summaries[name] = {
+            "mean": float(mean),
+            "std": float(variance ** 0.5),
+            "mean_abs": float(accumulator["sum_abs"] / count),
+        }
+    base_mean_abs = logit_summaries["base_time_logits"]["mean_abs"]
+    base_std = logit_summaries["base_time_logits"]["std"]
+    scope_logit_diagnostics = {
+        "scope_fusion": decoder.scope_fusion,
+        "scope_logit_scale": scope_logit_scale,
+        "temperature": float(decoder.temperature.item()),
+        "prototype_logit_bound": float(1.0 / decoder.temperature.item()),
+        **logit_summaries,
+        "scaled_scope_to_base_mean_abs_ratio": float(
+            logit_summaries["scaled_scope_logits"]["mean_abs"] / max(base_mean_abs, 1e-12)
+        ),
+        "scaled_scope_to_base_std_ratio": float(
+            logit_summaries["scaled_scope_logits"]["std"] / max(base_std, 1e-12)
+        ),
+        "combined_sigmoid_saturation_below_0_01": float(
+            saturated_low / max(sigmoid_count, 1)
+        ),
+        "combined_sigmoid_saturation_above_0_99": float(
+            saturated_high / max(sigmoid_count, 1)
+        ),
+    }
+
+    concept_names = list(model.symbolic.concept_names)
+    parent_names = list(model.symbolic.parent_names)
+    concept_rows, concept_summary = per_label_metrics(probs, targets, concept_names, threshold)
+    _, parent_summary = per_label_metrics(parent, parent_target, parent_names, 0.5)
+
+    prediction = scores.argmax(axis=1)
+    top5 = np.argsort(scores, axis=1)[:, -min(5, scores.shape[1]):]
+    negative_targets = model.symbolic.negative_support[action_labels].cpu().numpy()
+    negative_mask = negative_targets.astype(bool)
+    negative_probs = probs[negative_mask]
+    hierarchy_delta = raw - parent_child
+
+    result = {
+        "threshold": float(threshold),
+        "num_samples": int(len(action_labels)),
+        "num_concepts": int(probs.shape[1]),
+        "num_parents": int(parent.shape[1]),
+        "action": {
+            "top1": float((prediction == action_labels).mean()),
+            "top5": float(np.array([
+                action_labels[i] in top5[i] for i in range(len(action_labels))
+            ]).mean()),
+        },
+        "concept": concept_summary,
+        "parent": parent_summary,
+        "known_negative": {
+            "count": int(negative_mask.sum()),
+            "violation_rate": float((negative_probs >= 0.5).mean()) if negative_probs.size else 0.0,
+            "mean_probability": float(negative_probs.mean()) if negative_probs.size else 0.0,
+        },
+        "hierarchy": {
+            "violation_rate": float((hierarchy_delta > 0.0).mean()),
+            "violation_mean": float(np.maximum(hierarchy_delta, 0.0).mean()),
+        },
+        "scope_logit_diagnostics": scope_logit_diagnostics,
+        "per_concept": concept_rows,
+    }
+    return result, concept_names
+
+
+def write_outputs(result: dict[str, Any], output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    json_path = output_dir / "concept_metrics.json"
+    csv_path = output_dir / "concept_metrics_per_concept.csv"
+    json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    with csv_path.open("w", newline="", encoding="utf-8") as handle:
+        rows = result["per_concept"]
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Saved: {json_path}")
+    print(f"Saved: {csv_path}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Evaluate HCG-NS concepts from a checkpoint")
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--checkpoint", required=True)
+    parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--threshold", type=float, default=0.5)
+    args = parser.parse_args()
+
+    config_path = Path(args.config).resolve()
+    checkpoint_path = Path(args.checkpoint).resolve()
+    if not config_path.exists():
+        raise FileNotFoundError(config_path)
+    if not checkpoint_path.exists():
+        raise FileNotFoundError(checkpoint_path)
+    if not 0.0 < args.threshold < 1.0:
+        raise ValueError("--threshold must be between 0 and 1")
+
+    root = Path(__file__).resolve().parent
+    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    set_seed(int(cfg.get("seed", 1)))
+    device = device_from_config(cfg)
+    validate_paths(root, cfg)
+
+    test_dataset = make_dataset(root, cfg, "test", False, eval_mode=True)
+    test_loader = make_loader(test_dataset, cfg, False)
+    hard_negative_pairs = load_hard_negative_pairs(root, cfg)
+    model = HCGNSSkateFormer(
+        backbone_args=cfg["model_args"],
+        concept_csv=resolve(root, cfg["concept_csv"]),
+        metadata_csv=resolve(root, cfg["metadata_csv"]),
+        labels_csv=resolve(root, cfg.get("labels_csv")),
+        zero_is_negative=bool(cfg.get("zero_is_negative", False)),
+        num_classes=int(cfg["num_classes"]),
+        num_concepts=int(cfg.get("num_concepts", 78)),
+        hard_negative_pairs=hard_negative_pairs,
+        hard_negative_margin=float(cfg.get("hard_negative_margin", 0.2)),
+        residual_action_head=bool(cfg.get("residual_action_head", False)),
+        residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
+        prototype_args=cfg.get("prototype_args", {}),
+        parent_weight=float(cfg.get("parent_weight", 0.35)),
+        gate_floor=float(cfg.get("gate_floor", 0.05)),
+    ).to(device)
+    load_full_checkpoint(model, checkpoint_path, device)
+    result, _ = evaluate(model, test_loader, device, args.threshold)
+
+    output_dir = Path(args.output_dir).resolve() if args.output_dir else checkpoint_path.parent
+    write_outputs(result, output_dir)
+    print(json.dumps({k: result[k] for k in (
+        "action", "concept", "parent", "known_negative", "hierarchy",
+        "scope_logit_diagnostics",
+    )}, indent=2))
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="drawio-skill" agent="diagram-ir" version="3.0.0">
+  <diagram id="hcg-ns-full" name="HCG-NS-SkateFormer">
+    <mxGraphModel dx="1960" dy="1040" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1960" pageHeight="1040" math="0" shadow="0" background="#F8F9FA">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ====== MAIN TITLE ====== -->
+        <mxCell id="main_ttl" value="HCG-NS: Hierarchical Concept-Gated Neuro-Symbolic SkateFormer Architecture" style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=20;fontStyle=1;fontColor=#1a237e;" vertex="1" parent="1">
+          <mxGeometry x="40" y="12" width="1880" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- ==================================================================== -->
+        <!-- ====== PANEL (a): FRAMEWORK OVERVIEW ====== -->
+        <!-- ==================================================================== -->
+        <mxCell id="p_a" value="(a) Framework Overview" style="swimlane;startSize=28;fillColor=#f8f9fa;strokeColor=#455a64;fontStyle=1;fontSize=13;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="55" width="960" height="450" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_inp" value="&lt;b&gt;Skeleton Sequence&lt;/b&gt;&lt;br&gt;X &amp;isin; R^{B &amp;times; C &amp;times; T &amp;times; V &amp;times; M}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="p_a">
+          <mxGeometry x="25" y="45" width="145" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_stem" value="&lt;b&gt;Stem &amp;amp; Pos. Emb.&lt;/b&gt;&lt;br&gt;1&amp;times;1 Conv2d + PosEmb&lt;br&gt;&amp;rarr; [B, D, T, V&amp;middot;M]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" vertex="1" parent="p_a">
+          <mxGeometry x="200" y="45" width="155" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- SkateFormer as 1 single backbone block -->
+        <mxCell id="a_bb" value="&lt;b&gt;SkateFormer Backbone&lt;/b&gt;&lt;br&gt;Spatiotemporal Transformer&lt;br&gt;&amp;Phi;(X) &amp;isin; R^{B &amp;times; D &amp;times; T &amp;times; V}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=11;" vertex="1" parent="p_a">
+          <mxGeometry x="385" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_cdec" value="&lt;b&gt;Hierarchical Concept Decoder&lt;/b&gt;&lt;br&gt;&amp;bull; Unary Prototype Matching&lt;br&gt;&amp;bull; Taxonomic Soft Gating&lt;br&gt;&amp;rarr; P(concepts), P(parents)&lt;br&gt;&lt;i&gt;[Detailed in (b)]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2f1;strokeColor=#00695c;fontStyle=1;fontSize=10;" vertex="1" parent="p_a">
+          <mxGeometry x="620" y="35" width="310" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_sdec" value="&lt;b&gt;Hierarchical Symbolic Decoder&lt;/b&gt;&lt;br&gt;&amp;bull; Positive Concept Weights (W_c &amp;ge; 0)&lt;br&gt;&amp;bull; Taxonomic Parent Weights (W_p &amp;ge; 0)&lt;br&gt;&amp;rarr; Action Logits S(a)&lt;br&gt;&lt;i&gt;[Detailed in (c)]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#f57f17;fontStyle=1;fontSize=10;" vertex="1" parent="p_a">
+          <mxGeometry x="500" y="180" width="310" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_out" value="&lt;b&gt;Action Classification&lt;/b&gt;&lt;br&gt;y_hat = argmax softmax(S)&lt;br&gt;[B, num_classes]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a237e;strokeColor=#0d47a1;fontColor=#ffffff;fontStyle=1;fontSize=11;" vertex="1" parent="p_a">
+          <mxGeometry x="150" y="190" width="240" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="a_loss" value="&lt;b&gt;Multi-Task Loss Supervision [Detailed in (d)]&lt;/b&gt;&lt;br&gt;&amp;bull; Action Classification: L_CE + L_HardNeg (triplet margin on confusable pairs)&lt;br&gt;&amp;bull; Concept Discovery: L_BCE(P_c, M_c) + L_density (budget balance)&lt;br&gt;&amp;bull; Hierarchy Constraints: L_parent(P_p, M_p) + L_hier (P_c &amp;le; P_parent)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=10;align=left;" vertex="1" parent="p_a">
+          <mxGeometry x="80" y="315" width="800" height="105" as="geometry" />
+        </mxCell>
+
+        <!-- Panel (a) edges -->
+        <mxCell id="ea1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#666666;strokeWidth=2;" edge="1" parent="p_a" source="a_inp" target="a_stem">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=2;" edge="1" parent="p_a" source="a_stem" target="a_bb">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea3" value="&amp;Phi;(X)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#4caf50;strokeWidth=2;fontColor=#2e7d32;fontSize=10;" edge="1" parent="p_a" source="a_bb" target="a_cdec">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea4" value="P(c), P(p)" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#00695c;strokeWidth=2;fontColor=#00695c;fontSize=10;" edge="1" parent="p_a" source="a_cdec" target="a_sdec">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea5" value="Logits S" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;fontColor=#e65100;fontSize=10;" edge="1" parent="p_a" source="a_sdec" target="a_out">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea6" value="Loss" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.25;entryY=0;entryDx=0;entryDy=0;strokeColor=#1a237e;strokeWidth=1;fontSize=9;" edge="1" parent="p_a" source="a_out" target="a_loss">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ea7" value="Loss" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;dashed=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.72;entryY=0;entryDx=0;entryDy=0;strokeColor=#e65100;strokeWidth=1;fontSize=9;" edge="1" parent="p_a" source="a_sdec" target="a_loss">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================================================================== -->
+        <!-- ====== PANEL (b): CONCEPT DECODER DETAIL ====== -->
+        <!-- ==================================================================== -->
+        <mxCell id="p_b" value="(b) Hierarchical Concept Decoder (Detail)" style="swimlane;startSize=28;fillColor=#f8f9fa;strokeColor=#00695c;fontStyle=1;fontSize=13;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="55" width="890" height="450" as="geometry" />
+        </mxCell>
+
+        <!-- Branch 1: Prototype Grounding -->
+        <mxCell id="b_tokens" value="&lt;b&gt;Token Projection&lt;/b&gt;&lt;br&gt;z = norm(Proj(&amp;Phi;(X)))&lt;br&gt;[B, T, V, D]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b2dfdb;strokeColor=#004d40;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="25" y="42" width="185" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="b_proto" value="&lt;b&gt;Concept Prototypes&lt;/b&gt;&lt;br&gt;C_k &amp;isin; R^D (k=1..K)&lt;br&gt;Normalized centers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b2dfdb;strokeColor=#004d40;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="25" y="107" width="185" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_sim" value="&lt;b&gt;Prototype Matching&lt;/b&gt;&lt;br&gt;sim = z &amp;middot; C_k / &amp;tau;&lt;br&gt;&amp;bull; Soft Joint Attention:&lt;br&gt;attn_V = softmax_V(sim)&lt;br&gt;&amp;rarr; time_logits [B, T, K]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80cbc4;strokeColor=#004d40;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="245" y="55" width="205" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_temp" value="&lt;b&gt;Temporal Statistics&lt;/b&gt;&lt;br&gt;time_probs = &amp;sigma;(time_logits)&lt;br&gt;&amp;bull; Peak, Duration, Rising&lt;br&gt;&amp;bull; Cumulative Sequence Prob:&lt;br&gt;P_raw = 1 - &amp;prod; (1 - p_t)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#80cbc4;strokeColor=#004d40;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="485" y="55" width="200" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Branch 2: Scope & Parent Heads -->
+        <mxCell id="b_pool" value="&lt;b&gt;Global Avg Pooling&lt;/b&gt;&lt;br&gt;z_bar = mean_{T,V}(&amp;Phi;(X))&lt;br&gt;[B, D]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f7fa;strokeColor=#006064;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="25" y="225" width="185" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_scope" value="&lt;b&gt;Taxonomic Scope Heads&lt;/b&gt;&lt;br&gt;LN + Linear &amp;rarr; scope_logits&lt;br&gt;&lt;i&gt;Modulates prototype scale&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f7fa;strokeColor=#006064;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="245" y="225" width="205" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_parent" value="&lt;b&gt;Taxonomic Parent Heads&lt;/b&gt;&lt;br&gt;LN + Linear &amp;rarr; parent_probs&lt;br&gt;&lt;i&gt;P(parent) [B, K_par]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f7fa;strokeColor=#006064;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="485" y="225" width="200" height="55" as="geometry" />
+        </mxCell>
+
+        <!-- Soft Gate & Output -->
+        <mxCell id="b_gate" value="&lt;b&gt;Taxonomic Soft Gate&lt;/b&gt;&lt;br&gt;Gate = g_fl + (1-g_fl)&amp;middot;P_p&lt;br&gt;P(c) = Gate &amp;times; P_raw" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b2ebf2;strokeColor=#006064;fontStyle=1;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="715" y="95" width="155" height="95" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_out" value="&lt;b&gt;Grounding Output&lt;/b&gt;&lt;br&gt;&amp;bull; P(concepts) [B, K]&lt;br&gt;&amp;bull; P(parents) [B, K_par]&lt;br&gt;&amp;bull; Temporal Stats" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#004d40;strokeColor=#00251a;fontColor=#ffffff;fontStyle=1;fontSize=10;" vertex="1" parent="p_b">
+          <mxGeometry x="715" y="225" width="155" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="b_note" value="&lt;b&gt;Core Advantage&lt;/b&gt;: Unary concept prototypes ground temporal features efficiently without pairwise relation explosion (O(K) instead of O(K^2)). Continuous soft parent gating prevents discontinuous classification drops under taxonomic uncertainty." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e0f2f1;strokeColor=#00695c;fontSize=10;align=left;" vertex="1" parent="p_b">
+          <mxGeometry x="25" y="340" width="845" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Panel (b) edges -->
+        <mxCell id="eb1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#004d40;strokeWidth=2;" edge="1" parent="p_b" source="b_tokens" target="b_sim">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#004d40;strokeWidth=2;" edge="1" parent="p_b" source="b_proto" target="b_sim">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#004d40;strokeWidth=2;" edge="1" parent="p_b" source="b_sim" target="b_temp">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb4" value="P_raw" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#004d40;strokeWidth=2;fontSize=9;" edge="1" parent="p_b" source="b_temp" target="b_gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb5" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#006064;strokeWidth=2;" edge="1" parent="p_b" source="b_pool" target="b_scope">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#006064;strokeWidth=2;" edge="1" parent="p_b" source="b_scope" target="b_parent">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb7" value="P_par" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#006064;strokeWidth=2;fontSize=9;" edge="1" parent="p_b" source="b_parent" target="b_gate">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eb8" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;strokeColor=#004d40;strokeWidth=2;" edge="1" parent="p_b" source="b_gate" target="b_out">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================================================================== -->
+        <!-- ====== PANEL (c): SYMBOLIC DECODER DETAIL ====== -->
+        <!-- ==================================================================== -->
+        <mxCell id="p_c" value="(c) Hierarchical Symbolic Decoder (Detail)" style="swimlane;startSize=28;fillColor=#f8f9fa;strokeColor=#f57f17;fontStyle=1;fontSize=13;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="960" height="470" as="geometry" />
+        </mxCell>
+
+        <!-- Concept Row -->
+        <mxCell id="c_in_c" value="&lt;b&gt;Concept Evidences P(c)&lt;/b&gt;&lt;br&gt;From Concept Decoder [B, K]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="245" y="38" width="195" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="c_supp_c" value="&lt;b&gt;Weak Support M_c&lt;/b&gt;&lt;br&gt;Action-Concept Matrix&lt;br&gt;M_{a,c} &amp;isin; {0, 1}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="25" y="100" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w_c" value="&lt;b&gt;Concept Weights W_c &amp;ge; 0&lt;/b&gt;&lt;br&gt;W_c = softplus(W_{raw}) &amp;odot; M_c&lt;br&gt;Strictly positive support" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="245" y="100" width="195" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_sc_c" value="&lt;b&gt;Normalized Concept Score&lt;/b&gt;&lt;br&gt;S_c(a) = &amp;sum;_c P(c) &amp;times; W_{c,a} / Z_c&lt;br&gt;Fine-grained evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd54f;strokeColor=#ff8f00;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="480" y="65" width="215" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Parent Row -->
+        <mxCell id="c_in_p" value="&lt;b&gt;Parent Evidences P(p)&lt;/b&gt;&lt;br&gt;From Parent Heads [B, K_par]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="245" y="185" width="195" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="c_supp_p" value="&lt;b&gt;Parent Support M_p&lt;/b&gt;&lt;br&gt;Taxon Support Matrix&lt;br&gt;M_{a,p} &amp;isin; {0, 1}" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="25" y="245" width="180" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_w_p" value="&lt;b&gt;Parent Weights W_p &amp;ge; 0&lt;/b&gt;&lt;br&gt;W_p = softplus(W_{raw}^{(p)}) &amp;odot; M_p&lt;br&gt;Coarse taxon evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe082;strokeColor=#f57f17;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="245" y="245" width="195" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="c_sc_p" value="&lt;b&gt;Normalized Parent Score&lt;/b&gt;&lt;br&gt;S_p(a) = &amp;sum;_p P(p) &amp;times; W_{p,a} / Z_p&lt;br&gt;Coarse taxonomic evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffd54f;strokeColor=#ff8f00;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="480" y="210" width="215" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Compositional Scoring -->
+        <mxCell id="c_agg" value="&lt;b&gt;Hierarchical Compositional Scoring&lt;/b&gt;&lt;br&gt;S(a) = S_c(a) + &amp;lambda; &amp;times; S_p(a) + b_a&lt;br&gt;&amp;bull; &amp;lambda; = 0.35 (taxonomic weight)&lt;br&gt;&amp;bull; Action Logits S &amp;in; R^{B &amp;times; A}&lt;br&gt;&amp;rarr; Interpretable Decision Rule" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffcc02;strokeColor=#e65100;fontStyle=1;fontSize=10;" vertex="1" parent="p_c">
+          <mxGeometry x="725" y="115" width="215" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="c_note" value="&lt;b&gt;Interpretability &amp;amp; Open-World Logic Guarantees&lt;/b&gt;&lt;br&gt;&amp;bull; &lt;b&gt;Strictly Positive Weights&lt;/b&gt;: Active concepts contribute monotonically to action evidence; no contradictory negative weights.&lt;br&gt;&amp;bull; &lt;b&gt;Open-World Support&lt;/b&gt;: Zero in support matrix = Unknown (open-world), not a hard negative penalty.&lt;br&gt;&amp;bull; &lt;b&gt;Rule Extraction&lt;/b&gt;: Explanations can be read out directly: Action(a) &amp;larr; Concept_1(w_1) &amp;and; Concept_2(w_2) &amp;and; Parent(w_p)." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#f57f17;fontSize=10;align=left;" vertex="1" parent="p_c">
+          <mxGeometry x="25" y="340" width="915" height="105" as="geometry" />
+        </mxCell>
+
+        <!-- Panel (c) edges -->
+        <mxCell id="ec1" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_in_c" target="c_sc_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec2" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_supp_c" target="c_w_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_w_c" target="c_sc_c">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec4" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_in_p" target="c_sc_p">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec5" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_supp_p" target="c_w_p">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#f57f17;strokeWidth=2;" edge="1" parent="p_c" source="c_w_p" target="c_sc_p">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec7" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;strokeColor=#e65100;strokeWidth=2;" edge="1" parent="p_c" source="c_sc_c" target="c_agg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ec8" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.7;entryDx=0;entryDy=0;strokeColor=#e65100;strokeWidth=2;" edge="1" parent="p_c" source="c_sc_p" target="c_agg">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- ==================================================================== -->
+        <!-- ====== PANEL (d): TAXONOMIC ONTOLOGY & LOSSES ====== -->
+        <!-- ==================================================================== -->
+        <mxCell id="p_d" value="(d) Taxonomic Ontology &amp;amp; Multi-Task Supervision" style="swimlane;startSize=28;fillColor=#f8f9fa;strokeColor=#7b1fa2;fontStyle=1;fontSize=13;container=1;pointerEvents=0;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="530" width="890" height="470" as="geometry" />
+        </mxCell>
+
+        <!-- Ontology Hierarchy -->
+        <mxCell id="d_prim" value="&lt;b&gt;Primitive Concepts (L0)&lt;/b&gt;&lt;br&gt;&amp;bull; Spatial: arm_raise, kick, crouch&lt;br&gt;&amp;bull; Temporal: fast_motion, rising&lt;br&gt;&amp;bull; Interaction: person_touch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#7b1fa2;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="25" y="42" width="240" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_par" value="&lt;b&gt;Taxonomic Parents (L1)&lt;/b&gt;&lt;br&gt;&amp;bull; UpperBody_Motion&lt;br&gt;&amp;bull; LowerBody_Locomotion&lt;br&gt;&amp;bull; Person_Interaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1bee7;strokeColor=#6a1b9a;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="325" y="42" width="240" height="75" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_act" value="&lt;b&gt;Target Actions (L2)&lt;/b&gt;&lt;br&gt;&amp;bull; Jump, Wave, Cheer&lt;br&gt;&amp;bull; Kick, Walk, Bend&lt;br&gt;&amp;bull; Hug, Handshake, Push" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1a237e;strokeColor=#0d47a1;fontColor=#ffffff;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="625" y="42" width="235" height="75" as="geometry" />
+        </mxCell>
+
+        <!-- Losses Row 1 -->
+        <mxCell id="d_l_ce" value="&lt;b&gt;Action Loss L_{CE}&lt;/b&gt;&lt;br&gt;Cross-Entropy on Action Logits&lt;br&gt;-log softmax(S_{y*})" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="25" y="145" width="255" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d_l_hn" value="&lt;b&gt;Hard-Negative Loss L_{HN}&lt;/b&gt;&lt;br&gt;max(0, m + S_{neg} - S_{pos})&lt;br&gt;Separates confusable action pairs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="315" y="145" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d_l_c" value="&lt;b&gt;Concept BCE Loss L_{concept}&lt;/b&gt;&lt;br&gt;Weak concept supervision&lt;br&gt;Matches ontology support M_c" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="605" y="145" width="255" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Losses Row 2 -->
+        <mxCell id="d_l_par" value="&lt;b&gt;Parent Loss L_{parent}&lt;/b&gt;&lt;br&gt;Coarse taxonomy supervision&lt;br&gt;-log sigmoid(parent_logits)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="25" y="225" width="255" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d_l_hie" value="&lt;b&gt;Hierarchy Loss L_{hier}&lt;/b&gt;&lt;br&gt;ReLU(P_raw(c) - P(parent_c))&lt;br&gt;Child prob &amp;le; Parent prob" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="315" y="225" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="d_l_den" value="&lt;b&gt;Density Loss L_{density}&lt;/b&gt;&lt;br&gt;|sum(P_c) - budget_target|&lt;br&gt;Prevents concept over-activation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;fontSize=9;" vertex="1" parent="p_d">
+          <mxGeometry x="605" y="225" width="255" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Total Loss Box -->
+        <mxCell id="d_l_tot" value="&lt;b&gt;Total Multi-Task Objective Function&lt;/b&gt;&lt;br&gt;L_{total} = L_{CE} + &amp;alpha;&amp;middot;L_{HN} + &amp;beta;&amp;middot;L_{concept} + &amp;gamma;&amp;middot;L_{parent} + &amp;delta;&amp;middot;L_{hier} + &amp;eta;&amp;middot;L_{density}&lt;br&gt;&amp;bull; End-to-end differentiable neuro-symbolic optimization with exact semantic grounding" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe0b2;strokeColor=#e65100;fontStyle=1;fontSize=10;" vertex="1" parent="p_d">
+          <mxGeometry x="25" y="315" width="835" height="65" as="geometry" />
+        </mxCell>
+
+        <mxCell id="d_ft" value="&lt;b&gt;Thesis Contribution&lt;/b&gt;: Relation-free unary grounding + taxonomic gating eliminates O(K^2) pairwise relation explosion, delivering state-of-the-art accuracy with interpretable decision paths." style="text;html=1;strokeColor=none;fillColor=none;align=center;fontSize=10;fontStyle=2;fontColor=#455a64;" vertex="1" parent="p_d">
+          <mxGeometry x="25" y="405" width="835" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Panel (d) edges -->
+        <mxCell id="ed1" value="gated by" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7b1fa2;strokeWidth=2;fontSize=9;fontColor=#6a1b9a;" edge="1" parent="p_d" source="d_prim" target="d_par">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ed2" value="composed into" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#7b1fa2;strokeWidth=2;fontSize=9;fontColor=#6a1b9a;" edge="1" parent="p_d" source="d_par" target="d_act">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
