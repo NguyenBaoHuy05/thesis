@@ -86,6 +86,7 @@ class HierarchicalConceptDecoder(nn.Module):
         num_points: int | None = None,
         interaction_reasoning: bool = True,
         gate_floor: float = 0.05,
+        parent_enabled: bool = True,
         region_pooling: bool = False,
         region_tokens: dict[str, Sequence[int]] | None = None,
         scope_fusion: str = "fixed",
@@ -103,6 +104,7 @@ class HierarchicalConceptDecoder(nn.Module):
         self.num_concepts = int(num_concepts)
         self.num_parents = len(parent_names)
         self.gate_floor = float(gate_floor)
+        self.parent_enabled = bool(parent_enabled)
         if not 0.0 <= self.gate_floor < 1.0:
             raise ValueError("gate_floor must be in [0, 1)")
         self.register_buffer("concept_to_parent", concept_to_parent)
@@ -192,13 +194,21 @@ class HierarchicalConceptDecoder(nn.Module):
         feature_map = self._last_feature_map(feature_output)
         pooled = feature_map.mean(dim=(2, 3))
         parent_logits = pooled.new_zeros((pooled.shape[0], self.num_parents))
-        for level, parent_ids in self.parent_level_ids.items():
-            values = self.parent_heads[str(level)](pooled)
-            ids = torch.tensor(parent_ids, dtype=torch.long, device=pooled.device)
-            parent_logits[:, ids] = values
-        parent_probs = torch.sigmoid(parent_logits)
+        if self.parent_enabled:
+            for level, parent_ids in self.parent_level_ids.items():
+                values = self.parent_heads[str(level)](pooled)
+                ids = torch.tensor(parent_ids, dtype=torch.long, device=pooled.device)
+                parent_logits[:, ids] = values
+        parent_probs = (
+            torch.sigmoid(parent_logits)
+            if self.parent_enabled
+            else torch.zeros_like(parent_logits)
+        )
         parent_for_child = parent_probs[:, self.concept_to_parent]
-        gate = self.gate_floor + (1.0 - self.gate_floor) * parent_for_child
+        if self.parent_enabled:
+            gate = self.gate_floor + (1.0 - self.gate_floor) * parent_for_child
+        else:
+            gate = torch.ones_like(parent_for_child)
         scope_logits = pooled.new_zeros((pooled.shape[0], self.num_concepts))
         for scope, concept_ids in self.scope_ids.items():
             values = self.scope_heads[scope](pooled)

@@ -36,6 +36,7 @@ class HierarchicalSymbolicDecoder(nn.Module):
         zero_is_negative: bool = False,
         num_concepts: int = 78,
         parent_weight: float = 0.35,
+        parent_enabled: bool = True,
     ):
         super().__init__()
         metadata = load_ontology_metadata(metadata_csv, num_concepts=num_concepts)
@@ -77,6 +78,7 @@ class HierarchicalSymbolicDecoder(nn.Module):
         self.children_by_parent = children
         self.parent_levels = parent_levels
         self.parent_weight = float(parent_weight)
+        self.parent_enabled = bool(parent_enabled)
         self.register_buffer("support", positive_mask)
         self.register_buffer("negative_support", negative_mask)
         self.register_buffer("label_confidence", confidence)
@@ -109,9 +111,13 @@ class HierarchicalSymbolicDecoder(nn.Module):
         concept_weights, parent_weights = self._weights()
         concept_score = sequence_probs @ concept_weights.t()
         concept_score = concept_score / concept_weights.sum(dim=1).clamp_min(1e-6).unsqueeze(0)
-        parent_score = parent_probs @ parent_weights.t()
-        parent_score = parent_score / parent_weights.sum(dim=1).clamp_min(1e-6).unsqueeze(0)
-        return concept_score + self.parent_weight * parent_score + self.bias.unsqueeze(0)
+        if self.parent_enabled and self.parent_weight != 0.0:
+            parent_score = parent_probs @ parent_weights.t()
+            parent_score = parent_score / parent_weights.sum(dim=1).clamp_min(1e-6).unsqueeze(0)
+            parent_term = self.parent_weight * parent_score
+        else:
+            parent_term = torch.zeros_like(concept_score)
+        return concept_score + parent_term + self.bias.unsqueeze(0)
 
     def concept_loss(
         self, sequence_probs: torch.Tensor, action_labels: torch.Tensor,
@@ -166,7 +172,12 @@ class HierarchicalSymbolicDecoder(nn.Module):
         def smooth_l0(value: torch.Tensor) -> torch.Tensor:
             return (value / (value + 0.1)).mean()
 
-        return smooth_l0(concept_weights) + 0.25 * smooth_l0(parent_weights)
+        parent_term = (
+            0.25 * smooth_l0(parent_weights)
+            if self.parent_enabled
+            else concept_weights.new_zeros(())
+        )
+        return smooth_l0(concept_weights) + parent_term
 
     @torch.no_grad()
     def _rule_tensors(self) -> dict[str, torch.Tensor]:

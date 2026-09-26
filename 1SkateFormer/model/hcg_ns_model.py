@@ -46,6 +46,7 @@ class HCGNSSkateFormer(nn.Module):
         self.num_concepts = int(num_concepts)
         metadata = load_ontology_metadata(metadata_csv, num_concepts=num_concepts)
         prototype_args = dict(prototype_args or {})
+        parent_enabled = bool(prototype_args.get("parent_enabled", True))
         all_pyramid_dims = tuple(args.get("channels", (96, 192, 192, 192)))
         pyramid_levels = tuple(prototype_args.get("pyramid_levels", (2, 3)))
         try:
@@ -66,6 +67,7 @@ class HCGNSSkateFormer(nn.Module):
             num_points=int(args.get("num_points", 0)) or None,
             interaction_reasoning=bool(prototype_args.get("interaction_reasoning", True)),
             gate_floor=float(gate_floor),
+            parent_enabled=parent_enabled,
             region_pooling=bool(prototype_args.get("region_pooling", False)),
             region_tokens=prototype_args.get("region_tokens"),
             scope_fusion=str(prototype_args.get("scope_fusion", "fixed")),
@@ -86,6 +88,7 @@ class HCGNSSkateFormer(nn.Module):
             num_classes=num_classes,
             num_concepts=num_concepts,
             parent_weight=float(parent_weight),
+            parent_enabled=parent_enabled,
         )
         normalized = set()
         for pair in hard_negative_pairs or []:
