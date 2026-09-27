@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import gc
 import hashlib
 import json
 import random
@@ -395,7 +396,6 @@ def main() -> None:
 
     train_dataset = make_dataset(root, cfg, "train", True, eval_mode=False)
     train_loader = make_loader(train_dataset, cfg, True)
-    test_loader = make_loader(make_dataset(root, cfg, "test", False, eval_mode=True), cfg, False)
 
     hard_negative_pairs = load_hard_negative_pairs(root, cfg)
     model = HCGNSSkateFormer(
@@ -488,6 +488,19 @@ def main() -> None:
             "train_stats": train_stats,
             "selection": "final_epoch_no_validation",
         }, final_path)
+
+    # NTU120 is large enough that keeping both split arrays resident can
+    # exhaust Kaggle's host RAM.  The test dataset is only needed after all
+    # training epochs have completed, so release the training-side objects
+    # before constructing the test loader.
+    del train_loader, train_dataset, optimizer
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    test_loader = make_loader(
+        make_dataset(root, cfg, "test", False, eval_mode=True), cfg, False
+    )
 
     (work_dir / "history.json").write_text(
         json.dumps(history, ensure_ascii=False, indent=2), encoding="utf-8"
