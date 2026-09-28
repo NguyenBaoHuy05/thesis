@@ -1,14 +1,11 @@
-# Ablation A2_motion: + motion stream only.
-# Generated from ../HCG_NS_SkateFormer_ntu60_cs.yaml; only work_dir,
-# region_pooling, motion_branch and scope_fusion differ between runs.
 # HCG-NS-SkateFormer-RF v2.3: hierarchical, unary, relation-free training.
 # Protocol: use the complete official training split, then evaluate once on
 # the official test split. No validation split is created or used.
 seed: 1
 device: [0]
 num_worker: 0
-work_dir: ./work_dir/hcg_ns/ablation_ntu60_cs_v23/A2_motion
-num_classes: 60
+work_dir: ./work_dir/hcg_ns/new/ntu120_csub_joint
+num_classes: 120
 # 88 concepts (v2.3 shared NTU60+120 ontology): v2.2 minus foot_tap,
 # temporal_sequence_seq_cascading, context_target_object (never positive)
 # and foot_static (positive for 98/120 actions, non-discriminative).
@@ -18,11 +15,12 @@ metadata_csv: ./concepts/ntu_concept_metadata_v2_3.csv
 labels_csv: ./concepts/ntu_action_concept_v2_3_labels.csv
 zero_is_negative: true
 hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_3.csv
-weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu60_CSub/SkateFormer_j.pt
+weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
 
 train_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60csfull/NTU60_CS.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
   split: train
+  data_type: j
   debug: False
   window_size: 64
   p_interval: [0.5, 1]
@@ -34,8 +32,9 @@ train_feeder_args:
   partition: True
 
 test_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60csfull/NTU60_CS.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
   split: test
+  data_type: j
   debug: False
   window_size: 64
   p_interval: [0.95]
@@ -69,20 +68,20 @@ prototype_args:
   region_pooling: False
   # Motion stream: per-joint velocity/acceleration at the full frame rate,
   # fused (zero-initialised) into the final backbone tokens.
-  motion_branch: True
+  motion_branch: False
   motion_hidden_dim: 64
   # Scope-logit fusion: "fixed" = legacy 0.25 * raw logits (unbounded);
-  # "bounded" = learnable gate * tanh(scope) / temperature, same range as
-  # the prototype logits.
-  scope_fusion: fixed
+  # "bounded" = learnable gate * tanh(scope), limited by scope_scale.
+  # The scope term stays in raw-logit units and does not use temperature.
+  scope_fusion: bounded
   scope_scale: 0.25
 gate_floor: 0.05
 parent_weight: 0.35
 residual_action_head: false
 residual_action_weight: 0.1
 
-batch_size: 64
-test_batch_size: 32
+batch_size: 8
+test_batch_size: 16
 test_p_interval: [0.95]
 base_lr: 0.0001
 weight_decay: 0.0001
@@ -91,7 +90,6 @@ stage1_epochs: 5
 stage2_epochs: 10
 stage3_epochs: 0
 
-# Hard-negative pairs are reserved for a separate ablation run.
 hard_negative_pairs: []
 hard_negative_pairs_csv: null
 hard_negative_margin: 0.2

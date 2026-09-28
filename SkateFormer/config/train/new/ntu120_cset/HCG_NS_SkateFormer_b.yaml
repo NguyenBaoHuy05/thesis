@@ -1,43 +1,46 @@
-# HCG-NS-SkateFormer-RF v2.3 for NTU RGB+D 120 Cross-Subject.
-# Kaggle-safe baseline: the test split is created only after training by
-# main_hcg_ns.py, while multi-scale decoding is disabled to reduce VRAM.
-# After a successful full run, multi_scale can be changed to true for the
-# higher-capacity experiment.
+# HCG-NS-SkateFormer-RF v2.3: hierarchical, unary, relation-free training.
+# Protocol: use the complete official training split, then evaluate once on
+# the official test split. No validation split is created or used.
 seed: 1
 device: [0]
 num_worker: 0
-work_dir: ./work_dir/hcg_ns/ntu120_csub_v23_kaggle
+work_dir: ./work_dir/hcg_ns/new/ntu120_cset_bone
 num_classes: 120
+# 88 concepts (v2.3 shared NTU60+120 ontology): v2.2 minus foot_tap,
+# temporal_sequence_seq_cascading, context_target_object (never positive)
+# and foot_static (positive for 98/120 actions, non-discriminative).
 num_concepts: 88
 concept_csv: ./concepts/ntu_action_concept_v2_3.csv
 metadata_csv: ./concepts/ntu_concept_metadata_v2_3.csv
 labels_csv: ./concepts/ntu_action_concept_v2_3_labels.csv
 zero_is_negative: true
 hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_3.csv
-weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
+weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSet/SkateFormer_b.pt
 
 train_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csetfull/NTU120_CSet.npz
   split: train
-  debug: false
+  data_type: b
+  debug: False
   window_size: 64
   p_interval: [0.5, 1]
   aug_method: a123489
   intra_p: 0.5
   inter_p: 0.2
   thres: 64
-  uniform: true
-  partition: true
+  uniform: True
+  partition: True
 
 test_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csetfull/NTU120_CSet.npz
   split: test
-  debug: false
+  data_type: b
+  debug: False
   window_size: 64
   p_interval: [0.95]
   thres: 64
-  uniform: true
-  partition: true
+  uniform: True
+  partition: True
 
 model_args:
   num_people: 2
@@ -46,32 +49,37 @@ model_args:
   num_heads: 32
   attn_drop: 0.5
   head_drop: 0.0
-  rel: true
+  rel: True
   drop_path: 0.2
   type_1_size: [8, 8]
   type_2_size: [8, 12]
   type_3_size: [8, 8]
   type_4_size: [8, 12]
   mlp_ratio: 4.0
-  index_t: true
+  index_t: True
 
 prototype_args:
-  multi_scale: false
+  multi_scale: False
   pyramid_levels: [2, 3]
-  interaction_reasoning: true
-  region_pooling: false
-  motion_branch: false
+  interaction_reasoning: True
+  # Region pooling: body-region concepts (hand/arm, leg/foot, hip/torso, head)
+  # attend only to the joints of their parent region instead of all tokens.
+  # Requires the partitioned 24-joint layout (feeder partition: True).
+  region_pooling: False
+  # Motion stream: per-joint velocity/acceleration at the full frame rate,
+  # fused (zero-initialised) into the final backbone tokens.
+  motion_branch: False
   motion_hidden_dim: 64
-  scope_fusion: fixed
+  # Scope-logit fusion: "fixed" = legacy 0.25 * raw logits (unbounded);
+  # "bounded" = learnable gate * tanh(scope), limited by scope_scale.
+  # The scope term stays in raw-logit units and does not use temperature.
+  scope_fusion: bounded
   scope_scale: 0.25
-
 gate_floor: 0.05
 parent_weight: 0.35
 residual_action_head: false
 residual_action_weight: 0.1
 
-# Conservative values for Kaggle. Increase batch_size only after confirming
-# that the selected GPU has enough VRAM.
 batch_size: 8
 test_batch_size: 16
 test_p_interval: [0.95]
@@ -98,6 +106,8 @@ loss_weights:
   sparse: 0.001
   center: 0.05
 
+# Stage-specific profiles. Stage 1 is deliberately parent-first and does not
+# apply action-level hard-negative pressure before the hierarchy is grounded.
 stage1_loss_weights:
   weak_concept: 0.10
   weak_positive: 0.25
@@ -109,6 +119,7 @@ stage1_loss_weights:
   sparse: 0.001
   center: 0.10
 
+# Stage 2 restores the full unary-concept and symbolic-composition objective.
 stage2_loss_weights:
   weak_concept: 0.25
   weak_positive: 1.00

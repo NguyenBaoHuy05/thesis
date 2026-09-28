@@ -133,11 +133,9 @@ class HierarchicalConceptDecoder(nn.Module):
             ) if region_pooling else None,
         )
         # How the time-constant scope logits are added to the per-time
-        # prototype logits.  "fixed" (legacy): scope_scale * raw linear logits,
-        # which are unbounded while prototype logits are bounded by
-        # +-1/temperature.  "bounded": tanh(scope) / temperature scaled by a
-        # learnable per-concept gate initialised at scope_scale, so both terms
-        # live on the same range regardless of how the temperature evolves.
+        # prototype logits. Fixed mode is legacy and unbounded. Bounded mode
+        # keeps the scope contribution in raw-logit units: scope_scale is the
+        # hard maximum and the per-concept gate remains learnable.
         if scope_fusion not in {"fixed", "bounded"}:
             raise ValueError("scope_fusion must be 'fixed' or 'bounded'")
         if not 0.0 < float(scope_scale) < 1.0:
@@ -216,7 +214,7 @@ class HierarchicalConceptDecoder(nn.Module):
             scope_logits[:, ids] = values
         if self.scope_fusion == "bounded":
             scope_term = (
-                torch.sigmoid(self.scope_gate_raw) * torch.tanh(scope_logits) / self.temperature
+                self.scope_scale * torch.sigmoid(self.scope_gate_raw) * torch.tanh(scope_logits)
             )
         else:
             scope_term = self.scope_scale * scope_logits

@@ -4,7 +4,7 @@
 seed: 1
 device: [0]
 num_worker: 0
-work_dir: ./work_dir/hcg_ns/ntu60_cs_v23_interaction
+work_dir: ./work_dir/hcg_ns/new/ntu60_cv_joint
 num_classes: 60
 # 88 concepts (v2.3 shared NTU60+120 ontology): v2.2 minus foot_tap,
 # temporal_sequence_seq_cascading, context_target_object (never positive)
@@ -15,11 +15,12 @@ metadata_csv: ./concepts/ntu_concept_metadata_v2_3.csv
 labels_csv: ./concepts/ntu_action_concept_v2_3_labels.csv
 zero_is_negative: true
 hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_3.csv
-weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu60_CSub/SkateFormer_j.pt
+weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu60_CView/SkateFormer_j.pt
 
 train_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60csfull/NTU60_CS.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60cvfull/NTU60_CV.npz
   split: train
+  data_type: j
   debug: False
   window_size: 64
   p_interval: [0.5, 1]
@@ -31,8 +32,9 @@ train_feeder_args:
   partition: True
 
 test_feeder_args:
-  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60csfull/NTU60_CS.npz
+  data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu60cvfull/NTU60_CV.npz
   split: test
+  data_type: j
   debug: False
   window_size: 64
   p_interval: [0.95]
@@ -69,9 +71,9 @@ prototype_args:
   motion_branch: False
   motion_hidden_dim: 64
   # Scope-logit fusion: "fixed" = legacy 0.25 * raw logits (unbounded);
-  # "bounded" = learnable gate * tanh(scope) / temperature, same range as
-  # the prototype logits.
-  scope_fusion: fixed
+  # "bounded" = learnable gate * tanh(scope), limited by scope_scale.
+  # The scope term stays in raw-logit units and does not use temperature.
+  scope_fusion: bounded
   scope_scale: 0.25
 gate_floor: 0.05
 parent_weight: 0.35
@@ -88,7 +90,6 @@ stage1_epochs: 5
 stage2_epochs: 10
 stage3_epochs: 0
 
-# Hard-negative pairs are reserved for a separate ablation run.
 hard_negative_pairs: []
 hard_negative_pairs_csv: null
 hard_negative_margin: 0.2
