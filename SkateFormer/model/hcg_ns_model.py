@@ -35,6 +35,9 @@ class HCGNSSkateFormer(nn.Module):
         prototype_args: dict[str, Any] | None = None,
         parent_weight: float = 0.35,
         gate_floor: float = 0.05,
+        action_logit_scale: float = 1.0,
+        concept_score_mode: str = 'probability',
+        concept_idf_power: float = 0.0,
     ):
         super().__init__()
         args = dict(backbone_args)
@@ -89,6 +92,9 @@ class HCGNSSkateFormer(nn.Module):
             num_concepts=num_concepts,
             parent_weight=float(parent_weight),
             parent_enabled=parent_enabled,
+            action_logit_scale=float(action_logit_scale),
+            concept_score_mode=str(concept_score_mode),
+            concept_idf_power=float(concept_idf_power),
         )
         normalized = set()
         for pair in hard_negative_pairs or []:
@@ -204,7 +210,7 @@ class HCGNSSkateFormer(nn.Module):
             positive_weight=float(weights.get("weak_positive", 1.0)),
             negative_weight=float(weights.get("weak_negative", 0.0)),
         )
-        parent_loss = self.symbolic.parent_loss(output["parent_probs"], action_labels)
+        parent_loss = self.symbolic.parent_loss(output["parent_logits"], action_labels)
         hierarchy_loss = self.symbolic.hierarchy_loss(
             output["raw_sequence_probs"], output["parent_probs"]
         )

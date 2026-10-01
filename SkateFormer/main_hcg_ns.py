@@ -358,15 +358,25 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
 def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray,
                     parent_probs: np.ndarray) -> np.ndarray:
     dense = rulebook["dense_weights"]
+    coefficients = rulebook["coefficients"]
     concept = np.asarray(dense["concept"], dtype=np.float64)
     parent = np.asarray(dense["parent"], dtype=np.float64)
     bias = np.asarray(dense["bias"], dtype=np.float64)
-    concept_score = concept_probs @ concept.T
-    concept_score /= np.maximum(concept.sum(axis=1, keepdims=True).T, 1e-6)
+    concept_idf = np.asarray(
+        dense.get("concept_idf", np.ones(concept.shape[1])), dtype=np.float64
+    )
+    if coefficients.get("concept_score_mode", "probability") == "logit":
+        clipped = np.clip(concept_probs, 1e-4, 1.0 - 1e-4)
+        evidence = np.log(clipped) - np.log1p(-clipped)
+    else:
+        evidence = concept_probs
+    score_weights = concept * concept_idf[None, :]
+    concept_score = evidence @ score_weights.T
+    concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
     parent_score = parent_probs @ parent.T
     parent_score /= np.maximum(parent.sum(axis=1, keepdims=True).T, 1e-6)
-    return concept_score + float(rulebook["coefficients"]["parent_weight"]) * parent_score + bias
-
+    combined = concept_score + float(coefficients["parent_weight"]) * parent_score
+    return float(coefficients.get("action_logit_scale", 1.0)) * combined + bias
 
 def git_commit(root: Path) -> str | None:
     try:
@@ -414,6 +424,9 @@ def main() -> None:
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
         gate_floor=float(cfg.get("gate_floor", 0.05)),
+        action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
+        concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
+        concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
     ).to(device)
     load_checkpoint(
         model, resolve(root, cfg.get("weights")), device,

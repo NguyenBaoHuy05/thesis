@@ -79,10 +79,20 @@ class Scorer:
     @torch.no_grad()
     def terms(self, seq: torch.Tensor, parent: torch.Tensor) -> dict[str, torch.Tensor]:
         concept_w, parent_w = self.symbolic._weights()
-        concept = (seq @ concept_w.t()) / concept_w.sum(dim=1).clamp_min(1e-6)
-        parent_term = self.symbolic.parent_weight * (
-            (parent @ parent_w.t()) / parent_w.sum(dim=1).clamp_min(1e-6)
-        )
+        if self.symbolic.concept_score_mode == "logit":
+            evidence = torch.logit(seq.clamp(1e-4, 1.0 - 1e-4))
+        else:
+            evidence = seq
+        score_w = concept_w * self.symbolic.concept_idf.unsqueeze(0)
+        concept = (evidence @ score_w.t()) / score_w.sum(dim=1).clamp_min(1e-6)
+        concept = self.symbolic.action_logit_scale * concept
+        if self.symbolic.parent_enabled and self.symbolic.parent_weight != 0.0:
+            parent_term = self.symbolic.parent_weight * (
+                (parent @ parent_w.t()) / parent_w.sum(dim=1).clamp_min(1e-6)
+            )
+            parent_term = self.symbolic.action_logit_scale * parent_term
+        else:
+            parent_term = torch.zeros_like(concept)
         bias = self.symbolic.bias.unsqueeze(0).expand_as(concept)
         terms = {"concept": concept, "parent": parent_term, "bias": bias}
         if self.residual_term is not None:
@@ -275,6 +285,9 @@ def main() -> None:
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
         gate_floor=float(cfg.get("gate_floor", 0.05)),
+        action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
+        concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
+        concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
     ).to(device)
     load_full_checkpoint(model, checkpoint_path, device)
     model.eval()

@@ -1,20 +1,20 @@
-# HCG-NS-SkateFormer-RF v2.3: hierarchical, unary, relation-free training.
+# HCG-NS-SkateFormer-RF v2.4: hierarchical, unary, relation-free training.
 # Protocol: use the complete official training split, then evaluate once on
 # the official test split. No validation split is created or used.
 seed: 1
 device: [0]
 num_worker: 0
-work_dir: ./work_dir/hcg_ns/new/ntu120_cset_bone
+work_dir: ./work_dir/hcg_ns/new/ntu120_cset_bone_v24_core102
 num_classes: 120
-# 88 concepts (v2.3 shared NTU60+120 ontology): v2.2 minus foot_tap,
-# temporal_sequence_seq_cascading, context_target_object (never positive)
-# and foot_static (positive for 98/120 actions, non-discriminative).
-num_concepts: 88
-concept_csv: ./concepts/ntu_action_concept_v2_3.csv
-metadata_csv: ./concepts/ntu_concept_metadata_v2_3.csv
-labels_csv: ./concepts/ntu_action_concept_v2_3_labels.csv
+# 102 concepts: v2.3 base (88) plus 14 NTU120 candidates selected for
+# discriminating the closest action pairs; IDs are contiguous and preserved.
+
+num_concepts: 102
+concept_csv: ./concepts/ntu_action_concept_v2_4.csv
+metadata_csv: ./concepts/ntu_concept_metadata_v2_4.csv
+labels_csv: ./concepts/ntu_action_concept_v2_4_labels.csv
 zero_is_negative: true
-hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_3.csv
+hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_4.csv
 weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSet/SkateFormer_b.pt
 
 train_feeder_args:
@@ -76,12 +76,15 @@ prototype_args:
   scope_fusion: bounded
   scope_scale: 0.25
 gate_floor: 0.05
-parent_weight: 0.35
+parent_weight: 0.0
+action_logit_scale: 2.0
+concept_score_mode: logit
+concept_idf_power: 1.0
 residual_action_head: false
 residual_action_weight: 0.1
 
-batch_size: 8
-test_batch_size: 16
+batch_size: 64
+test_batch_size: 32
 test_p_interval: [0.95]
 base_lr: 0.0001
 weight_decay: 0.0001

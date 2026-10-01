@@ -328,6 +328,9 @@ def main() -> None:
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
         gate_floor=float(cfg.get("gate_floor", 0.05)),
+        action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
+        concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
+        concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
     ).to(device)
     load_full_checkpoint(model, checkpoint_path, device)
     result, _ = evaluate(model, test_loader, device, args.threshold)

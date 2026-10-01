@@ -105,8 +105,8 @@ class HierarchicalConceptDecoder(nn.Module):
         self.num_parents = len(parent_names)
         self.gate_floor = float(gate_floor)
         self.parent_enabled = bool(parent_enabled)
-        if not 0.0 <= self.gate_floor < 1.0:
-            raise ValueError("gate_floor must be in [0, 1)")
+        if not 0.0 <= self.gate_floor <= 1.0:
+            raise ValueError("gate_floor must be in [0, 1]")
         self.register_buffer("concept_to_parent", concept_to_parent)
         interaction_concepts = [
             int(row["concept_id"])
