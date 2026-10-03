@@ -29,7 +29,6 @@ import torch
 from main_hcg_ns import (
     HCGNSSkateFormer,
     device_from_config,
-    load_hard_negative_pairs,
     load_config,
     make_dataset,
     make_loader,
@@ -332,7 +331,6 @@ def main() -> None:
 
     test_dataset = make_dataset(root, cfg, "test", False, eval_mode=True)
     test_loader = make_loader(test_dataset, cfg, False)
-    hard_negative_pairs = load_hard_negative_pairs(root, cfg)
     model = HCGNSSkateFormer(
         backbone_args=cfg["model_args"],
         concept_csv=resolve(root, cfg["concept_csv"]),
@@ -341,8 +339,6 @@ def main() -> None:
         zero_is_negative=bool(cfg.get("zero_is_negative", False)),
         num_classes=int(cfg["num_classes"]),
         num_concepts=int(cfg.get("num_concepts", 78)),
-        hard_negative_pairs=hard_negative_pairs,
-        hard_negative_margin=float(cfg.get("hard_negative_margin", 0.2)),
         residual_action_head=bool(cfg.get("residual_action_head", False)),
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),

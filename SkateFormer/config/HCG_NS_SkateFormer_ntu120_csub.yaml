@@ -87,9 +87,6 @@ stage1_epochs: 5
 stage2_epochs: 10
 stage3_epochs: 0
 
-hard_negative_pairs: []
-hard_negative_pairs_csv: null
-hard_negative_margin: 0.2
 checkpoint_max_missing_ratio: 0.02
 
 # Defaults used outside the explicitly staged training loop.
@@ -98,11 +95,8 @@ loss_weights:
   weak_positive: 1.0
   weak_negative: 0.25
   parent: 0.25
-  hierarchy: 0.0
   graph: 0.10
   density: 0.05
-  hard_negative: 0.0
-  sparse: 0.001
   center: 0.05
 
 # Ground parent concepts first; the graph teacher is not used yet.
@@ -111,11 +105,8 @@ stage1_loss_weights:
   weak_positive: 0.25
   weak_negative: 0.0
   parent: 1.0
-  hierarchy: 0.50
   graph: 0.0
   density: 0.02
-  hard_negative: 0.0
-  sparse: 0.001
   center: 0.10
 
 # Then regularize child concepts with the fixed parent-concept graph.
@@ -124,11 +115,8 @@ stage2_loss_weights:
   weak_positive: 1.0
   weak_negative: 0.25
   parent: 0.25
-  hierarchy: 0.0
   graph: 0.10
   density: 0.05
-  hard_negative: 0.0
-  sparse: 0.001
   center: 0.05
 
 stage1_lr: 0.0001

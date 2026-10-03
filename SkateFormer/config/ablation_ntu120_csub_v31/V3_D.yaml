@@ -8,10 +8,7 @@ prototype_args:
 parent_weight: 0.0
 loss_weights:
   parent: 0.0
-  hierarchy: 0.0
 stage1_loss_weights:
   parent: 0.0
-  hierarchy: 0.0
 stage2_loss_weights:
   parent: 0.0
-  hierarchy: 0.0

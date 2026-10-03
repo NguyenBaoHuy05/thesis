@@ -27,8 +27,6 @@ class HCGNSSkateFormer(nn.Module):
         labels_csv: str | Path | None = None,
         zero_is_negative: bool = False,
         num_concepts: int = 78,
-        hard_negative_pairs: list[list[int]] | None = None,
-        hard_negative_margin: float = 0.2,
         residual_action_head: bool = False,
         residual_action_weight: float = 0.1,
         prototype_args: dict[str, Any] | None = None,
@@ -88,16 +86,6 @@ class HCGNSSkateFormer(nn.Module):
             concept_score_mode=str(concept_score_mode),
             concept_idf_power=float(concept_idf_power),
         )
-        normalized = set()
-        for pair in hard_negative_pairs or []:
-            if len(pair) != 2:
-                raise ValueError(f"hard-negative pair must contain two ids: {pair}")
-            first, second = sorted((int(pair[0]), int(pair[1])))
-            if first == second or not (0 <= first < num_classes and 0 <= second < num_classes):
-                raise ValueError(f"invalid hard-negative action pair: {pair}")
-            normalized.add((first, second))
-        self.hard_negative_pairs = tuple(sorted(normalized))
-        self.hard_negative_margin = float(hard_negative_margin)
         self.residual_action_head_enabled = bool(residual_action_head)
         self.residual_action_weight = float(residual_action_weight)
         if self.residual_action_head_enabled:
@@ -120,22 +108,6 @@ class HCGNSSkateFormer(nn.Module):
             parameter.requires_grad = False
         for parameter in self.backbone.stages[-1].parameters():
             parameter.requires_grad = True
-
-    def hard_negative_loss(
-        self, action_scores: torch.Tensor, action_labels: torch.Tensor,
-    ) -> torch.Tensor:
-        if not self.hard_negative_pairs:
-            return action_scores.new_zeros(())
-        pairs = torch.tensor(self.hard_negative_pairs, dtype=torch.long, device=action_scores.device)
-        left, right = pairs[:, 0], pairs[:, 1]
-        is_left = action_labels.unsqueeze(1).eq(left.unsqueeze(0))
-        is_right = action_labels.unsqueeze(1).eq(right.unsqueeze(0))
-        valid = is_left | is_right
-        if not valid.any():
-            return action_scores.new_zeros(())
-        positive_score = torch.where(is_left, action_scores[:, left], action_scores[:, right])
-        negative_score = torch.where(is_left, action_scores[:, right], action_scores[:, left])
-        return F.relu(self.hard_negative_margin + negative_score - positive_score)[valid].mean()
 
     def forward(self, x: torch.Tensor, index_t: torch.Tensor | None = None) -> dict[str, Any]:
         feature_output = self.backbone.forward_features_raw(
@@ -183,29 +155,22 @@ class HCGNSSkateFormer(nn.Module):
             "hierarchy": 0.10,
             "graph": 0.0,
             "density": 0.05,
-            "sparse": 0.001,
             "center": 0.05,
-            "hard_negative": 0.25,
             **(weights or {}),
         }
         action_loss = F.cross_entropy(output["action_scores"], action_labels)
-        hard_negative = self.hard_negative_loss(output["action_scores"], action_labels)
         concept_loss = self.symbolic.concept_loss(
             output["sequence_probs"], action_labels,
             positive_weight=float(weights.get("weak_positive", 1.0)),
             negative_weight=float(weights.get("weak_negative", 0.0)),
         )
         parent_loss = self.symbolic.parent_loss(output["parent_logits"], action_labels)
-        hierarchy_loss = self.symbolic.hierarchy_loss(
-            output["sequence_probs"], output["parent_probs"]
-        )
         graph_loss = self.concept_decoder.parent_graph_loss(
             output["sequence_probs"], output["parent_probs"]
         )
         density_loss = self.symbolic.density_loss(
             output["sequence_probs"], action_labels
         )
-        sparse_loss = self.symbolic.sparsity_loss()
         center_loss = (
             self.concept_decoder.center_grounding_loss(
                 output["cosine_similarity"], action_labels, self.symbolic.support
@@ -213,24 +178,18 @@ class HCGNSSkateFormer(nn.Module):
         )
         total = (
             action_loss
-            + weights["hard_negative"] * hard_negative
             + weights["weak_concept"] * concept_loss
             + weights["parent"] * parent_loss
-            + weights["hierarchy"] * hierarchy_loss
             + weights["graph"] * graph_loss
             + weights["density"] * density_loss
-            + weights["sparse"] * sparse_loss
             + weights["center"] * center_loss
         )
         return {
             "total": total,
             "action": action_loss,
-            "hard_negative": hard_negative,
             "weak_concept": concept_loss,
             "parent": parent_loss,
-            "hierarchy": hierarchy_loss,
             "graph": graph_loss,
             "density": density_loss,
-            "sparse": sparse_loss,
             "center": center_loss,
         }

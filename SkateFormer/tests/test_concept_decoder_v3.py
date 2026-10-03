@@ -141,18 +141,6 @@ class ConceptDecoderV3Tests(unittest.TestCase):
             symbolic(sequence, parents), symbolic(legacy_sequence, parents), atol=1e-7
         ))
 
-    def test_hierarchy_loss_accepts_official_sequence_probs(self) -> None:
-        symbolic = HierarchicalSymbolicDecoder(
-            concept_csv="concepts/ntu_action_concept_v2_4.csv",
-            metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
-            num_classes=2,
-            num_concepts=102,
-        )
-        sequence_probs = torch.full((2, 102), 0.25)
-        parent_probs = torch.full((2, symbolic.num_parents), 0.5)
-        loss = symbolic.hierarchy_loss(sequence_probs, parent_probs)
-        self.assertTrue(torch.isfinite(loss))
-
     def test_parent_graph_regularizes_only_violating_concepts(self) -> None:
         metadata = [
             {
@@ -242,7 +230,7 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertTrue(torch.allclose(symbolic._score_evidence(probabilities), expected))
 
     def test_ntu120_csub_ablation_configs_resolve(self) -> None:
-        config_dir = Path("config/train/ablation_ntu120_csub_v31")
+        config_dir = Path("config/ablation_ntu120_csub_v31")
         expected = {
             "V2_R.yaml": ("legacy_noisy_or", False, "shared", True),
             "V3_A.yaml": ("adaptive_mil", False, "shared", True),
@@ -264,13 +252,17 @@ class ConceptDecoderV3Tests(unittest.TestCase):
                 self.assertIn("ntu120_csub_v31", config["work_dir"])
                 if name == "V3_E.yaml":
                     self.assertEqual(config["stage1_loss_weights"]["graph"], 0.0)
-                    self.assertEqual(config["stage1_loss_weights"]["hierarchy"], 0.50)
                     self.assertEqual(config["stage2_loss_weights"]["graph"], 0.10)
-                    self.assertEqual(config["stage2_loss_weights"]["hierarchy"], 0.0)
+                for profile in (
+                    "loss_weights", "stage1_loss_weights", "stage2_loss_weights"
+                ):
+                    self.assertNotIn("hierarchy", config[profile])
+                    self.assertNotIn("sparse", config[profile])
+                    self.assertNotIn("hard_negative", config[profile])
 
     def test_main_config_is_standalone_v3_e(self) -> None:
-        main = load_config("config/train/HCG_NS_SkateFormer_ntu120_csub.yaml")
-        v3_e = load_config("config/train/ablation_ntu120_csub_v31/V3_E.yaml")
+        main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
+        v3_e = load_config("config/ablation_ntu120_csub_v31/V3_E.yaml")
 
         self.assertNotIn("base_config", main)
         self.assertEqual(main["work_dir"], "./work_dir/hcg_ns/main_ntu120_csub")

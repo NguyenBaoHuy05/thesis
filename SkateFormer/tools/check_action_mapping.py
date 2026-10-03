@@ -76,12 +76,6 @@ def check_mapping(csv_path: Path, label_set: str = "ntu120") -> dict:
         "checked": count,
         "mismatch_count": len(mismatches),
         "mismatches": mismatches,
-        "hard_negative_ids": {
-            "A24_A51": [23, 50],
-            "A31_A54": [30, 53],
-            "A37_A38": [36, 37],
-            "A11_A12_A29_A30": [10, 11, 28, 29],
-        },
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return result

@@ -199,12 +199,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
         ).sum(dim=1).clamp_min(1.0)
         return (loss.sum(dim=1) / normalizer).mean()
 
-    def hierarchy_loss(
-        self, sequence_probs: torch.Tensor, parent_probs: torch.Tensor,
-    ) -> torch.Tensor:
-        parent_for_child = parent_probs[:, self.concept_to_parent]
-        return F.relu(sequence_probs - parent_for_child).mean()
-
     def density_loss(
         self, sequence_probs: torch.Tensor, action_labels: torch.Tensor,
     ) -> torch.Tensor:
@@ -213,19 +207,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
         predicted_count = sequence_probs.sum(dim=1)
         scale = target_count.clamp_min(1.0)
         return F.smooth_l1_loss(predicted_count / scale, torch.ones_like(scale))
-
-    def sparsity_loss(self) -> torch.Tensor:
-        concept_weights, parent_weights = self._weights()
-
-        def smooth_l0(value: torch.Tensor) -> torch.Tensor:
-            return (value / (value + 0.1)).mean()
-
-        parent_term = (
-            0.25 * smooth_l0(parent_weights)
-            if self.parent_enabled
-            else concept_weights.new_zeros(())
-        )
-        return smooth_l0(concept_weights) + parent_term
 
     @torch.no_grad()
     def _rule_tensors(self) -> dict[str, torch.Tensor]:

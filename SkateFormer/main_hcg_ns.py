@@ -11,7 +11,6 @@ statistics.
 from __future__ import annotations
 
 import argparse
-import csv
 import gc
 import hashlib
 import json
@@ -72,40 +71,6 @@ def load_config(path: str | Path) -> dict[str, Any]:
     return _deep_merge(load_config(base_path), current)
 
 
-def load_hard_negative_pairs(root: Path, cfg: dict[str, Any]) -> list[list[int]]:
-    """Load reviewed action pairs and keep the config reproducible.
-
-    The CSV is generated/reviewed from the v2 action-concept signatures.  It
-    contains action ids rather than concept relations because the loss is
-    applied to action logits.
-    """
-    configured = [list(pair) for pair in cfg.get("hard_negative_pairs", [])]
-    csv_value = cfg.get("hard_negative_pairs_csv")
-    if not csv_value:
-        return configured
-    csv_path = Path(resolve(root, csv_value))
-    if not csv_path.exists():
-        raise FileNotFoundError(f"hard-negative pairs CSV not found: {csv_path}")
-    loaded: list[list[int]] = []
-    with csv_path.open("r", encoding="utf-8", newline="") as handle:
-        for row in csv.DictReader(handle):
-            try:
-                loaded.append([
-                    int(row["left_action_id"]),
-                    int(row["right_action_id"]),
-                ])
-            except (KeyError, TypeError, ValueError) as exc:
-                raise ValueError(
-                    f"invalid hard-negative row in {csv_path}: {row}"
-                ) from exc
-    if configured and sorted(map(sorted, configured)) != sorted(map(sorted, loaded)):
-        raise ValueError(
-            "hard_negative_pairs and hard_negative_pairs_csv disagree; "
-            "update both together or leave the inline list empty"
-        )
-    return loaded
-
-
 def device_from_config(cfg: dict[str, Any]) -> torch.device:
     requested = cfg.get("device", [0])
     if isinstance(requested, int):
@@ -149,8 +114,6 @@ def validate_paths(root: Path, cfg: dict[str, Any]) -> None:
         "train_data": cfg.get("train_feeder_args", {}).get("data_path"),
         "test_data": cfg.get("test_feeder_args", {}).get("data_path"),
     }
-    if cfg.get("hard_negative_pairs_csv"):
-        required["hard_negative_pairs_csv"] = cfg["hard_negative_pairs_csv"]
     if cfg.get("weights"):
         required["weights"] = cfg["weights"]
     missing = []
@@ -176,10 +139,6 @@ def validate_paths(root: Path, cfg: dict[str, Any]) -> None:
         f"{int(cfg['num_classes'])} actions, {matrix.shape[1]} concepts, "
         f"{len(metadata)} metadata rows, relation-free hierarchy"
     )
-    pairs = load_hard_negative_pairs(root, cfg)
-    print(f"Hard-negative action pairs: {len(pairs)} (concept-signature derived)")
-
-
 def load_checkpoint(model: HCGNSSkateFormer, path: str | None,
                     device: torch.device, max_missing_ratio: float = 0.02) -> None:
     if not path:
@@ -438,7 +397,6 @@ def main() -> None:
     test_loader = make_loader(make_dataset(root, cfg, "test", False, eval_mode=True), cfg, False)
     train_loader = make_loader(train_dataset, cfg, True)
 
-    hard_negative_pairs = load_hard_negative_pairs(root, cfg)
     model = HCGNSSkateFormer(
         backbone_args=cfg["model_args"],
         concept_csv=resolve(root, cfg["concept_csv"]),
@@ -447,8 +405,6 @@ def main() -> None:
         zero_is_negative=bool(cfg.get("zero_is_negative", False)),
         num_classes=int(cfg["num_classes"]),
         num_concepts=int(cfg.get("num_concepts", 78)),
-        hard_negative_pairs=hard_negative_pairs,
-        hard_negative_margin=float(cfg.get("hard_negative_margin", 0.2)),
         residual_action_head=bool(cfg.get("residual_action_head", False)),
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),
@@ -557,9 +513,6 @@ def main() -> None:
         "checkpoint": str(final_path),
         "evaluation_protocol": "full_train_then_test_once",
         "concept_target_source": "curated_action_concept_annotations",
-        "hard_negative_pairs_source": str(resolve(root, cfg.get("hard_negative_pairs_csv")))
-        if cfg.get("hard_negative_pairs_csv") else "inline_config",
-        "hard_negative_pairs": [list(pair) for pair in hard_negative_pairs],
     })
     (work_dir / "test_metrics.json").write_text(
         json.dumps(final_metrics, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -619,8 +572,6 @@ def main() -> None:
             "metadata_csv": str(resolve(root, cfg["metadata_csv"])),
             "labels_csv": str(resolve(root, cfg.get("labels_csv"))),
             "hierarchy_csv": str(resolve(root, cfg["hierarchy_csv"])),
-            "hard_negative_pairs_csv": str(resolve(root, cfg.get("hard_negative_pairs_csv")))
-            if cfg.get("hard_negative_pairs_csv") else None,
         },
         "test_metrics": str(work_dir / "test_metrics.json"),
         "test_predictions": str(work_dir / "test_predictions.npz"),

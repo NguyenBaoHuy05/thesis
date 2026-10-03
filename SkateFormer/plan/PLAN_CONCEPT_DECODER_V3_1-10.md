@@ -72,7 +72,7 @@ action_scores = symbolic(sequence_probs, parent_probs)
 Parent chỉ còn ba vai trò độc lập:
 
 1. `parent_loss`: auxiliary supervision;
-2. `hierarchy_loss(sequence_probs, parent_probs)`: soft consistency regularizer;
+2. `parent_graph_loss(sequence_probs, parent_probs)`: detached-teacher consistency regularizer;
 3. `parent_weight * parent_score`: đóng góp trực tiếp trong symbolic action score.
 
 ### API cần xóa
