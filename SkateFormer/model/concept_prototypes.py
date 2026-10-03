@@ -108,7 +108,6 @@ class ConceptPrototypeDecoder(nn.Module):
         num_people: int = 1,
         num_points: int | None = None,
         interaction_concepts: Iterable[int] | None = None,
-        token_mask: torch.Tensor | None = None,
     ):
         super().__init__()
         self.feature_dim = feature_dim
@@ -162,19 +161,6 @@ class ConceptPrototypeDecoder(nn.Module):
         nn.init.normal_(self.centers, std=0.02)
         self.log_temperature = nn.Parameter(torch.tensor(float(temperature)).log())
 
-        # Optional [V, K] boolean mask restricting which tokens each concept
-        # may attend to (region pooling).  Non-persistent so checkpoints stay
-        # interchangeable between region-pooled and global-pooled runs.
-        if token_mask is not None:
-            token_mask = torch.as_tensor(token_mask, dtype=torch.bool)
-            if token_mask.ndim != 2 or token_mask.shape[1] != num_concepts:
-                raise ValueError("token_mask must have shape [num_tokens, num_concepts]")
-            if not token_mask.any(dim=0).all():
-                raise ValueError("token_mask leaves a concept without any token")
-            self.register_buffer("token_mask", token_mask, persistent=False)
-        else:
-            self.token_mask = None
-
         self.interaction_projector = None
         if self.interaction_concepts and self.num_people >= 2:
             self.interaction_projector = nn.Sequential(
@@ -218,19 +204,7 @@ class ConceptPrototypeDecoder(nn.Module):
         similarity = cosine_similarity / self.temperature
 
         # Concept-specific soft selection over joints/persons at each time.
-        attention_logits = similarity
-        if self.token_mask is not None:
-            if self.token_mask.shape[0] != similarity.shape[2]:
-                raise ValueError(
-                    f"token_mask covers {self.token_mask.shape[0]} tokens, "
-                    f"feature map has {similarity.shape[2]}"
-                )
-            attention_logits = similarity.masked_fill(
-                ~self.token_mask, torch.finfo(similarity.dtype).min
-            )
-            # Grounding losses must also ignore out-of-region tokens.
-            cosine_similarity = cosine_similarity.masked_fill(~self.token_mask, -1.0)
-        joint_attention = torch.softmax(attention_logits, dim=2)
+        joint_attention = torch.softmax(similarity, dim=2)
         time_logits = (joint_attention * similarity).sum(dim=2)
         return z, cosine_similarity, time_logits
 

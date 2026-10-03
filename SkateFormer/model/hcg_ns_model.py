@@ -13,7 +13,6 @@ from model.SkateFormer import SkateFormer_
 from model.concept_ontology import load_ontology_metadata
 from model.hierarchical_concept_decoder import HierarchicalConceptDecoder
 from model.hierarchical_symbolic_decoder import HierarchicalSymbolicDecoder
-from model.kinematic_encoder import KinematicEncoder
 
 
 class HCGNSSkateFormer(nn.Module):
@@ -73,18 +72,9 @@ class HCGNSSkateFormer(nn.Module):
             num_points=int(args.get("num_points", 0)) or None,
             interaction_reasoning=bool(prototype_args.get("interaction_reasoning", True)),
             parent_enabled=parent_enabled,
-            region_pooling=bool(prototype_args.get("region_pooling", False)),
-            region_tokens=prototype_args.get("region_tokens"),
             scope_fusion=str(prototype_args.get("scope_fusion", "fixed")),
             scope_scale=float(prototype_args.get("scope_scale", 0.25)),
         )
-        self.kinematic = None
-        if bool(prototype_args.get("motion_branch", False)):
-            self.kinematic = KinematicEncoder(
-                in_channels=int(args.get("in_channels", 3)),
-                hidden_dim=int(prototype_args.get("motion_hidden_dim", 64)),
-                out_dim=feature_dim,
-            )
         self.symbolic = HierarchicalSymbolicDecoder(
             concept_csv=concept_csv,
             metadata_csv=metadata_csv,
@@ -152,13 +142,6 @@ class HCGNSSkateFormer(nn.Module):
             x, index_t, return_pyramid=self.concept_decoder.base.multi_scale
         )
         feature_map = feature_output[-1] if isinstance(feature_output, (list, tuple)) else feature_output
-        if self.kinematic is not None:
-            # Motion evidence is fused into the final-stage tokens only.
-            feature_map = feature_map + self.kinematic(x, tuple(feature_map.shape[2:]))
-            if isinstance(feature_output, (list, tuple)):
-                feature_output = [*feature_output[:-1], feature_map]
-            else:
-                feature_output = feature_map
         concepts = self.concept_decoder(feature_output)
         action_scores = self.symbolic(concepts["sequence_probs"], concepts["parent_probs"])
         residual_scores = None

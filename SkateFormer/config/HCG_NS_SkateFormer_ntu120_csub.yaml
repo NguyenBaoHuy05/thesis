@@ -66,9 +66,6 @@ prototype_args:
   temporal_pooling: adaptive_mil
   scale_fusion: per_concept
   interaction_reasoning: true
-  region_pooling: false
-  motion_branch: false
-  motion_hidden_dim: 64
   scope_fusion: bounded
   scope_scale: 0.25
   parent_enabled: true

@@ -14,56 +14,6 @@ from model.concept_prototypes import ConceptPrototypeDecoder
 from model.concept_ontology import build_parent_index
 
 
-# Joint positions per person after the NTU feeder's ``partition=True``
-# reordering (24 joints; spine-shoulder is dropped):
-#   0-3 / 4-7   : wrist, hand, hand tip, thumb of each arm
-#   8-11 / 12-15: hip, knee, ankle, foot of each leg
-#   16, 17      : shoulders      18, 19: elbows
-#   20: spine mid  21: neck  22: spine base  23: head
-# Parents not listed here (temporal_*, context_participant) attend to all
-# tokens.  Can be overridden with ``prototype_args.region_tokens``.
-DEFAULT_REGION_JOINTS: dict[str, list[int]] = {
-    "region_upper_limb": [0, 1, 2, 3, 4, 5, 6, 7, 16, 17, 18, 19],
-    "region_lower_limb": [8, 9, 10, 11, 12, 13, 14, 15],
-    "region_hip_torso": [8, 9, 12, 13, 20, 21, 22],
-    "region_head": [16, 17, 21, 23],
-}
-PARTITIONED_NTU_POINTS = 24
-
-
-def build_region_token_mask(
-    metadata: list[dict[str, str]],
-    num_people: int,
-    num_points: int | None,
-    region_joints: dict[str, Sequence[int]] | None = None,
-) -> torch.Tensor:
-    """Return a [num_people * num_points, num_concepts] boolean token mask."""
-    if region_joints is None:
-        if num_points != PARTITIONED_NTU_POINTS:
-            raise ValueError(
-                "default region pooling assumes the partitioned 24-joint NTU layout "
-                f"(num_points=24, feeder partition=True); got num_points={num_points}. "
-                "Set prototype_args.region_tokens explicitly for other layouts."
-            )
-        region_joints = DEFAULT_REGION_JOINTS
-    if not num_points:
-        raise ValueError("region pooling requires num_points")
-    num_tokens = int(num_people) * int(num_points)
-    mask = torch.ones(num_tokens, len(metadata), dtype=torch.bool)
-    for concept_id, row in enumerate(metadata):
-        joints = region_joints.get(row.get("parent_name", ""))
-        if joints is None:
-            continue
-        if any(not 0 <= int(j) < num_points for j in joints):
-            raise ValueError(f"region joints for {row['parent_name']} exceed num_points")
-        column = torch.zeros(num_tokens, dtype=torch.bool)
-        for person in range(int(num_people)):
-            for joint in joints:
-                column[person * int(num_points) + int(joint)] = True
-        mask[:, concept_id] = column
-    return mask
-
-
 class HierarchicalConceptDecoder(nn.Module):
     """Ground concepts and parent groups without pairwise relations.
 
@@ -90,8 +40,6 @@ class HierarchicalConceptDecoder(nn.Module):
         num_points: int | None = None,
         interaction_reasoning: bool = True,
         parent_enabled: bool = True,
-        region_pooling: bool = False,
-        region_tokens: dict[str, Sequence[int]] | None = None,
         scope_fusion: str = "fixed",
         scope_scale: float = 0.25,
     ):
@@ -135,9 +83,6 @@ class HierarchicalConceptDecoder(nn.Module):
             num_people=num_people,
             num_points=num_points,
             interaction_concepts=interaction_concepts if interaction_reasoning else [],
-            token_mask=build_region_token_mask(
-                metadata, num_people, num_points, region_tokens
-            ) if region_pooling else None,
         )
         # How the time-constant scope logits are added to the per-time
         # prototype logits. Fixed mode is legacy and unbounded. Bounded mode
