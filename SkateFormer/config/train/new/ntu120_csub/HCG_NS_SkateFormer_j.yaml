@@ -60,6 +60,8 @@ model_args:
 
 prototype_args:
   multi_scale: False
+  temporal_pooling: legacy_noisy_or
+  scale_fusion: shared
   pyramid_levels: [2, 3]
   interaction_reasoning: True
   # Region pooling: body-region concepts (hand/arm, leg/foot, hip/torso, head)
@@ -75,9 +77,8 @@ prototype_args:
   # The scope term stays in raw-logit units and does not use temperature.
   scope_fusion: bounded
   scope_scale: 0.25
-# Ablation: disable multiplicative concept gating while retaining the direct
-# parent contribution to action scores.
-gate_floor: 1.0
+# Parent remains an independent auxiliary branch and can contribute directly
+# to symbolic action scores.
 parent_weight: 0.35
 action_logit_scale: 2.0
 concept_score_mode: logit

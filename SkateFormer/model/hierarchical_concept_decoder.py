@@ -8,6 +8,7 @@ import math
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from model.concept_prototypes import ConceptPrototypeDecoder
 from model.concept_ontology import build_parent_index
@@ -68,9 +69,10 @@ class HierarchicalConceptDecoder(nn.Module):
 
     The base prototype decoder still produces temporally grounded unary
     evidence. Separate scope heads and parent heads read the final backbone
-    representation. The sequence evidence is softly gated by its parent
-    probability, never hard thresholded, so uncertain parent predictions do
-    not create discontinuous action decisions.
+    representation. Parent predictions remain independent forward evidence:
+    they supervise the hierarchy, may regularize concepts through fixed
+    ontology edges during training, and may contribute to symbolic action
+    scores, but never modify concept probabilities at inference time.
     """
 
     def __init__(
@@ -82,10 +84,11 @@ class HierarchicalConceptDecoder(nn.Module):
         multi_scale: bool = False,
         pyramid_dims: Sequence[int] | None = None,
         pyramid_levels: Iterable[int] | None = None,
+        temporal_pooling: str = "legacy_noisy_or",
+        scale_fusion: str = "shared",
         num_people: int = 1,
         num_points: int | None = None,
         interaction_reasoning: bool = True,
-        gate_floor: float = 0.05,
         parent_enabled: bool = True,
         region_pooling: bool = False,
         region_tokens: dict[str, Sequence[int]] | None = None,
@@ -103,11 +106,13 @@ class HierarchicalConceptDecoder(nn.Module):
         self.parent_levels = parent_levels
         self.num_concepts = int(num_concepts)
         self.num_parents = len(parent_names)
-        self.gate_floor = float(gate_floor)
         self.parent_enabled = bool(parent_enabled)
-        if not 0.0 <= self.gate_floor <= 1.0:
-            raise ValueError("gate_floor must be in [0, 1]")
         self.register_buffer("concept_to_parent", concept_to_parent)
+        self.register_buffer(
+            "parent_child_count",
+            torch.bincount(concept_to_parent, minlength=self.num_parents).float(),
+            persistent=False,
+        )
         interaction_concepts = [
             int(row["concept_id"])
             for row in metadata
@@ -125,6 +130,8 @@ class HierarchicalConceptDecoder(nn.Module):
             multi_scale=multi_scale,
             pyramid_dims=pyramid_dims,
             pyramid_levels=pyramid_levels,
+            temporal_pooling=temporal_pooling,
+            scale_fusion=scale_fusion,
             num_people=num_people,
             num_points=num_points,
             interaction_concepts=interaction_concepts if interaction_reasoning else [],
@@ -203,10 +210,6 @@ class HierarchicalConceptDecoder(nn.Module):
             else torch.zeros_like(parent_logits)
         )
         parent_for_child = parent_probs[:, self.concept_to_parent]
-        if self.parent_enabled:
-            gate = self.gate_floor + (1.0 - self.gate_floor) * parent_for_child
-        else:
-            gate = torch.ones_like(parent_for_child)
         scope_logits = pooled.new_zeros((pooled.shape[0], self.num_concepts))
         for scope, concept_ids in self.scope_ids.items():
             values = self.scope_heads[scope](pooled)
@@ -221,19 +224,14 @@ class HierarchicalConceptDecoder(nn.Module):
         time_logits = base["time_logits"] + scope_term.unsqueeze(1)
         time_probs = torch.sigmoid(time_logits)
         temporal_stats = self.base._temporal_statistics(time_probs, time_logits)
-        raw_sequence_probs = temporal_stats["sequence_probs"]
-        effective_sequence_probs = raw_sequence_probs * gate
         return {
             **base,
             "time_logits": time_logits,
             "time_probs": time_probs,
             **temporal_stats,
-            "raw_sequence_probs": raw_sequence_probs,
-            "sequence_probs": effective_sequence_probs,
             "parent_logits": parent_logits,
             "parent_probs": parent_probs,
             "parent_for_child": parent_for_child,
-            "soft_gate": gate,
             "scope_logits": scope_logits,
             "scope_probs": torch.sigmoid(scope_logits),
             "scope_term": scope_term,
@@ -247,3 +245,35 @@ class HierarchicalConceptDecoder(nn.Module):
 
     def center_separation_loss(self, margin: float = 0.15) -> torch.Tensor:
         return self.base.center_separation_loss(margin=margin)
+
+    def parent_graph_loss(
+        self, sequence_probs: torch.Tensor, parent_probs: torch.Tensor,
+    ) -> torch.Tensor:
+        """Use the fixed ontology graph to regularize child concepts.
+
+        Each concept has exactly one parent edge.  Parent probabilities act as
+        detached teacher targets, so this loss only updates the concept path;
+        the independently supervised parent head cannot reduce the loss by
+        following an over-confident child.  Violations are measured in logit
+        space and averaged per parent before the final mean so large parent
+        groups do not dominate smaller groups.
+        """
+        if not self.parent_enabled:
+            return sequence_probs.new_zeros(())
+        if sequence_probs.ndim != 2 or sequence_probs.shape[1] != self.num_concepts:
+            raise ValueError("sequence_probs must have shape [B, num_concepts]")
+        if parent_probs.ndim != 2 or parent_probs.shape[1] != self.num_parents:
+            raise ValueError("parent_probs must have shape [B, num_parents]")
+
+        child_evidence = torch.logit(sequence_probs.clamp(1e-4, 1.0 - 1e-4))
+        parent_evidence = torch.logit(parent_probs.clamp(1e-4, 1.0 - 1e-4)).detach()
+        parent_for_child = parent_evidence[:, self.concept_to_parent]
+        edge_penalty = F.relu(child_evidence - parent_for_child).square()
+
+        per_parent = edge_penalty.new_zeros(
+            (edge_penalty.shape[0], self.num_parents)
+        )
+        parent_index = self.concept_to_parent.unsqueeze(0).expand_as(edge_penalty)
+        per_parent = per_parent.scatter_add(1, parent_index, edge_penalty)
+        per_parent = per_parent / self.parent_child_count.clamp_min(1.0).unsqueeze(0)
+        return per_parent.mean()

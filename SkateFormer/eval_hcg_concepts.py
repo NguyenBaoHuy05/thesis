@@ -7,8 +7,8 @@ preprocessing as ``main_hcg_ns.py``.  It loads a full checkpoint such as
 Example (run from the SkateFormer repository root)::
 
     python eval_hcg_concepts.py \
-        --config config/train/HCG_NS_SkateFormer_ntu60_cs.yaml \
-        --checkpoint work_dir/hcg_ns/ntu60_cs_v22_interaction/final_model.pt
+        --config config/train/ablation_ntu120_csub_v31/V3_C.yaml \
+        --checkpoint work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_C/final_model.pt
 
 The evaluator writes ``concept_metrics.json`` and
 ``concept_metrics_per_concept.csv`` next to the checkpoint unless
@@ -25,12 +25,12 @@ from typing import Any
 
 import numpy as np
 import torch
-import yaml
 
 from main_hcg_ns import (
     HCGNSSkateFormer,
     device_from_config,
     load_hard_negative_pairs,
+    load_config,
     make_dataset,
     make_loader,
     move_batch,
@@ -117,6 +117,20 @@ def per_label_metrics(
     micro_f1 = 2.0 * micro_precision * micro_recall / max(
         micro_precision + micro_recall, 1e-12
     )
+    flat_probabilities = probabilities.reshape(-1)
+    flat_targets = targets.astype(np.float64).reshape(-1)
+    ece = 0.0
+    for lower in np.linspace(0.0, 1.0, 11)[:-1]:
+        upper = min(lower + 0.1, 1.0)
+        mask = (flat_probabilities >= lower) & (
+            flat_probabilities <= upper if upper == 1.0 else flat_probabilities < upper
+        )
+        if np.any(mask):
+            ece += float(mask.mean()) * abs(
+                float(flat_probabilities[mask].mean())
+                - float(flat_targets[mask].mean())
+            )
+
     aggregate = {
         "accuracy": float(accuracy.mean()),
         "macro_precision": float(precision.mean()),
@@ -128,6 +142,7 @@ def per_label_metrics(
         "exact_match": float(np.all(prediction == target, axis=1).mean()),
         "sparsity": float(prediction.mean()),
         "brier": float(np.mean((probabilities - targets) ** 2)),
+        "ece": float(ece),
     }
     return rows, aggregate
 
@@ -146,7 +161,6 @@ def evaluate(
     concept_targets = []
     parent_probs = []
     parent_targets = []
-    raw_concept_probs = []
     parent_for_child = []
     # The decoder returns the exact scope contribution it added to the
     # prototype logits ("fixed" or "bounded" fusion); it is broadcast over T.
@@ -169,7 +183,6 @@ def evaluate(
         concept_targets.append(model.symbolic.support[label].cpu().numpy())
         parent_probs.append(output["parent_probs"].cpu().numpy())
         parent_targets.append(model.symbolic.parent_support[label].cpu().numpy())
-        raw_concept_probs.append(output["raw_sequence_probs"].cpu().numpy())
         parent_for_child.append(output["parent_for_child"].cpu().numpy())
 
         combined_logits = output["time_logits"].float()
@@ -198,7 +211,6 @@ def evaluate(
     targets = np.concatenate(concept_targets)
     parent = np.concatenate(parent_probs)
     parent_target = np.concatenate(parent_targets)
-    raw = np.concatenate(raw_concept_probs)
     parent_child = np.concatenate(parent_for_child)
 
     logit_summaries = {}
@@ -240,10 +252,16 @@ def evaluate(
 
     prediction = scores.argmax(axis=1)
     top5 = np.argsort(scores, axis=1)[:, -min(5, scores.shape[1]):]
+    confusion = np.zeros((scores.shape[1], scores.shape[1]), dtype=np.int64)
+    np.add.at(confusion, (action_labels, prediction), 1)
+    per_class_accuracy = [
+        float(confusion[class_id, class_id] / max(confusion[class_id].sum(), 1))
+        for class_id in range(scores.shape[1])
+    ]
     negative_targets = model.symbolic.negative_support[action_labels].cpu().numpy()
     negative_mask = negative_targets.astype(bool)
     negative_probs = probs[negative_mask]
-    hierarchy_delta = raw - parent_child
+    hierarchy_delta = probs - parent_child
 
     result = {
         "threshold": float(threshold),
@@ -255,6 +273,8 @@ def evaluate(
             "top5": float(np.array([
                 action_labels[i] in top5[i] for i in range(len(action_labels))
             ]).mean()),
+            "per_class_accuracy": per_class_accuracy,
+            "confusion_matrix": confusion.tolist(),
         },
         "concept": concept_summary,
         "parent": parent_summary,
@@ -305,7 +325,7 @@ def main() -> None:
         raise ValueError("--threshold must be between 0 and 1")
 
     root = Path(__file__).resolve().parent
-    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    cfg = load_config(config_path)
     set_seed(int(cfg.get("seed", 1)))
     device = device_from_config(cfg)
     validate_paths(root, cfg)
@@ -327,7 +347,6 @@ def main() -> None:
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
-        gate_floor=float(cfg.get("gate_floor", 0.05)),
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),

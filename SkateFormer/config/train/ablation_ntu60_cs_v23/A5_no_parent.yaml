@@ -1,6 +1,6 @@
 # Ablation A5_no_parent: concept-to-action symbolic composition without parent hierarchy.
-# Compared with A0, parent prediction, parent gating, parent action score, and
-# parent/hierarchy losses are disabled. The concept support matrix and symbolic
+# Compared with A0, parent prediction, parent action score, and parent/hierarchy
+# losses are disabled. The concept support matrix and symbolic
 # concept-to-action composition remain active.
 # HCG-NS-SkateFormer-RF v2.3: flat concept-symbolic ablation.
 seed: 1
@@ -57,6 +57,8 @@ model_args:
 
 prototype_args:
   multi_scale: False
+  temporal_pooling: legacy_noisy_or
+  scale_fusion: shared
   pyramid_levels: [2, 3]
   interaction_reasoning: True
   region_pooling: False
@@ -67,7 +69,6 @@ prototype_args:
   # Disable all parent mechanisms while retaining concept-to-action rules.
   parent_enabled: False
 
-gate_floor: 0.05
 parent_weight: 0.0
 residual_action_head: false
 residual_action_weight: 0.1

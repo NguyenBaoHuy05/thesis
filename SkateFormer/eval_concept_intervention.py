@@ -4,7 +4,7 @@ The tests check whether action decisions actually flow through the concept
 bottleneck and whether the learned rules are faithful to the ontology:
 
 1. Score decomposition: how much of the top-1 vs top-2 margin comes from the
-   concept term, the parent term, the per-class bias and the residual head.
+   concept term, the parent term and the residual head.
 2. Oracle intervention: replace predicted concepts/parents by the action
    template (upper bound of the symbolic decoder).
 3. Top-k intervention curve: correct the k most-wrong known concepts per
@@ -17,8 +17,8 @@ bottleneck and whether the learned rules are faithful to the ontology:
 Example (run from the SkateFormer repository root)::
 
     python eval_concept_intervention.py \
-        --config config/train/HCG_NS_SkateFormer_ntu60_cs.yaml \
-        --checkpoint work_dir/hcg_ns/ntu60_cs_v22_interaction/final_model.pt
+        --config config/train/ablation_ntu120_csub_v31/V3_C.yaml \
+        --checkpoint work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_C/final_model.pt
 
 Writes ``intervention_metrics.json`` and ``intervention_per_concept.csv`` next
 to the checkpoint unless ``--output-dir`` is supplied.
@@ -33,13 +33,13 @@ from pathlib import Path
 from typing import Any
 
 import torch
-import yaml
 
 from eval_hcg_concepts import load_full_checkpoint
 from main_hcg_ns import (
     HCGNSSkateFormer,
     device_from_config,
     load_hard_negative_pairs,
+    load_config,
     make_dataset,
     make_loader,
     move_batch,
@@ -79,22 +79,19 @@ class Scorer:
     @torch.no_grad()
     def terms(self, seq: torch.Tensor, parent: torch.Tensor) -> dict[str, torch.Tensor]:
         concept_w, parent_w = self.symbolic._weights()
-        if self.symbolic.concept_score_mode == "logit":
-            evidence = torch.logit(seq.clamp(1e-4, 1.0 - 1e-4))
-        else:
-            evidence = seq
+        concept_evidence = self.symbolic._score_evidence(seq)
         score_w = concept_w * self.symbolic.concept_idf.unsqueeze(0)
-        concept = (evidence @ score_w.t()) / score_w.sum(dim=1).clamp_min(1e-6)
+        concept = (concept_evidence @ score_w.t()) / score_w.sum(dim=1).clamp_min(1e-6)
         concept = self.symbolic.action_logit_scale * concept
         if self.symbolic.parent_enabled and self.symbolic.parent_weight != 0.0:
+            parent_evidence = self.symbolic._score_evidence(parent)
             parent_term = self.symbolic.parent_weight * (
-                (parent @ parent_w.t()) / parent_w.sum(dim=1).clamp_min(1e-6)
+                (parent_evidence @ parent_w.t()) / parent_w.sum(dim=1).clamp_min(1e-6)
             )
             parent_term = self.symbolic.action_logit_scale * parent_term
         else:
             parent_term = torch.zeros_like(concept)
-        bias = self.symbolic.bias.unsqueeze(0).expand_as(concept)
-        terms = {"concept": concept, "parent": parent_term, "bias": bias}
+        terms = {"concept": concept, "parent": parent_term}
         if self.residual_term is not None:
             terms["residual"] = self.residual_term
         return terms
@@ -130,8 +127,6 @@ def score_decomposition(scorer: Scorer, seq, parent, labels) -> dict[str, Any]:
         },
         "mean_margin": {name: float(value.mean().item()) for name, value in margin.items()},
         "across_class_std": spread,
-        "bias_range": float((scorer.symbolic.bias.max() - scorer.symbolic.bias.min()).item()),
-        "no_bias_top1": accuracy(scores - terms["bias"], labels),
         "concept_only_top1": accuracy(terms["concept"], labels),
     }
 
@@ -263,7 +258,7 @@ def main() -> None:
             raise FileNotFoundError(path)
 
     root = Path(__file__).resolve().parent
-    cfg = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    cfg = load_config(config_path)
     set_seed(int(cfg.get("seed", 1)))
     device = device_from_config(cfg)
     validate_paths(root, cfg)
@@ -284,7 +279,6 @@ def main() -> None:
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
-        gate_floor=float(cfg.get("gate_floor", 0.05)),
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),

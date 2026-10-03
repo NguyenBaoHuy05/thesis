@@ -61,6 +61,8 @@ model_args:
 
 prototype_args:
   multi_scale: False
+  temporal_pooling: legacy_noisy_or
+  scale_fusion: shared
   pyramid_levels: [2, 3]
   interaction_reasoning: True
   # Region pooling: body-region concepts (hand/arm, leg/foot, hip/torso, head)
@@ -76,7 +78,6 @@ prototype_args:
   # the prototype logits.
   scope_fusion: fixed
   scope_scale: 0.25
-gate_floor: 0.05
 parent_weight: 0.35
 residual_action_head: false
 residual_action_weight: 0.1

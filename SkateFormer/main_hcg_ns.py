@@ -1,9 +1,11 @@
-"""Train/evaluate HCG-NS-SkateFormer-RF.
+"""Train/evaluate the V3 HCG-NS-SkateFormer-RF concept bottleneck.
 
-This is the only neuro-symbolic training entry point in the cleaned v2 tree.
-It has no relation graph, no co-occurrence loss, no exclusion loss, and no
-temporal-order loss. Temporal information remains inside each unary concept
-through the prototype decoder's time probabilities and sequence statistics.
+This is the neuro-symbolic training entry point for the relation-free model.
+It has no learned concept-relation graph, co-occurrence loss, exclusion loss,
+or temporal-order loss. An optional fixed parent-concept ontology graph can
+regularize child concepts during training. Temporal information remains inside
+each unary concept through the configurable temporal MIL pool and sequence
+statistics.
 """
 
 from __future__ import annotations
@@ -42,6 +44,32 @@ def resolve(root: Path, value: str | None) -> str | None:
         return None
     path = Path(value)
     return str(path if path.is_absolute() else root / path)
+
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    merged = dict(base)
+    for key, value in override.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def load_config(path: str | Path) -> dict[str, Any]:
+    """Load a YAML config, optionally inheriting a local base config."""
+    config_path = Path(path).resolve()
+    with config_path.open("r", encoding="utf-8") as handle:
+        current = yaml.safe_load(handle) or {}
+    if not isinstance(current, dict):
+        raise ValueError(f"config must contain a mapping: {config_path}")
+    base_reference = current.pop("base_config", None)
+    if not base_reference:
+        return current
+    base_path = (config_path.parent / str(base_reference)).resolve()
+    if not base_path.exists():
+        raise FileNotFoundError(f"base config not found: {base_path}")
+    return _deep_merge(load_config(base_path), current)
 
 
 def load_hard_negative_pairs(root: Path, cfg: dict[str, Any]) -> list[list[int]]:
@@ -248,7 +276,7 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
              detailed: bool = False, concept_thresholds: np.ndarray | None = None) -> dict[str, Any]:
     model.eval()
     scores, labels, concept_probs, parent_probs = [], [], [], []
-    raw_concept_probs, parent_for_child = [], []
+    parent_for_child = []
     concept_targets, concept_negative_targets, parent_targets = [], [], []
     for batch in loader:
         data, index_t, label, _, _ = move_batch(batch, device)
@@ -257,7 +285,6 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
         labels.append(label.cpu())
         concept_probs.append(output["sequence_probs"].cpu().numpy())
         parent_probs.append(output["parent_probs"].cpu().numpy())
-        raw_concept_probs.append(output["raw_sequence_probs"].cpu().numpy())
         parent_for_child.append(output["parent_for_child"].cpu().numpy())
         concept_targets.append(model.symbolic.support[label].cpu().numpy())
         concept_negative_targets.append(model.symbolic.negative_support[label].cpu().numpy())
@@ -272,9 +299,8 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
     concept_negative_array = np.concatenate(concept_negative_targets)
     parent_array = np.concatenate(parent_probs)
     parent_target_array = np.concatenate(parent_targets)
-    raw_concept_array = np.concatenate(raw_concept_probs)
     parent_for_child_array = np.concatenate(parent_for_child)
-    hierarchy_delta = raw_concept_array - parent_for_child_array
+    hierarchy_delta = concept_array - parent_for_child_array
     negative_mask = concept_negative_array.astype(bool)
     negative_probabilities = concept_array[negative_mask]
     concept_metric = multilabel_metrics(
@@ -308,12 +334,15 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
         dump_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
             dump_path,
+            schema_version=np.asarray(3, dtype=np.int64),
+            concept_probability_semantics=np.asarray(
+                "temporal_pool_without_parent_gate"
+            ),
             concept_probs=concept_array,
             concept_targets=concept_target_array,
             concept_negative_targets=concept_negative_array,
             parent_probs=parent_array,
             parent_targets=parent_target_array,
-            raw_concept_probs=raw_concept_array,
             parent_for_child=parent_for_child_array,
             action_scores=score_tensor.numpy(),
             action_labels=label_tensor.numpy(),
@@ -361,22 +390,24 @@ def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray,
     coefficients = rulebook["coefficients"]
     concept = np.asarray(dense["concept"], dtype=np.float64)
     parent = np.asarray(dense["parent"], dtype=np.float64)
-    bias = np.asarray(dense["bias"], dtype=np.float64)
     concept_idf = np.asarray(
         dense.get("concept_idf", np.ones(concept.shape[1])), dtype=np.float64
     )
     if coefficients.get("concept_score_mode", "probability") == "logit":
-        clipped = np.clip(concept_probs, 1e-4, 1.0 - 1e-4)
-        evidence = np.log(clipped) - np.log1p(-clipped)
+        clipped_concept = np.clip(concept_probs, 1e-4, 1.0 - 1e-4)
+        concept_evidence = np.log(clipped_concept) - np.log1p(-clipped_concept)
+        clipped_parent = np.clip(parent_probs, 1e-4, 1.0 - 1e-4)
+        parent_evidence = np.log(clipped_parent) - np.log1p(-clipped_parent)
     else:
-        evidence = concept_probs
+        concept_evidence = concept_probs
+        parent_evidence = parent_probs
     score_weights = concept * concept_idf[None, :]
-    concept_score = evidence @ score_weights.T
+    concept_score = concept_evidence @ score_weights.T
     concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
-    parent_score = parent_probs @ parent.T
+    parent_score = parent_evidence @ parent.T
     parent_score /= np.maximum(parent.sum(axis=1, keepdims=True).T, 1e-6)
     combined = concept_score + float(coefficients["parent_weight"]) * parent_score
-    return float(coefficients.get("action_logit_scale", 1.0)) * combined + bias
+    return float(coefficients.get("action_logit_scale", 1.0)) * combined
 
 def git_commit(root: Path) -> str | None:
     try:
@@ -394,8 +425,7 @@ def main() -> None:
     parser.add_argument("--config", required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
-    with open(args.config, "r", encoding="utf-8") as handle:
-        cfg = yaml.safe_load(handle)
+    cfg = load_config(args.config)
     set_seed(int(cfg.get("seed", 1)))
     device = device_from_config(cfg)
     validate_paths(root, cfg)
@@ -423,7 +453,6 @@ def main() -> None:
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),
         parent_weight=float(cfg.get("parent_weight", 0.35)),
-        gate_floor=float(cfg.get("gate_floor", 0.05)),
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
@@ -490,7 +519,10 @@ def main() -> None:
             "loss_profile": stage_name,
             "learning_rate": active_lr,
             "model": "HCG-NS-SkateFormer-RF",
-            "relation_components": [],
+            "relation_components": (
+                ["parent_concept_graph_regularizer"]
+                if float((active_loss_weights or {}).get("graph", 0.0)) != 0.0 else []
+            ),
             **train_stats,
         }
         history.append(row)
@@ -538,13 +570,24 @@ def main() -> None:
         )
         reference = predictions["action_scores"].astype(np.float64)
         verification = {
-            "format_version": 2,
+            "format_version": 3,
             "model": "HCG-NS-SkateFormer-RF",
             "relation_components": [],
             "max_abs_error": float(np.max(np.abs(replay - reference))),
             "mean_abs_error": float(np.mean(np.abs(replay - reference))),
             "top1_mismatch_count": int(np.sum(replay.argmax(axis=1) != reference.argmax(axis=1))),
         }
+        if not model.residual_action_head_enabled:
+            if verification["max_abs_error"] >= 1e-3:
+                raise RuntimeError(
+                    "symbolic rule replay exceeded tolerance: "
+                    f"{verification['max_abs_error']:.6g}"
+                )
+            if verification["top1_mismatch_count"] != 0:
+                raise RuntimeError(
+                    "symbolic rule replay changed "
+                    f"{verification['top1_mismatch_count']} top-1 predictions"
+                )
     (work_dir / "rule_verification.json").write_text(
         json.dumps(verification, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -552,13 +595,20 @@ def main() -> None:
         json.dumps(rulebook["rule_statistics"], ensure_ascii=False, indent=2), encoding="utf-8"
     )
     config_path = work_dir / "config_resolved.yaml"
+    graph_regularizer_enabled = any(
+        float((profile or {}).get("graph", 0.0)) != 0.0
+        for profile in (stage1_loss_weights, stage2_loss_weights, stage3_loss_weights)
+    )
+    training_relation_components = (
+        ["parent_concept_graph_regularizer"] if graph_regularizer_enabled else []
+    )
     manifest = {
         "model": "HCG-NS-SkateFormer-RF",
         "final_epoch": final_epoch,
         "checkpoint": str(final_path),
         "seed": int(cfg.get("seed", 1)),
-        "relation_components_configured": [],
-        "relation_components_effective": [],
+        "relation_components_configured": training_relation_components,
+        "relation_components_effective": training_relation_components,
         "evaluation": {
             "protocol": "full_train_then_test_once",
             "train_size": len(train_dataset),

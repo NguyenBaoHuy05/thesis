@@ -1,0 +1,6 @@
+base_config: _base.yaml
+work_dir: ./work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_C
+prototype_args:
+  multi_scale: true
+  temporal_pooling: adaptive_mil
+  scale_fusion: per_concept

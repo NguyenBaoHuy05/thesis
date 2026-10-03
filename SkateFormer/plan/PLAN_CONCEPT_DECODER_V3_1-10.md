@@ -282,10 +282,14 @@ Official test per-concept ranking chỉ dùng cho error analysis sau khi thiết
 
 ### Config
 
-- Tất cả YAML dưới `config/train/new/` và `config/train/ablation_ntu60_cs_v23/`:
+- Tất cả YAML runtime cũ dưới `config/train/new/` và
+  `config/train/ablation_ntu60_cs_v23/`:
   - xóa `gate_floor`;
-  - thêm `temporal_pooling` và `scale_fusion` nơi cần;
+  - khai báo explicit `temporal_pooling` và `scale_fusion` để tái lập baseline.
+- Ma trận V3.1 tập trung vào NTU120-CSub được đặt tại
+  `config/train/ablation_ntu120_csub_v31/`:
   - tạo config riêng cho V2-R, V3-A, V3-B, V3-C, V3-D;
+  - dùng ontology 120 action/102 concept v2.4 và pretrained NTU120-CSub;
   - dùng `work_dir` riêng, không ghi đè checkpoint cũ.
 
 ## 11. Kiểm thử
@@ -321,7 +325,7 @@ Implementation được xem là hoàn tất khi:
 
 - parent gate đã biến mất khỏi runtime/API/config;
 - regression baseline tái tạo checkpoint `gate_floor=1.0` trong tolerance;
-- bốn cấu hình V2-R/V3-A/V3-B/V3-C chạy độc lập;
+- năm cấu hình V2-R/V3-A/V3-B/V3-C/V3-D parse và chạy độc lập;
 - evaluator và rule replay nhất quán;
 - V3 không sử dụng bất kỳ concept-specific decision nào lấy từ official test;
 - kết quả được báo cáo đầy đủ, kể cả khi V3 không vượt baseline.

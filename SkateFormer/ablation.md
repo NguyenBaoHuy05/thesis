@@ -33,3 +33,43 @@ và kết quả dưới đây lấy từ test split.
 những run còn lại có parent micro-F1 khoảng 98.72% và parent exact match khoảng
 86%. Cần kiểm tra lại parent prediction/threshold, checkpoint loading và metric
 pipeline trước khi sử dụng các parent metrics này trong luận văn.
+
+## 16. Kế hoạch decoder V3 trên NTU120-CSub
+
+Từ V3, parent branch chỉ còn auxiliary supervision, hierarchy regularization và
+đóng góp trực tiếp trong symbolic score; parent probability không còn nhân vào
+concept probability. Artifact mới chỉ dùng `concept_probs` và
+`parent_for_child`, còn evaluator vẫn đọc được `raw_concept_probs` của artifact
+v2 cũ.
+
+Ma trận chạy được khóa trong `config/train/ablation_ntu120_csub_v31/`.
+Tất cả run dùng ontology NTU120 v2.4 gồm 120 action/102 concept, checkpoint
+SkateFormer NTU120-CSub và official CSub train/test split:
+
+| Run | Temporal pooling | Scale fusion | Parent auxiliary |
+|---|---|---|---|
+| V2-R | legacy noisy-OR | single final scale | bật |
+| V3-A | adaptive MIL | single final scale | bật |
+| V3-B | legacy noisy-OR | per-concept multi-scale | bật |
+| V3-C | adaptive MIL | per-concept multi-scale | bật |
+| V3-D | adaptive MIL | per-concept multi-scale | tắt |
+
+Các run dùng cùng seed, loss weights, stage schedule và final-epoch protocol;
+chưa ghi kết quả cho đến khi có môi trường PyTorch cùng dữ liệu/checkpoint
+NTU120-CSub. `V3-D` chỉ chạy sau khi `V3-C` hoàn tất.
+
+Chạy toàn bộ ma trận theo đúng thứ tự:
+
+```bash
+python scripts/train_ntu120_csub_v31.py
+```
+
+Script tự bỏ qua run đã có `final_model.pt`, ghi log riêng và dừng ngay
+khi một run lỗi. Có thể chạy riêng một phần ma trận, kiểm tra lệnh hoặc
+train lại bằng:
+
+```bash
+python scripts/train_ntu120_csub_v31.py --runs V3_A V3_B V3_C
+python scripts/train_ntu120_csub_v31.py --dry-run
+python scripts/train_ntu120_csub_v31.py --runs V3_C --force
+```

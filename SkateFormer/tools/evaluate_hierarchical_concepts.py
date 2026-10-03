@@ -1,4 +1,4 @@
-"""Evaluate saved v2 concept and parent predictions."""
+"""Evaluate saved V3 concept predictions and backward-compatible V2 artifacts."""
 
 from __future__ import annotations
 
@@ -32,6 +32,8 @@ def main() -> None:
     args = parser.parse_args()
     with np.load(args.predictions) as payload:
         result = {
+            "schema_version": int(payload["schema_version"])
+            if "schema_version" in payload else 2,
             "concept": multilabel(payload["concept_probs"], payload["concept_targets"]),
             "parent": multilabel(payload["parent_probs"], payload["parent_targets"]),
         }
@@ -47,8 +49,15 @@ def main() -> None:
                     negative_probs.mean() if negative_probs.size else 0.0
                 ),
             }
-        if "raw_concept_probs" in payload and "parent_for_child" in payload:
-            delta = payload["raw_concept_probs"] - payload["parent_for_child"]
+        if "parent_for_child" in payload:
+            # V2 artifacts used raw_concept_probs for the pre-gate signal.
+            # V3 has one official concept probability field, concept_probs.
+            concept_for_hierarchy = (
+                payload["raw_concept_probs"]
+                if "raw_concept_probs" in payload
+                else payload["concept_probs"]
+            )
+            delta = concept_for_hierarchy - payload["parent_for_child"]
             result["hierarchy"] = {
                 "violation_rate": float((delta > 0.0).mean()),
                 "violation_mean": float(np.maximum(delta, 0.0).mean()),
@@ -57,17 +66,31 @@ def main() -> None:
             rulebook = json.loads(Path(args.rulebook).read_text(encoding="utf-8"))
             dense = rulebook["dense_weights"]
             concept_weights = np.asarray(dense["concept"], dtype=np.float64)
+            concept_idf = np.asarray(
+                dense.get("concept_idf", np.ones(concept_weights.shape[1])),
+                dtype=np.float64,
+            )
             parent_weights = np.asarray(dense["parent"], dtype=np.float64)
-            bias = np.asarray(dense["bias"], dtype=np.float64)
-            concept_score = payload["concept_probs"] @ concept_weights.T
-            concept_score /= np.maximum(concept_weights.sum(axis=1, keepdims=True).T, 1e-6)
-            parent_score = payload["parent_probs"] @ parent_weights.T
+            coefficients = rulebook.get("coefficients", {})
+            if coefficients.get("concept_score_mode", "probability") == "logit":
+                clipped_concept = np.clip(payload["concept_probs"], 1e-4, 1.0 - 1e-4)
+                concept_evidence = np.log(clipped_concept) - np.log1p(-clipped_concept)
+                clipped_parent = np.clip(payload["parent_probs"], 1e-4, 1.0 - 1e-4)
+                parent_evidence = np.log(clipped_parent) - np.log1p(-clipped_parent)
+            else:
+                concept_evidence = payload["concept_probs"]
+                parent_evidence = payload["parent_probs"]
+            score_weights = concept_weights * concept_idf[None, :]
+            concept_score = concept_evidence @ score_weights.T
+            concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
+            concept_score *= float(coefficients.get("action_logit_scale", 1.0))
+            parent_score = parent_evidence @ parent_weights.T
             parent_score /= np.maximum(parent_weights.sum(axis=1, keepdims=True).T, 1e-6)
-            parent_score *= float(rulebook["coefficients"]["parent_weight"])
+            parent_score *= float(coefficients.get("parent_weight", 0.35))
+            parent_score *= float(coefficients.get("action_logit_scale", 1.0))
             result["branch_contribution"] = {
                 "mean_abs_concept_score": float(np.abs(concept_score).mean()),
                 "mean_abs_parent_score": float(np.abs(parent_score).mean()),
-                "mean_abs_bias": float(np.abs(bias).mean()),
             }
             if "action_labels" in payload:
                 labels = payload["action_labels"]

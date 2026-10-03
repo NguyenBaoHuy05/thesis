@@ -1,0 +1,19 @@
+# V3-E: V3-C with fixed parent-concept ontology graph regularization.
+# The graph loss replaces the symmetric probability-space hierarchy penalty:
+# detached parent logits teach child concepts, balanced equally per parent.
+# The graph is enabled only after parent grounding, when its teacher signal is
+# reliable enough to constrain the child concepts.
+base_config: V3_C.yaml
+work_dir: ./work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_E
+
+loss_weights:
+  hierarchy: 0.0
+  graph: 0.10
+
+stage1_loss_weights:
+  hierarchy: 0.50
+  graph: 0.0
+
+stage2_loss_weights:
+  hierarchy: 0.0
+  graph: 0.10

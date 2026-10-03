@@ -118,7 +118,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
         # before the decoder has learned sharply separated concept evidence.
         self.concept_raw = nn.Parameter(torch.full((num_classes, num_concepts), -1.0))
         self.parent_raw = nn.Parameter(torch.full((num_classes, len(parent_names)), -1.0))
-        self.bias = nn.Parameter(torch.zeros(num_classes))
 
     @staticmethod
     def _positive(value: torch.Tensor) -> torch.Tensor:
@@ -129,6 +128,12 @@ class HierarchicalSymbolicDecoder(nn.Module):
         parent_weights = self._positive(self.parent_raw) * self.parent_support
         return concept_weights, parent_weights
 
+    def _score_evidence(self, probabilities: torch.Tensor) -> torch.Tensor:
+        """Map every symbolic branch to the configured evidence domain."""
+        if self.concept_score_mode == "logit":
+            return torch.logit(probabilities.clamp(1e-4, 1.0 - 1e-4))
+        return probabilities
+
     def forward(
         self, sequence_probs: torch.Tensor, parent_probs: torch.Tensor
     ) -> torch.Tensor:
@@ -137,20 +142,18 @@ class HierarchicalSymbolicDecoder(nn.Module):
         if parent_probs.ndim != 2 or parent_probs.shape[-1] != self.num_parents:
             raise ValueError("parent_probs must have shape [B, num_parents]")
         concept_weights, parent_weights = self._weights()
-        if self.concept_score_mode == "logit":
-            evidence = torch.logit(sequence_probs.clamp(1e-4, 1.0 - 1e-4))
-        else:
-            evidence = sequence_probs
+        concept_evidence = self._score_evidence(sequence_probs)
         score_weights = concept_weights * self.concept_idf.unsqueeze(0)
-        concept_score = evidence @ score_weights.t()
+        concept_score = concept_evidence @ score_weights.t()
         concept_score = concept_score / score_weights.sum(dim=1).clamp_min(1e-6).unsqueeze(0)
         if self.parent_enabled and self.parent_weight != 0.0:
-            parent_score = parent_probs @ parent_weights.t()
+            parent_evidence = self._score_evidence(parent_probs)
+            parent_score = parent_evidence @ parent_weights.t()
             parent_score = parent_score / parent_weights.sum(dim=1).clamp_min(1e-6).unsqueeze(0)
             parent_term = self.parent_weight * parent_score
         else:
             parent_term = torch.zeros_like(concept_score)
-        return self.action_logit_scale * (concept_score + parent_term) + self.bias.unsqueeze(0)
+        return self.action_logit_scale * (concept_score + parent_term)
 
     def concept_loss(
         self, sequence_probs: torch.Tensor, action_labels: torch.Tensor,
@@ -197,10 +200,10 @@ class HierarchicalSymbolicDecoder(nn.Module):
         return (loss.sum(dim=1) / normalizer).mean()
 
     def hierarchy_loss(
-        self, raw_sequence_probs: torch.Tensor, parent_probs: torch.Tensor,
+        self, sequence_probs: torch.Tensor, parent_probs: torch.Tensor,
     ) -> torch.Tensor:
         parent_for_child = parent_probs[:, self.concept_to_parent]
-        return F.relu(raw_sequence_probs - parent_for_child).mean()
+        return F.relu(sequence_probs - parent_for_child).mean()
 
     def density_loss(
         self, sequence_probs: torch.Tensor, action_labels: torch.Tensor,
@@ -227,7 +230,7 @@ class HierarchicalSymbolicDecoder(nn.Module):
     @torch.no_grad()
     def _rule_tensors(self) -> dict[str, torch.Tensor]:
         concept, parent = self._weights()
-        return {"concept": concept, "parent": parent, "bias": self.bias}
+        return {"concept": concept, "parent": parent}
 
     @torch.no_grad()
     def rule_statistics(self, threshold: float = 0.5) -> dict[str, float | int]:
@@ -263,7 +266,7 @@ class HierarchicalSymbolicDecoder(nn.Module):
                 "parent_names": [self.parent_names[i] for i in parent_ids],
             })
         return {
-            "format_version": 2,
+            "format_version": 3,
             "model": "HCG-NS-SkateFormer-RF",
             "relation_components": [],
             "num_classes": self.num_classes,
@@ -283,7 +286,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
                 "concept": tensors["concept"].cpu().tolist(),
                 "concept_idf": self.concept_idf.cpu().tolist(),
                 "parent": tensors["parent"].cpu().tolist(),
-                "bias": tensors["bias"].cpu().tolist(),
             },
             "rule_statistics": self.rule_statistics(threshold=threshold),
         }

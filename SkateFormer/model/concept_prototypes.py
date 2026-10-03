@@ -2,11 +2,87 @@
 
 from __future__ import annotations
 
+import math
 from typing import Iterable, Sequence
 
 import torch
 from torch import nn
 import torch.nn.functional as F
+
+
+class AdaptiveTemporalMILPool(nn.Module):
+    """Pool per-timestep concept logits with a learned mean/LSE mixture.
+
+    Every concept uses the same pooling rule, while ``beta``, ``mix`` and
+    ``bias`` are learned independently for each concept.  The bounded beta
+    parameter keeps the log-sum-exp branch numerically stable and makes the
+    module permutation invariant over timesteps when no mask is supplied.
+    """
+
+    def __init__(
+        self,
+        num_concepts: int,
+        beta_min: float = 0.1,
+        beta_max: float = 10.0,
+        initial_beta: float = 1.0,
+    ):
+        super().__init__()
+        if int(num_concepts) <= 0:
+            raise ValueError("num_concepts must be positive")
+        if not 0.0 < float(beta_min) < float(beta_max):
+            raise ValueError("beta_min and beta_max must satisfy 0 < min < max")
+        if not float(beta_min) < float(initial_beta) < float(beta_max):
+            raise ValueError("initial_beta must lie strictly inside the beta bounds")
+        self.num_concepts = int(num_concepts)
+        self.beta_min = float(beta_min)
+        self.beta_max = float(beta_max)
+        beta_fraction = (float(initial_beta) - self.beta_min) / (
+            self.beta_max - self.beta_min
+        )
+        beta_raw = math.log(beta_fraction / (1.0 - beta_fraction))
+        self.beta_raw = nn.Parameter(torch.full((self.num_concepts,), beta_raw))
+        self.mix_raw = nn.Parameter(torch.zeros(self.num_concepts))
+        self.bias = nn.Parameter(torch.zeros(self.num_concepts))
+
+    @property
+    def beta(self) -> torch.Tensor:
+        return self.beta_min + (self.beta_max - self.beta_min) * torch.sigmoid(
+            self.beta_raw
+        )
+
+    @property
+    def mix(self) -> torch.Tensor:
+        return torch.sigmoid(self.mix_raw)
+
+    def pool_logits(self, time_logits: torch.Tensor) -> torch.Tensor:
+        if time_logits.ndim != 3:
+            raise ValueError(
+                f"time_logits must have shape [B,T,K], got {tuple(time_logits.shape)}"
+            )
+        if time_logits.shape[-1] != self.num_concepts:
+            raise ValueError(
+                f"time_logits has {time_logits.shape[-1]} concepts, "
+                f"expected {self.num_concepts}"
+            )
+        timesteps = int(time_logits.shape[1])
+        if timesteps <= 0:
+            raise ValueError("time_logits must contain at least one timestep")
+        beta = self.beta.to(dtype=time_logits.dtype, device=time_logits.device)
+        mix = self.mix.to(dtype=time_logits.dtype, device=time_logits.device)
+        bias = self.bias.to(dtype=time_logits.dtype, device=time_logits.device)
+        mean_logits = time_logits.mean(dim=1)
+        scaled = time_logits * beta.view(1, 1, -1)
+        lse_logits = (
+            torch.logsumexp(scaled, dim=1) - math.log(float(timesteps))
+        ) / beta.view(1, -1)
+        return (
+            mix.view(1, -1) * lse_logits
+            + (1.0 - mix).view(1, -1) * mean_logits
+            + bias.view(1, -1)
+        )
+
+    def forward(self, time_logits: torch.Tensor) -> torch.Tensor:
+        return torch.sigmoid(self.pool_logits(time_logits))
 
 
 class ConceptPrototypeDecoder(nn.Module):
@@ -27,6 +103,8 @@ class ConceptPrototypeDecoder(nn.Module):
         multi_scale: bool = False,
         pyramid_dims: Sequence[int] | None = None,
         pyramid_levels: Iterable[int] | None = None,
+        temporal_pooling: str = "legacy_noisy_or",
+        scale_fusion: str = "shared",
         num_people: int = 1,
         num_points: int | None = None,
         interaction_concepts: Iterable[int] | None = None,
@@ -36,6 +114,21 @@ class ConceptPrototypeDecoder(nn.Module):
         self.feature_dim = feature_dim
         self.num_concepts = num_concepts
         self.multi_scale = bool(multi_scale)
+        self.temporal_pooling = str(temporal_pooling)
+        if self.temporal_pooling not in {"legacy_noisy_or", "adaptive_mil"}:
+            raise ValueError(
+                "temporal_pooling must be 'legacy_noisy_or' or 'adaptive_mil'"
+            )
+        self.scale_fusion = "single" if not self.multi_scale else str(scale_fusion)
+        if self.multi_scale and self.scale_fusion not in {"shared", "per_concept"}:
+            raise ValueError(
+                "scale_fusion must be 'shared' or 'per_concept' when multi_scale=true"
+            )
+        self.adaptive_mil_pool = (
+            AdaptiveTemporalMILPool(num_concepts)
+            if self.temporal_pooling == "adaptive_mil"
+            else None
+        )
         self.num_people = int(num_people)
         self.num_points = int(num_points) if num_points is not None else None
         self.interaction_concepts = tuple(
@@ -56,7 +149,12 @@ class ConceptPrototypeDecoder(nn.Module):
             self.scale_projectors = nn.ModuleList(
                 [self._make_projector(dim, feature_dim) for dim in dims]
             )
-            self.scale_logits = nn.Parameter(torch.zeros(len(levels)))
+            scale_shape = (
+                (len(levels), num_concepts)
+                if self.scale_fusion == "per_concept"
+                else (len(levels),)
+            )
+            self.scale_logits = nn.Parameter(torch.zeros(scale_shape))
         else:
             self.projector = self._make_projector(feature_dim, feature_dim)
 
@@ -99,6 +197,12 @@ class ConceptPrototypeDecoder(nn.Module):
 
     def normalized_centers(self) -> torch.Tensor:
         return F.normalize(self.centers, dim=-1)
+
+    @property
+    def scale_weights(self) -> torch.Tensor | None:
+        if not self.multi_scale:
+            return None
+        return torch.softmax(self.scale_logits, dim=0)
 
     def _project_tokens(
         self, feature_map: torch.Tensor, projector: nn.Module
@@ -149,9 +253,8 @@ class ConceptPrototypeDecoder(nn.Module):
         pair_cosine = torch.einsum("btc,kc->btk", pair_z, centers)
         return pair_cosine, pair_cosine / self.temperature
 
-    @staticmethod
     def _temporal_statistics(
-        time_probs: torch.Tensor, time_logits: torch.Tensor
+        self, time_probs: torch.Tensor, time_logits: torch.Tensor
     ) -> dict[str, torch.Tensor]:
         safe_probs = time_probs.clamp(1e-5, 1.0 - 1e-5)
         timesteps = time_probs.shape[1]
@@ -163,9 +266,12 @@ class ConceptPrototypeDecoder(nn.Module):
             dtype=time_probs.dtype,
         ).view(1, -1, 1)
         mass = safe_probs.sum(dim=1).clamp_min(1e-6)
-        sequence_probs = 1.0 - torch.exp(
-            torch.log1p(-safe_probs).sum(dim=1)
-        )
+        if self.adaptive_mil_pool is not None:
+            sequence_probs = self.adaptive_mil_pool(time_logits)
+        else:
+            sequence_probs = 1.0 - torch.exp(
+                torch.log1p(-safe_probs).sum(dim=1)
+            )
         expected_time = (safe_probs * time_index).sum(dim=1) / mass
         peak_attention = torch.softmax(time_logits, dim=1)
         peak_time = (peak_attention * time_index).sum(dim=1)
@@ -205,11 +311,17 @@ class ConceptPrototypeDecoder(nn.Module):
                         align_corners=False,
                     ).transpose(1, 2)
                 fused_logits.append(logits)
-            scale_weights = torch.softmax(self.scale_logits, dim=0)
-            time_logits = sum(
-                weight * logits
-                for weight, logits in zip(scale_weights, fused_logits)
-            )
+            scale_weights = self.scale_weights
+            if self.scale_fusion == "per_concept":
+                time_logits = sum(
+                    weight.view(1, 1, -1) * logits
+                    for weight, logits in zip(scale_weights, fused_logits)
+                )
+            else:
+                time_logits = sum(
+                    weight * logits
+                    for weight, logits in zip(scale_weights, fused_logits)
+                )
             final_z, final_cosine, _ = selected[-1]
         else:
             if isinstance(feature_map, (list, tuple)):
@@ -253,6 +365,7 @@ class ConceptPrototypeDecoder(nn.Module):
             "duration": stats["duration"],
             "rising_activity": stats["rising_activity"],
             "falling_activity": stats["falling_activity"],
+            "scale_weights": self.scale_weights,
             "similarity": final_cosine / self.temperature,
             "cosine_similarity": grounding_cosine,
             "centers": centers,

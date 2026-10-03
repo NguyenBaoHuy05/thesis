@@ -34,7 +34,6 @@ class HCGNSSkateFormer(nn.Module):
         residual_action_weight: float = 0.1,
         prototype_args: dict[str, Any] | None = None,
         parent_weight: float = 0.35,
-        gate_floor: float = 0.05,
         action_logit_scale: float = 1.0,
         concept_score_mode: str = 'probability',
         concept_idf_power: float = 0.0,
@@ -66,10 +65,13 @@ class HCGNSSkateFormer(nn.Module):
             multi_scale=bool(prototype_args.get("multi_scale", False)),
             pyramid_dims=pyramid_dims,
             pyramid_levels=pyramid_levels,
+            temporal_pooling=str(
+                prototype_args.get("temporal_pooling", "legacy_noisy_or")
+            ),
+            scale_fusion=str(prototype_args.get("scale_fusion", "shared")),
             num_people=int(args.get("num_people", 1)),
             num_points=int(args.get("num_points", 0)) or None,
             interaction_reasoning=bool(prototype_args.get("interaction_reasoning", True)),
-            gate_floor=float(gate_floor),
             parent_enabled=parent_enabled,
             region_pooling=bool(prototype_args.get("region_pooling", False)),
             region_tokens=prototype_args.get("region_tokens"),
@@ -168,7 +170,6 @@ class HCGNSSkateFormer(nn.Module):
             "action_scores": action_scores,
             "time_logits": concepts["time_logits"],
             "time_probs": concepts["time_probs"],
-            "raw_sequence_probs": concepts["raw_sequence_probs"],
             "sequence_probs": concepts["sequence_probs"],
             "expected_time": concepts["expected_time"],
             "peak_time": concepts["peak_time"],
@@ -178,7 +179,7 @@ class HCGNSSkateFormer(nn.Module):
             "parent_logits": concepts["parent_logits"],
             "parent_probs": concepts["parent_probs"],
             "parent_for_child": concepts["parent_for_child"],
-            "soft_gate": concepts["soft_gate"],
+            "scale_weights": concepts["scale_weights"],
             "scope_logits": concepts["scope_logits"],
             "scope_probs": concepts["scope_probs"],
             "scope_term": concepts["scope_term"],
@@ -197,6 +198,7 @@ class HCGNSSkateFormer(nn.Module):
             "weak_positive": 1.0,
             "weak_negative": 0.0,
             "hierarchy": 0.10,
+            "graph": 0.0,
             "density": 0.05,
             "sparse": 0.001,
             "center": 0.05,
@@ -212,7 +214,10 @@ class HCGNSSkateFormer(nn.Module):
         )
         parent_loss = self.symbolic.parent_loss(output["parent_logits"], action_labels)
         hierarchy_loss = self.symbolic.hierarchy_loss(
-            output["raw_sequence_probs"], output["parent_probs"]
+            output["sequence_probs"], output["parent_probs"]
+        )
+        graph_loss = self.concept_decoder.parent_graph_loss(
+            output["sequence_probs"], output["parent_probs"]
         )
         density_loss = self.symbolic.density_loss(
             output["sequence_probs"], action_labels
@@ -229,6 +234,7 @@ class HCGNSSkateFormer(nn.Module):
             + weights["weak_concept"] * concept_loss
             + weights["parent"] * parent_loss
             + weights["hierarchy"] * hierarchy_loss
+            + weights["graph"] * graph_loss
             + weights["density"] * density_loss
             + weights["sparse"] * sparse_loss
             + weights["center"] * center_loss
@@ -240,6 +246,7 @@ class HCGNSSkateFormer(nn.Module):
             "weak_concept": concept_loss,
             "parent": parent_loss,
             "hierarchy": hierarchy_loss,
+            "graph": graph_loss,
             "density": density_loss,
             "sparse": sparse_loss,
             "center": center_loss,
