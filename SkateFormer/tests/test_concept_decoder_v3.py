@@ -133,12 +133,11 @@ class ConceptDecoderV3Tests(unittest.TestCase):
             num_concepts=102,
         )
         sequence = torch.rand(2, 102)
-        parents = torch.rand(2, symbolic.num_parents)
         legacy_sequence = sequence * (
-            1.0 + 0.0 * parents[:, symbolic.concept_to_parent]
+            1.0 + 0.0 * symbolic.concept_to_parent
         )
         self.assertTrue(torch.allclose(
-            symbolic(sequence, parents), symbolic(legacy_sequence, parents), atol=1e-7
+            symbolic(sequence), symbolic(legacy_sequence), atol=1e-7
         ))
 
     def test_parent_graph_regularizes_only_violating_concepts(self) -> None:
@@ -191,21 +190,42 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         loss = decoder.parent_graph_loss(torch.tensor([[0.9]]), torch.tensor([[0.1]]))
         self.assertEqual(float(loss), 0.0)
 
-    def test_parent_disabled_removes_symbolic_parent_contribution(self) -> None:
+    def test_parent_is_auxiliary_only(self) -> None:
         symbolic = HierarchicalSymbolicDecoder(
             concept_csv="concepts/ntu_action_concept_v2_4.csv",
             metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
             num_classes=2,
             num_concepts=102,
-            parent_weight=0.35,
-            parent_enabled=False,
         )
         sequence = torch.rand(3, 102)
-        low_parent = torch.zeros(3, symbolic.num_parents)
-        high_parent = torch.ones_like(low_parent)
-        self.assertTrue(torch.equal(
-            symbolic(sequence, low_parent), symbolic(sequence, high_parent)
-        ))
+        self.assertEqual(tuple(symbolic(sequence).shape), (3, 2))
+        self.assertNotIn("parent_raw", dict(symbolic.named_parameters()))
+        rulebook = symbolic.export_rulebook()
+        self.assertEqual(rulebook["parent_role"], "auxiliary_supervision")
+        self.assertNotIn("parent", rulebook["dense_weights"])
+        self.assertNotIn("parent_weight", rulebook["coefficients"])
+        parent_logits = torch.randn(3, symbolic.num_parents, requires_grad=True)
+        symbolic.parent_loss(parent_logits, torch.tensor([0, 1, 0])).backward()
+        self.assertIsNotNone(parent_logits.grad)
+        self.assertTrue(torch.isfinite(parent_logits.grad).all())
+
+    def test_concept_loss_is_full_binary_cross_entropy(self) -> None:
+        symbolic = HierarchicalSymbolicDecoder(
+            concept_csv="concepts/ntu_action_concept_v2_4.csv",
+            metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
+            num_classes=2,
+            num_concepts=102,
+        )
+        probabilities = torch.full((2, 102), 0.3, requires_grad=True)
+        labels = torch.tensor([0, 1])
+        expected = torch.nn.functional.binary_cross_entropy(
+            probabilities, symbolic.support[labels]
+        )
+        actual = symbolic.concept_loss(probabilities, labels)
+        self.assertTrue(torch.allclose(actual, expected))
+        actual.backward()
+        negative_mask = symbolic.support[labels] == 0
+        self.assertTrue((probabilities.grad[negative_mask] > 0).all())
 
     def test_symbolic_decoder_has_no_class_bias(self) -> None:
         symbolic = HierarchicalSymbolicDecoder(
@@ -217,7 +237,7 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertNotIn("bias", dict(symbolic.named_parameters()))
         self.assertNotIn("bias", symbolic.export_rulebook()["dense_weights"])
 
-    def test_logit_mode_maps_concept_and_parent_to_same_domain(self) -> None:
+    def test_logit_mode_maps_concepts_to_logit_domain(self) -> None:
         symbolic = HierarchicalSymbolicDecoder(
             concept_csv="concepts/ntu_action_concept_v2_4.csv",
             metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
@@ -256,9 +276,15 @@ class ConceptDecoderV3Tests(unittest.TestCase):
                 for profile in (
                     "loss_weights", "stage1_loss_weights", "stage2_loss_weights"
                 ):
+                    self.assertIn("concept", config[profile])
+                    self.assertNotIn("weak_concept", config[profile])
+                    self.assertNotIn("weak_positive", config[profile])
+                    self.assertNotIn("weak_negative", config[profile])
+                    self.assertNotIn("density", config[profile])
                     self.assertNotIn("hierarchy", config[profile])
                     self.assertNotIn("sparse", config[profile])
                     self.assertNotIn("hard_negative", config[profile])
+                self.assertNotIn("parent_weight", config)
 
     def test_main_config_is_standalone_v3_e(self) -> None:
         main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")

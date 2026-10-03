@@ -6,7 +6,7 @@ Kế hoạch này được chốt trước khi chạy các thí nghiệm V3 đ�
 
 1. Xóa hoàn toàn multiplicative parent gate khỏi model, API, evaluator và YAML.
 2. Giữ parent head như một nhánh auxiliary có supervision.
-3. Giữ `parent_weight` trong symbolic decoder để parent vẫn có thể đóng góp trực tiếp vào action score.
+3. Parent chỉ dùng làm auxiliary supervision và không đóng góp trực tiếp vào action score.
 4. Giữ hierarchy loss như một soft regularizer; không dùng parent probability để sửa concept probability ở inference.
 5. Không dùng `concept_priority.csv` sinh từ official test để chọn concept hoặc thiết kế head riêng cho từng concept.
 6. Nâng cấp concept decoder theo hai thay đổi tổng quát áp dụng đồng đều cho toàn bộ concept:
@@ -66,14 +66,13 @@ Sau thay đổi:
 ```text
 sequence_probs = temporal_pool(time_logits)
 parent_probs = parent_head(features)
-action_scores = symbolic(sequence_probs, parent_probs)
+action_scores = symbolic(sequence_probs)
 ```
 
-Parent chỉ còn ba vai trò độc lập:
+Parent chỉ còn hai vai trò độc lập:
 
 1. `parent_loss`: auxiliary supervision;
 2. `parent_graph_loss(sequence_probs, parent_probs)`: detached-teacher consistency regularizer;
-3. `parent_weight * parent_score`: đóng góp trực tiếp trong symbolic action score.
 
 ### API cần xóa
 

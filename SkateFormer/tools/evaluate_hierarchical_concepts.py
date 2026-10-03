@@ -27,7 +27,7 @@ def multilabel(probabilities: np.ndarray, targets: np.ndarray, threshold: float 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("predictions", help="path to test_predictions.npz")
-    parser.add_argument("--rulebook", default=None, help="optional final_rules.json for branch contribution")
+    parser.add_argument("--rulebook", default=None, help="optional final_rules.json for symbolic score diagnostics")
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
     with np.load(args.predictions) as payload:
@@ -70,35 +70,23 @@ def main() -> None:
                 dense.get("concept_idf", np.ones(concept_weights.shape[1])),
                 dtype=np.float64,
             )
-            parent_weights = np.asarray(dense["parent"], dtype=np.float64)
             coefficients = rulebook.get("coefficients", {})
             if coefficients.get("concept_score_mode", "probability") == "logit":
                 clipped_concept = np.clip(payload["concept_probs"], 1e-4, 1.0 - 1e-4)
                 concept_evidence = np.log(clipped_concept) - np.log1p(-clipped_concept)
-                clipped_parent = np.clip(payload["parent_probs"], 1e-4, 1.0 - 1e-4)
-                parent_evidence = np.log(clipped_parent) - np.log1p(-clipped_parent)
             else:
                 concept_evidence = payload["concept_probs"]
-                parent_evidence = payload["parent_probs"]
             score_weights = concept_weights * concept_idf[None, :]
             concept_score = concept_evidence @ score_weights.T
             concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
             concept_score *= float(coefficients.get("action_logit_scale", 1.0))
-            parent_score = parent_evidence @ parent_weights.T
-            parent_score /= np.maximum(parent_weights.sum(axis=1, keepdims=True).T, 1e-6)
-            parent_score *= float(coefficients.get("parent_weight", 0.35))
-            parent_score *= float(coefficients.get("action_logit_scale", 1.0))
-            result["branch_contribution"] = {
+            result["symbolic_score"] = {
                 "mean_abs_concept_score": float(np.abs(concept_score).mean()),
-                "mean_abs_parent_score": float(np.abs(parent_score).mean()),
             }
             if "action_labels" in payload:
                 labels = payload["action_labels"]
-                result["branch_contribution"]["concept_only_top1"] = float(
+                result["symbolic_score"]["concept_top1"] = float(
                     (concept_score.argmax(axis=1) == labels).mean()
-                )
-                result["branch_contribution"]["parent_only_top1"] = float(
-                    (parent_score.argmax(axis=1) == labels).mean()
                 )
     text = json.dumps(result, ensure_ascii=False, indent=2)
     if args.output:

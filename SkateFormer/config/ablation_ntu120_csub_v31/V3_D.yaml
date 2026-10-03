@@ -5,7 +5,6 @@ prototype_args:
   temporal_pooling: adaptive_mil
   scale_fusion: per_concept
   parent_enabled: false
-parent_weight: 0.0
 loss_weights:
   parent: 0.0
 stage1_loss_weights:

@@ -19,10 +19,10 @@ class HierarchicalConceptDecoder(nn.Module):
 
     The base prototype decoder still produces temporally grounded unary
     evidence. Separate scope heads and parent heads read the final backbone
-    representation. Parent predictions remain independent forward evidence:
-    they supervise the hierarchy, may regularize concepts through fixed
-    ontology edges during training, and may contribute to symbolic action
-    scores, but never modify concept probabilities at inference time.
+    representation. Parent predictions are auxiliary supervision: they train
+    the hierarchy head and may regularize concepts through fixed ontology
+    edges, but they never modify concept probabilities or action scores at
+    inference time.
     """
 
     def __init__(

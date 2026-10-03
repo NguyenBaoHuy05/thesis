@@ -291,10 +291,11 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
         dump_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
             dump_path,
-            schema_version=np.asarray(3, dtype=np.int64),
+            schema_version=np.asarray(4, dtype=np.int64),
             concept_probability_semantics=np.asarray(
                 "temporal_pool_without_parent_gate"
             ),
+            parent_role=np.asarray("auxiliary_supervision"),
             concept_probs=concept_array,
             concept_targets=concept_target_array,
             concept_negative_targets=concept_negative_array,
@@ -341,30 +342,22 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
     return {name: value / max(steps, 1) for name, value in totals.items()}
 
 
-def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray,
-                    parent_probs: np.ndarray) -> np.ndarray:
+def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray) -> np.ndarray:
     dense = rulebook["dense_weights"]
     coefficients = rulebook["coefficients"]
     concept = np.asarray(dense["concept"], dtype=np.float64)
-    parent = np.asarray(dense["parent"], dtype=np.float64)
     concept_idf = np.asarray(
         dense.get("concept_idf", np.ones(concept.shape[1])), dtype=np.float64
     )
     if coefficients.get("concept_score_mode", "probability") == "logit":
         clipped_concept = np.clip(concept_probs, 1e-4, 1.0 - 1e-4)
         concept_evidence = np.log(clipped_concept) - np.log1p(-clipped_concept)
-        clipped_parent = np.clip(parent_probs, 1e-4, 1.0 - 1e-4)
-        parent_evidence = np.log(clipped_parent) - np.log1p(-clipped_parent)
     else:
         concept_evidence = concept_probs
-        parent_evidence = parent_probs
     score_weights = concept * concept_idf[None, :]
     concept_score = concept_evidence @ score_weights.T
     concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
-    parent_score = parent_evidence @ parent.T
-    parent_score /= np.maximum(parent.sum(axis=1, keepdims=True).T, 1e-6)
-    combined = concept_score + float(coefficients["parent_weight"]) * parent_score
-    return float(coefficients.get("action_logit_scale", 1.0)) * combined
+    return float(coefficients.get("action_logit_scale", 1.0)) * concept_score
 
 def git_commit(root: Path) -> str | None:
     try:
@@ -399,13 +392,11 @@ def main() -> None:
         backbone_args=cfg["model_args"],
         concept_csv=resolve(root, cfg["concept_csv"]),
         metadata_csv=resolve(root, cfg["metadata_csv"]),
-        zero_is_negative=bool(cfg.get("zero_is_negative", False)),
         num_classes=int(cfg["num_classes"]),
         num_concepts=int(cfg.get("num_concepts", 78)),
         residual_action_head=bool(cfg.get("residual_action_head", False)),
         residual_action_weight=float(cfg.get("residual_action_weight", 0.1)),
         prototype_args=cfg.get("prototype_args", {}),
-        parent_weight=float(cfg.get("parent_weight", 0.35)),
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
@@ -515,12 +506,10 @@ def main() -> None:
         json.dumps(final_metrics, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     with np.load(work_dir / "test_predictions.npz") as predictions:
-        replay = replay_symbolic(
-            rulebook, predictions["concept_probs"], predictions["parent_probs"]
-        )
+        replay = replay_symbolic(rulebook, predictions["concept_probs"])
         reference = predictions["action_scores"].astype(np.float64)
         verification = {
-            "format_version": 3,
+            "format_version": 4,
             "model": "HCG-NS-SkateFormer-RF",
             "relation_components": [],
             "max_abs_error": float(np.max(np.abs(replay - reference))),

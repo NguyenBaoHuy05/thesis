@@ -24,12 +24,10 @@ class HCGNSSkateFormer(nn.Module):
         concept_csv: str | Path,
         metadata_csv: str | Path,
         num_classes: int,
-        zero_is_negative: bool = False,
         num_concepts: int = 78,
         residual_action_head: bool = False,
         residual_action_weight: float = 0.1,
         prototype_args: dict[str, Any] | None = None,
-        parent_weight: float = 0.35,
         action_logit_scale: float = 1.0,
         concept_score_mode: str = 'probability',
         concept_idf_power: float = 0.0,
@@ -75,11 +73,8 @@ class HCGNSSkateFormer(nn.Module):
         self.symbolic = HierarchicalSymbolicDecoder(
             concept_csv=concept_csv,
             metadata_csv=metadata_csv,
-            zero_is_negative=zero_is_negative,
             num_classes=num_classes,
             num_concepts=num_concepts,
-            parent_weight=float(parent_weight),
-            parent_enabled=parent_enabled,
             action_logit_scale=float(action_logit_scale),
             concept_score_mode=str(concept_score_mode),
             concept_idf_power=float(concept_idf_power),
@@ -113,7 +108,7 @@ class HCGNSSkateFormer(nn.Module):
         )
         feature_map = feature_output[-1] if isinstance(feature_output, (list, tuple)) else feature_output
         concepts = self.concept_decoder(feature_output)
-        action_scores = self.symbolic(concepts["sequence_probs"], concepts["parent_probs"])
+        action_scores = self.symbolic(concepts["sequence_probs"])
         residual_scores = None
         if self.residual_action_head_enabled:
             residual_scores = self.residual_action_head(feature_map.mean(dim=(2, 3)))
@@ -147,27 +142,17 @@ class HCGNSSkateFormer(nn.Module):
     ) -> dict[str, torch.Tensor]:
         weights = {
             "parent": 0.25,
-            "weak_concept": 0.25,
-            "weak_positive": 1.0,
-            "weak_negative": 0.0,
+            "concept": 0.25,
             "hierarchy": 0.10,
             "graph": 0.0,
-            "density": 0.05,
             "center": 0.05,
             **(weights or {}),
         }
         action_loss = F.cross_entropy(output["action_scores"], action_labels)
-        concept_loss = self.symbolic.concept_loss(
-            output["sequence_probs"], action_labels,
-            positive_weight=float(weights.get("weak_positive", 1.0)),
-            negative_weight=float(weights.get("weak_negative", 0.0)),
-        )
+        concept_loss = self.symbolic.concept_loss(output["sequence_probs"], action_labels)
         parent_loss = self.symbolic.parent_loss(output["parent_logits"], action_labels)
         graph_loss = self.concept_decoder.parent_graph_loss(
             output["sequence_probs"], output["parent_probs"]
-        )
-        density_loss = self.symbolic.density_loss(
-            output["sequence_probs"], action_labels
         )
         center_loss = (
             self.concept_decoder.center_grounding_loss(
@@ -176,18 +161,16 @@ class HCGNSSkateFormer(nn.Module):
         )
         total = (
             action_loss
-            + weights["weak_concept"] * concept_loss
+            + weights["concept"] * concept_loss
             + weights["parent"] * parent_loss
             + weights["graph"] * graph_loss
-            + weights["density"] * density_loss
             + weights["center"] * center_loss
         )
         return {
             "total": total,
             "action": action_loss,
-            "weak_concept": concept_loss,
+            "concept": concept_loss,
             "parent": parent_loss,
             "graph": graph_loss,
-            "density": density_loss,
             "center": center_loss,
         }

@@ -8,7 +8,6 @@ num_classes: 120
 num_concepts: 102
 concept_csv: ./concepts/ntu_action_concept_v2_4.csv
 metadata_csv: ./concepts/ntu_concept_metadata_v2_4.csv
-zero_is_negative: true
 weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
 
 train_feeder_args:
@@ -62,7 +61,6 @@ prototype_args:
   scope_scale: 0.25
   parent_enabled: true
 
-parent_weight: 0.35
 residual_action_head: false
 residual_action_weight: 0.1
 action_logit_scale: 2.0
@@ -81,30 +79,21 @@ stage3_epochs: 0
 checkpoint_max_missing_ratio: 0.02
 
 loss_weights:
-  weak_concept: 0.25
-  weak_positive: 1.0
-  weak_negative: 0.25
+  concept: 0.25
   parent: 0.25
   graph: 0.00
-  density: 0.05
   center: 0.05
 
 stage1_loss_weights:
-  weak_concept: 0.10
-  weak_positive: 0.25
-  weak_negative: 0.00
+  concept: 0.10
   parent: 1.00
   graph: 0.00
-  density: 0.02
   center: 0.10
 
 stage2_loss_weights:
-  weak_concept: 0.25
-  weak_positive: 1.00
-  weak_negative: 0.25
+  concept: 0.25
   parent: 0.25
   graph: 0.00
-  density: 0.05
   center: 0.05
 
 stage1_lr: 0.0001
