@@ -24,7 +24,6 @@ class HCGNSSkateFormer(nn.Module):
         concept_csv: str | Path,
         metadata_csv: str | Path,
         num_classes: int,
-        labels_csv: str | Path | None = None,
         zero_is_negative: bool = False,
         num_concepts: int = 78,
         residual_action_head: bool = False,
@@ -76,7 +75,6 @@ class HCGNSSkateFormer(nn.Module):
         self.symbolic = HierarchicalSymbolicDecoder(
             concept_csv=concept_csv,
             metadata_csv=metadata_csv,
-            labels_csv=labels_csv,
             zero_is_negative=zero_is_negative,
             num_classes=num_classes,
             num_concepts=num_concepts,

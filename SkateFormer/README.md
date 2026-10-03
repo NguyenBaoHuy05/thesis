@@ -210,8 +210,10 @@ adaptive multi-scale concept decoder with fixed parent-concept graph regularizat
 python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
 ```
 
-The production ontology is the `v2_4` set under `concepts/`. Earlier V3 configs are
-kept only in `config/train/ablation_ntu120_csub_v31/` to reproduce the ablation table.
+The production ontology uses two `v2_4` files under `concepts/`: the binary
+action-concept matrix and the concept metadata that defines scopes and parent
+groups. Earlier V3 configs are kept only in
+`config/train/ablation_ntu120_csub_v31/` to reproduce the ablation table.
 
 ## Evaluation
 

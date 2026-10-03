@@ -268,7 +268,6 @@ def main() -> None:
         backbone_args=cfg["model_args"],
         concept_csv=resolve(root, cfg["concept_csv"]),
         metadata_csv=resolve(root, cfg["metadata_csv"]),
-        labels_csv=resolve(root, cfg.get("labels_csv")),
         zero_is_negative=bool(cfg.get("zero_is_negative", False)),
         num_classes=int(cfg["num_classes"]),
         num_concepts=int(cfg.get("num_concepts", 78)),

@@ -109,8 +109,6 @@ def validate_paths(root: Path, cfg: dict[str, Any]) -> None:
     required = {
         "concept_csv": cfg.get("concept_csv"),
         "metadata_csv": cfg.get("metadata_csv"),
-        "labels_csv": cfg.get("labels_csv"),
-        "hierarchy_csv": cfg.get("hierarchy_csv"),
         "train_data": cfg.get("train_feeder_args", {}).get("data_path"),
         "test_data": cfg.get("test_feeder_args", {}).get("data_path"),
     }
@@ -401,7 +399,6 @@ def main() -> None:
         backbone_args=cfg["model_args"],
         concept_csv=resolve(root, cfg["concept_csv"]),
         metadata_csv=resolve(root, cfg["metadata_csv"]),
-        labels_csv=resolve(root, cfg.get("labels_csv")),
         zero_is_negative=bool(cfg.get("zero_is_negative", False)),
         num_classes=int(cfg["num_classes"]),
         num_concepts=int(cfg.get("num_concepts", 78)),
@@ -570,8 +567,6 @@ def main() -> None:
         "artifacts": {
             "concept_csv": str(resolve(root, cfg["concept_csv"])),
             "metadata_csv": str(resolve(root, cfg["metadata_csv"])),
-            "labels_csv": str(resolve(root, cfg.get("labels_csv"))),
-            "hierarchy_csv": str(resolve(root, cfg["hierarchy_csv"])),
         },
         "test_metrics": str(work_dir / "test_metrics.json"),
         "test_predictions": str(work_dir / "test_predictions.npz"),

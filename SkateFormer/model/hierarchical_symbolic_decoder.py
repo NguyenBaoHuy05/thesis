@@ -11,7 +11,6 @@ import torch.nn.functional as F
 
 from model.concept_ontology import (
     build_parent_support,
-    load_action_concept_annotations,
     load_action_concept_matrix_v2,
     load_ontology_metadata,
     build_parent_index,
@@ -21,10 +20,9 @@ from model.concept_ontology import (
 class HierarchicalSymbolicDecoder(nn.Module):
     """Compose unary concept and parent evidence into action scores.
 
-    The support matrix is a weak positive ontology. A zero in that matrix is
-    unknown rather than a negative label; explicit negative states come only
-    from the companion annotation file. Unknown entries do not contribute to
-    the concept loss or to an action rule.
+    The support matrix is a binary ontology. Ones provide positive supervision
+    and define each action rule. Zeros provide negative supervision only when
+    ``zero_is_negative`` is enabled; otherwise they are ignored by the loss.
     """
 
     def __init__(
@@ -32,7 +30,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
         concept_csv: str | Path,
         metadata_csv: str | Path,
         num_classes: int,
-        labels_csv: str | Path | None = None,
         zero_is_negative: bool = False,
         num_concepts: int = 78,
         parent_weight: float = 0.35,
@@ -51,23 +48,8 @@ class HierarchicalSymbolicDecoder(nn.Module):
             raise ValueError(
                 "action-concept header and ontology metadata use different concept ordering"
             )
-        if labels_csv is None:
-            positive_mask = matrix.clone()
-            negative_mask = (1.0 - matrix) if zero_is_negative else torch.zeros_like(matrix)
-            confidence = positive_mask.clone()
-        else:
-            positive_mask, negative_mask, confidence = load_action_concept_annotations(
-                labels_csv,
-                num_classes=num_classes,
-                num_concepts=num_concepts,
-                action_names=action_names,
-                concept_names=concept_names,
-                zero_is_negative=zero_is_negative,
-            )
-            if not torch.equal(positive_mask, matrix):
-                raise ValueError(
-                    "action-concept matrix and annotation positive states disagree"
-                )
+        positive_mask = matrix.clone()
+        negative_mask = (1.0 - matrix) if zero_is_negative else torch.zeros_like(matrix)
         parent_names, concept_to_parent, children, parent_levels = build_parent_index(metadata)
         parent_support = build_parent_support(positive_mask, concept_to_parent, len(parent_names))
         parent_negative_support = positive_mask.new_zeros(
@@ -105,7 +87,6 @@ class HierarchicalSymbolicDecoder(nn.Module):
             raise ValueError("concept_idf_power must be non-negative")
         self.register_buffer("support", positive_mask)
         self.register_buffer("negative_support", negative_mask)
-        self.register_buffer("label_confidence", confidence)
         self.register_buffer("parent_support", parent_support)
         self.register_buffer("parent_negative_support", parent_negative_support)
         self.register_buffer("concept_to_parent", concept_to_parent)

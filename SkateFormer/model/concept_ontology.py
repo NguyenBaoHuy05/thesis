@@ -100,67 +100,6 @@ def load_action_concept_matrix_v2(
     return torch.tensor(values, dtype=torch.float32), action_names, header[1:]
 
 
-def load_action_concept_annotations(
-    path: str | Path,
-    num_classes: int,
-    num_concepts: int,
-    action_names: list[str],
-    concept_names: list[str],
-    zero_is_negative: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Load sparse positive/negative/unknown mapping annotations.
-
-    Rows that are not present are unknown by design unless ``zero_is_negative``
-    is enabled for a temporary dense-negative experiment. The returned
-    confidence tensor is zero for unknown entries and is available for future
-    confidence-weighted losses without changing the matrix file format.
-    """
-    with Path(path).open("r", encoding="utf-8", newline="") as handle:
-        rows = list(csv.DictReader(handle))
-    required = {"action_id", "action_class", "concept_id", "concept_name", "state", "confidence"}
-    if not rows:
-        raise ValueError(f"action-concept annotation file is empty: {path}")
-    missing = required.difference(rows[0])
-    if missing:
-        raise ValueError(f"action-concept annotations missing columns: {sorted(missing)}")
-    positive = torch.zeros((int(num_classes), int(num_concepts)), dtype=torch.float32)
-    negative = torch.ones_like(positive) if zero_is_negative else torch.zeros_like(positive)
-    confidence = torch.zeros_like(positive)
-    valid_states = {"positive", "negative", "unknown"}
-    for row in rows:
-        action_id = int(row["action_id"])
-        concept_id = int(row["concept_id"])
-        # A shared 60+120 labels file contains annotations for actions that
-        # are outside the current dataset subset.
-        if action_id >= int(num_classes):
-            continue
-        if not (0 <= action_id < int(num_classes)):
-            raise ValueError(f"invalid action id in annotations: {action_id}")
-        if not (0 <= concept_id < int(num_concepts)):
-            raise ValueError(f"invalid concept id in annotations: {concept_id}")
-        if row["action_class"] != action_names[action_id]:
-            raise ValueError("annotation action name does not match action matrix ordering")
-        if row["concept_name"] != concept_names[concept_id]:
-            raise ValueError("annotation concept name does not match concept matrix ordering")
-        state = row["state"].strip().lower()
-        if state not in valid_states:
-            raise ValueError(f"unsupported annotation state: {state}")
-        value = float(row["confidence"])
-        if not 0.0 <= value <= 1.0:
-            raise ValueError("annotation confidence must be in [0, 1]")
-        confidence[action_id, concept_id] = max(confidence[action_id, concept_id], value)
-        if state == "positive":
-            positive[action_id, concept_id] = 1.0
-            negative[action_id, concept_id] = 0.0
-        elif state == "negative":
-            negative[action_id, concept_id] = 1.0
-        elif state == "unknown" and not zero_is_negative:
-            negative[action_id, concept_id] = 0.0
-    if torch.any((positive > 0) & (negative > 0)):
-        raise ValueError("a mapping cannot be both positive and negative")
-    return positive, negative, confidence
-
-
 def build_parent_support(
     support: torch.Tensor, concept_to_parent: torch.Tensor, num_parents: int,
 ) -> torch.Tensor:

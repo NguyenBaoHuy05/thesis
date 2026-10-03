@@ -8,9 +8,7 @@ num_classes: 120
 num_concepts: 102
 concept_csv: ./concepts/ntu_action_concept_v2_4.csv
 metadata_csv: ./concepts/ntu_concept_metadata_v2_4.csv
-labels_csv: ./concepts/ntu_action_concept_v2_4_labels.csv
 zero_is_negative: true
-hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_4.csv
 weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
 
 train_feeder_args:
