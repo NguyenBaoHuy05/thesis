@@ -268,6 +268,16 @@ class ConceptDecoderV3Tests(unittest.TestCase):
                     self.assertEqual(config["stage2_loss_weights"]["graph"], 0.10)
                     self.assertEqual(config["stage2_loss_weights"]["hierarchy"], 0.0)
 
+    def test_main_config_is_standalone_v3_e(self) -> None:
+        main = load_config("config/train/HCG_NS_SkateFormer_ntu120_csub.yaml")
+        v3_e = load_config("config/train/ablation_ntu120_csub_v31/V3_E.yaml")
+
+        self.assertNotIn("base_config", main)
+        self.assertEqual(main["work_dir"], "./work_dir/hcg_ns/main_ntu120_csub")
+        for key, value in v3_e.items():
+            if key != "work_dir":
+                self.assertEqual(main[key], value, key)
+
 
 if __name__ == "__main__":
     unittest.main()

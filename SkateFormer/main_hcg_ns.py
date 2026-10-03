@@ -273,7 +273,7 @@ def multilabel_metrics(probabilities: np.ndarray, targets: np.ndarray,
 
 @torch.no_grad()
 def evaluate(model, loader, device, dump_path: Path | None = None,
-             detailed: bool = False, concept_thresholds: np.ndarray | None = None) -> dict[str, Any]:
+             detailed: bool = False) -> dict[str, Any]:
     model.eval()
     scores, labels, concept_probs, parent_probs = [], [], [], []
     parent_for_child = []
@@ -306,7 +306,7 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
     concept_metric = multilabel_metrics(
         concept_array,
         concept_target_array,
-        threshold=0.5 if concept_thresholds is None else concept_thresholds,
+        threshold=0.5,
     )
     parent_metric = multilabel_metrics(parent_array, parent_target_array, threshold=0.5)
     result: dict[str, Any] = {

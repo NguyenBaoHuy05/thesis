@@ -111,10 +111,10 @@ def build(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--actions", default="concepts/ntu_action_concept_v2_3.csv")
+    parser.add_argument("--actions", default="concepts/ntu_action_concept_v2_4.csv")
     parser.add_argument(
         "--output",
-        default="concepts/ntu_hard_negative_pairs_v2_3_candidates.csv",
+        default="concepts/ntu_hard_negative_pairs_v2_4_candidates.csv",
     )
     parser.add_argument("--min-shared", type=int, default=2)
     parser.add_argument("--min-jaccard", type=float, default=0.30)

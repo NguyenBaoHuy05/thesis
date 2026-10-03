@@ -37,10 +37,10 @@ def audit(concept_csv: Path, metadata_csv: Path, num_classes: int, num_concepts:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--concept-csv", default="concepts/ntu_action_concept_v2.csv")
-    parser.add_argument("--metadata-csv", default="concepts/ntu_concept_metadata_v2.csv")
-    parser.add_argument("--num-classes", type=int, default=60)
-    parser.add_argument("--num-concepts", type=int, default=78)
+    parser.add_argument("--concept-csv", default="concepts/ntu_action_concept_v2_4.csv")
+    parser.add_argument("--metadata-csv", default="concepts/ntu_concept_metadata_v2_4.csv")
+    parser.add_argument("--num-classes", type=int, default=120)
+    parser.add_argument("--num-concepts", type=int, default=102)
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
     result = audit(Path(args.concept_csv), Path(args.metadata_csv), args.num_classes, args.num_concepts)

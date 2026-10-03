@@ -7,8 +7,8 @@ preprocessing as ``main_hcg_ns.py``.  It loads a full checkpoint such as
 Example (run from the SkateFormer repository root)::
 
     python eval_hcg_concepts.py \
-        --config config/train/ablation_ntu120_csub_v31/V3_C.yaml \
-        --checkpoint work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_C/final_model.pt
+        --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
+        --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
 
 The evaluator writes ``concept_metrics.json`` and
 ``concept_metrics_per_concept.csv`` next to the checkpoint unless

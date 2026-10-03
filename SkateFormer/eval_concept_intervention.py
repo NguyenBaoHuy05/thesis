@@ -17,8 +17,8 @@ bottleneck and whether the learned rules are faithful to the ontology:
 Example (run from the SkateFormer repository root)::
 
     python eval_concept_intervention.py \
-        --config config/train/ablation_ntu120_csub_v31/V3_C.yaml \
-        --checkpoint work_dir/hcg_ns/ablation_ntu120_csub_v31/V3_C/final_model.pt
+        --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
+        --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
 
 Writes ``intervention_metrics.json`` and ``intervention_per_concept.csv`` next
 to the checkpoint unless ``--output-dir`` is supplied.

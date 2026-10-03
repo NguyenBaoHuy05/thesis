@@ -196,9 +196,23 @@ with torch.no_grad():
 The `skateformer/` package is a packaging layer only: `skateformer/modeling_skateformer.py`
 keeps the module and parameter names of `model/SkateFormer.py` unchanged, so the released
 `.pt` files load into it as-is and weights pulled from the Hub load back into the training
-code in this repository. `main.py` and everything under `model/` are untouched.
+code in this repository. The original `main.py` and `model/SkateFormer.py` entry points
+remain compatible with the released checkpoints.
 
 ## Training
+
+### Main HCG-NS model (NTU120 CSub)
+
+The selected thesis model is the standalone V3-E configuration. It combines the
+adaptive multi-scale concept decoder with fixed parent-concept graph regularization:
+
+```bash
+python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
+```
+
+The production ontology is the `v2_4` set under `concepts/`. Earlier V3 configs are
+kept only in `config/train/ablation_ntu120_csub_v31/` to reproduce the ablation table.
+
 ```bash
 # Download code
 git clone https://github.com/KAIST-VICLab/SkateFormer

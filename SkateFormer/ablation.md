@@ -53,23 +53,21 @@ SkateFormer NTU120-CSub và official CSub train/test split:
 | V3-B | legacy noisy-OR | per-concept multi-scale | bật |
 | V3-C | adaptive MIL | per-concept multi-scale | bật |
 | V3-D | adaptive MIL | per-concept multi-scale | tắt |
+| V3-E | adaptive MIL | per-concept multi-scale + graph regularizer | bật |
 
 Các run dùng cùng seed, loss weights, stage schedule và final-epoch protocol;
 chưa ghi kết quả cho đến khi có môi trường PyTorch cùng dữ liệu/checkpoint
 NTU120-CSub. `V3-D` chỉ chạy sau khi `V3-C` hoàn tất.
 
-Chạy toàn bộ ma trận theo đúng thứ tự:
+Chạy mô hình chính đã chọn (V3-E):
 
 ```bash
-python scripts/train_ntu120_csub_v31.py
+python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
 ```
 
-Script tự bỏ qua run đã có `final_model.pt`, ghi log riêng và dừng ngay
-khi một run lỗi. Có thể chạy riêng một phần ma trận, kiểm tra lệnh hoặc
-train lại bằng:
+Các config V3 cũ được giữ để tái lập ablation. Ví dụ:
 
 ```bash
-python scripts/train_ntu120_csub_v31.py --runs V3_A V3_B V3_C
-python scripts/train_ntu120_csub_v31.py --dry-run
-python scripts/train_ntu120_csub_v31.py --runs V3_C --force
+python main_hcg_ns.py --config config/train/ablation_ntu120_csub_v31/V3_C.yaml
+python main_hcg_ns.py --config config/train/ablation_ntu120_csub_v31/V3_E.yaml
 ```

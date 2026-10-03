@@ -1,46 +1,48 @@
-# HCG-NS-SkateFormer-RF v2.4: hierarchical, unary, relation-free training.
-# Protocol: use the complete official training split, then evaluate once on
-# the official test split. No validation split is created or used.
+# Main HCG-NS model: selected from the V3 ablation series.
+#
+# This is the standalone, fully resolved V3-E configuration.  It keeps the
+# adaptive multi-scale concept decoder from V3-C and adds the fixed
+# parent-concept graph regularizer.  Historical V3 configs remain under
+# ablation_ntu120_csub_v31 for experiment reproducibility.
 seed: 1
 device: [0]
 num_worker: 0
-work_dir: ./work_dir/hcg_ns/new/ntu120_csub_joint_v24_core102
 num_classes: 120
-# 102 concepts: v2.3 base (88) plus 14 NTU120 candidates selected for
-# discriminating the closest action pairs; IDs are contiguous and preserved.
-
 num_concepts: 102
+
 concept_csv: ./concepts/ntu_action_concept_v2_4.csv
 metadata_csv: ./concepts/ntu_concept_metadata_v2_4.csv
 labels_csv: ./concepts/ntu_action_concept_v2_4_labels.csv
-zero_is_negative: true
 hierarchy_csv: ./concepts/ntu_concept_hierarchy_v2_4.csv
+zero_is_negative: true
+
 weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
+work_dir: ./work_dir/hcg_ns/main_ntu120_csub
 
 train_feeder_args:
   data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
   split: train
   data_type: j
-  debug: False
+  debug: false
   window_size: 64
   p_interval: [0.5, 1]
   aug_method: a123489
   intra_p: 0.5
   inter_p: 0.2
   thres: 64
-  uniform: True
-  partition: True
+  uniform: true
+  partition: true
 
 test_feeder_args:
   data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
   split: test
   data_type: j
-  debug: False
+  debug: false
   window_size: 64
   p_interval: [0.95]
   thres: 64
-  uniform: True
-  partition: True
+  uniform: true
+  partition: true
 
 model_args:
   num_people: 2
@@ -49,42 +51,34 @@ model_args:
   num_heads: 32
   attn_drop: 0.5
   head_drop: 0.0
-  rel: True
+  rel: true
   drop_path: 0.2
   type_1_size: [8, 8]
   type_2_size: [8, 12]
   type_3_size: [8, 8]
   type_4_size: [8, 12]
   mlp_ratio: 4.0
-  index_t: True
+  index_t: true
 
 prototype_args:
-  multi_scale: False
-  temporal_pooling: legacy_noisy_or
-  scale_fusion: shared
+  multi_scale: true
   pyramid_levels: [2, 3]
-  interaction_reasoning: True
-  # Region pooling: body-region concepts (hand/arm, leg/foot, hip/torso, head)
-  # attend only to the joints of their parent region instead of all tokens.
-  # Requires the partitioned 24-joint layout (feeder partition: True).
-  region_pooling: False
-  # Motion stream: per-joint velocity/acceleration at the full frame rate,
-  # fused (zero-initialised) into the final backbone tokens.
-  motion_branch: False
+  temporal_pooling: adaptive_mil
+  scale_fusion: per_concept
+  interaction_reasoning: true
+  region_pooling: false
+  motion_branch: false
   motion_hidden_dim: 64
-  # Scope-logit fusion: "fixed" = legacy 0.25 * raw logits (unbounded);
-  # "bounded" = learnable gate * tanh(scope), limited by scope_scale.
-  # The scope term stays in raw-logit units and does not use temperature.
   scope_fusion: bounded
   scope_scale: 0.25
-# Parent remains an independent auxiliary branch and can contribute directly
-# to symbolic action scores.
+  parent_enabled: true
+
 parent_weight: 0.35
+residual_action_head: false
+residual_action_weight: 0.1
 action_logit_scale: 2.0
 concept_score_mode: logit
 concept_idf_power: 1.0
-residual_action_head: false
-residual_action_weight: 0.1
 
 batch_size: 64
 test_batch_size: 32
@@ -101,39 +95,42 @@ hard_negative_pairs_csv: null
 hard_negative_margin: 0.2
 checkpoint_max_missing_ratio: 0.02
 
+# Defaults used outside the explicitly staged training loop.
 loss_weights:
   weak_concept: 0.25
   weak_positive: 1.0
   weak_negative: 0.25
   parent: 0.25
-  hierarchy: 0.10
+  hierarchy: 0.0
+  graph: 0.10
   density: 0.05
-  hard_negative: 0.00
+  hard_negative: 0.0
   sparse: 0.001
   center: 0.05
 
-# Stage-specific profiles. Stage 1 is deliberately parent-first and does not
-# apply action-level hard-negative pressure before the hierarchy is grounded.
+# Ground parent concepts first; the graph teacher is not used yet.
 stage1_loss_weights:
   weak_concept: 0.10
   weak_positive: 0.25
-  weak_negative: 0.00
-  parent: 1.00
+  weak_negative: 0.0
+  parent: 1.0
   hierarchy: 0.50
+  graph: 0.0
   density: 0.02
-  hard_negative: 0.00
+  hard_negative: 0.0
   sparse: 0.001
   center: 0.10
 
-# Stage 2 restores the full unary-concept and symbolic-composition objective.
+# Then regularize child concepts with the fixed parent-concept graph.
 stage2_loss_weights:
   weak_concept: 0.25
-  weak_positive: 1.00
+  weak_positive: 1.0
   weak_negative: 0.25
   parent: 0.25
-  hierarchy: 0.10
+  hierarchy: 0.0
+  graph: 0.10
   density: 0.05
-  hard_negative: 0.00
+  hard_negative: 0.0
   sparse: 0.001
   center: 0.05
 

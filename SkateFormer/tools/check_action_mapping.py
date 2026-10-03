@@ -53,7 +53,7 @@ def normalize(value: str) -> str:
     return CSV_ALIASES.get(value, value)
 
 
-def check_mapping(csv_path: Path, label_set: str = "ntu60") -> dict:
+def check_mapping(csv_path: Path, label_set: str = "ntu120") -> dict:
     sys.path.insert(0, str(csv_path.parents[1]))
     from skateformer.labels import LABEL_SETS
 
@@ -90,7 +90,7 @@ def check_mapping(csv_path: Path, label_set: str = "ntu60") -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--concept-csv", required=True)
-    parser.add_argument("--label-set", default="ntu60")
+    parser.add_argument("--label-set", default="ntu120")
     args = parser.parse_args()
     check_mapping(Path(args.concept_csv), args.label_set)
 
