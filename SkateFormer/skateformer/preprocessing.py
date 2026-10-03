@@ -88,8 +88,8 @@ def crop_resize(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Deterministic centre-crop + linear resize to ``window`` frames.
 
-    Mirrors ``tools.valid_crop_resize`` with a single-element ``p_interval`` (the setting
-    every `config/test/*.yaml` uses).
+    Mirrors ``tools.valid_crop_resize`` with a single-element ``p_interval`` (the
+    deterministic evaluation setting used by the main HCG-NS config).
 
     Args:
         data: ``[C, T, V, M]`` skeleton sequence.

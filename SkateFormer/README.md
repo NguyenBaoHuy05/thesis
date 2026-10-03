@@ -213,37 +213,16 @@ python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
 The production ontology is the `v2_4` set under `concepts/`. Earlier V3 configs are
 kept only in `config/train/ablation_ntu120_csub_v31/` to reproduce the ablation table.
 
+## Evaluation
+
 ```bash
-# Download code
-git clone https://github.com/KAIST-VICLab/SkateFormer
-cd SkateFormer
+python eval_hcg_concepts.py \
+  --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
+  --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
 
-# Train SkateFormer on NTU RGB+D X-Sub60 dataset (joint modality)
-python main.py --config ./config/train/ntu_cs/SkateFormer_j.yaml
-
-# Train SkateFormer on NTU RGB+D X-Sub60 dataset (bone modality)
-python main.py --config ./config/train/ntu_cs/SkateFormer_b.yaml
-
-# Train SkateFormer on NTU-Inter X-View60 dataset (joint modality)
-python main.py --config ./config/train/ntu_cv_inter/SkateFormer_j.yaml
-
-# Train SkateFormer on NTU-Inter 120 X-Set120 dataset (joint modality)
-python main.py --config ./config/train/ntu120_cset_inter/SkateFormer_j.yaml 
-
-# Train SkateFormer on NW-UCLA dataset (joint modality)
-python main.py --config ./config/train/nw_ucla/SkateFormer_j.yaml
-```
-
-## Testing
-```bash
-# Test SkateFormer on NTU RGB+D X-View60 dataset (joint modality)
-python main.py --config ./config/test/ntu_cv/SkateFormer_j.yaml
-
-# Test SkateFormer on NTU RGB+D 120 X-Sub120 dataset (joint modality)
-python main.py --config ./config/test/ntu120_csub/SkateFormer_j.yaml
-
-# Test SkateFormer on NW-UCLA dataset (bone modality)
-python main.py --config ./config/test/nw_ucla/SkateFormer_b.yaml
+python eval_concept_intervention.py \
+  --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
+  --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
 ```
 
 ## Results
