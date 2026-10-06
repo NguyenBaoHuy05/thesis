@@ -86,13 +86,13 @@ class AdaptiveTemporalMILPool(nn.Module):
 
 
 class ConceptPrototypeDecoder(nn.Module):
-    """Convert SkateFormer feature maps into temporally grounded concepts.
+    """Convert SkateFormer feature maps into scope-routed concept evidence.
 
-    The default path is checkpoint-compatible with the original decoder. An
-    optional multi-scale path fuses the last two backbone stages so temporal
-    concepts retain a higher-resolution signal. Interaction concepts can use a
-    small person-pair branch while ordinary concepts continue to use token
-    cosine similarity.
+    Pose features ground spatial/context concepts, while first-order temporal
+    differences ground temporal concepts.  Both paths share the concept
+    prototype space and may fuse several backbone stages. Interaction concepts
+    can use a small person-pair branch while ordinary concepts continue to use
+    token cosine similarity.
     """
 
     def __init__(
@@ -107,6 +107,7 @@ class ConceptPrototypeDecoder(nn.Module):
         scale_fusion: str = "shared",
         num_people: int = 1,
         num_points: int | None = None,
+        temporal_concepts: Iterable[int] | None = None,
         interaction_concepts: Iterable[int] | None = None,
         center_loss_mode: str = "legacy",
         center_positive_margin: float = 0.35,
@@ -139,6 +140,14 @@ class ConceptPrototypeDecoder(nn.Module):
         )
         self.num_people = int(num_people)
         self.num_points = int(num_points) if num_points is not None else None
+        temporal_ids = tuple(sorted(set(int(i) for i in (temporal_concepts or []))))
+        if any(i < 0 or i >= self.num_concepts for i in temporal_ids):
+            raise ValueError("temporal concept ids must be inside the concept vocabulary")
+        temporal_mask = torch.zeros(self.num_concepts, dtype=torch.bool)
+        if temporal_ids:
+            temporal_mask[list(temporal_ids)] = True
+        self.temporal_concepts = temporal_ids
+        self.register_buffer("temporal_mask", temporal_mask, persistent=False)
         self.interaction_concepts = tuple(
             sorted(set(int(i) for i in (interaction_concepts or [])))
         )
@@ -191,8 +200,11 @@ class ConceptPrototypeDecoder(nn.Module):
                     "pyramid_dims and pyramid_levels must have the same non-zero length"
                 )
             self.pyramid_levels = levels
-            self.scale_projectors = nn.ModuleList(
+            self.pose_scale_projectors = nn.ModuleList(
                 [self._make_projector(dim, feature_dim) for dim in dims]
+            )
+            self.motion_scale_projectors = nn.ModuleList(
+                [self._make_projector(dim, feature_dim, bias=False) for dim in dims]
             )
             scale_shape = (
                 (len(levels), num_concepts)
@@ -201,7 +213,10 @@ class ConceptPrototypeDecoder(nn.Module):
             )
             self.scale_logits = nn.Parameter(torch.zeros(scale_shape))
         else:
-            self.projector = self._make_projector(feature_dim, feature_dim)
+            self.pose_projector = self._make_projector(feature_dim, feature_dim)
+            self.motion_projector = self._make_projector(
+                feature_dim, feature_dim, bias=False
+            )
 
         self.centers = nn.Parameter(torch.empty(num_concepts, feature_dim))
         nn.init.normal_(self.centers, std=0.02)
@@ -215,10 +230,12 @@ class ConceptPrototypeDecoder(nn.Module):
             )
 
     @staticmethod
-    def _make_projector(input_dim: int, output_dim: int) -> nn.Sequential:
+    def _make_projector(
+        input_dim: int, output_dim: int, bias: bool = True
+    ) -> nn.Sequential:
         return nn.Sequential(
             nn.LayerNorm(input_dim),
-            nn.Linear(input_dim, output_dim),
+            nn.Linear(input_dim, output_dim, bias=bias),
         )
 
     @property
@@ -254,6 +271,39 @@ class ConceptPrototypeDecoder(nn.Module):
         time_logits = (joint_attention * similarity).sum(dim=2)
         return z, cosine_similarity, time_logits
 
+    @staticmethod
+    def _motion_feature_map(feature_map: torch.Tensor) -> torch.Tensor:
+        """Return first-order temporal differences without changing length."""
+        if feature_map.ndim != 4:
+            raise ValueError(
+                f"feature_map must be [B,C,T,V], got {tuple(feature_map.shape)}"
+            )
+        if feature_map.shape[2] <= 1:
+            return torch.zeros_like(feature_map)
+        differences = feature_map[:, :, 1:] - feature_map[:, :, :-1]
+        # Replicate the first valid difference at t=0 so adaptive max/LSE
+        # pooling cannot learn a spurious special "zero-motion first frame".
+        return torch.cat((differences[:, :, :1], differences), dim=2)
+
+    def _project_scope_routed_tokens(
+        self,
+        feature_map: torch.Tensor,
+        pose_projector: nn.Module,
+        motion_projector: nn.Module,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Select pose or motion prototype evidence from immutable scope metadata."""
+        pose_z, pose_cosine, pose_logits = self._project_tokens(
+            feature_map, pose_projector
+        )
+        _, motion_cosine, motion_logits = self._project_tokens(
+            self._motion_feature_map(feature_map), motion_projector
+        )
+        mask_logits = self.temporal_mask.view(1, 1, -1)
+        mask_cosine = self.temporal_mask.view(1, 1, 1, -1)
+        time_logits = torch.where(mask_logits, motion_logits, pose_logits)
+        cosine_similarity = torch.where(mask_cosine, motion_cosine, pose_cosine)
+        return pose_z, cosine_similarity, time_logits
+
     def _interaction_logits(
         self, z: torch.Tensor, centers: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor] | None:
@@ -287,10 +337,14 @@ class ConceptPrototypeDecoder(nn.Module):
         ).view(1, -1, 1)
         mass = safe_probs.sum(dim=1).clamp_min(1e-6)
         if self.adaptive_mil_pool is not None:
-            sequence_probs = self.adaptive_mil_pool(time_logits)
+            sequence_logits = self.adaptive_mil_pool.pool_logits(time_logits)
+            sequence_probs = torch.sigmoid(sequence_logits)
         else:
             sequence_probs = 1.0 - torch.exp(
                 torch.log1p(-safe_probs).sum(dim=1)
+            )
+            sequence_logits = torch.logit(
+                sequence_probs.clamp(1e-6, 1.0 - 1e-6)
             )
         expected_time = (safe_probs * time_index).sum(dim=1) / mass
         peak_attention = torch.softmax(time_logits, dim=1)
@@ -299,6 +353,7 @@ class ConceptPrototypeDecoder(nn.Module):
         rising = F.relu(safe_probs[:, 1:] - safe_probs[:, :-1]).sum(dim=1)
         falling = F.relu(safe_probs[:, :-1] - safe_probs[:, 1:]).sum(dim=1)
         return {
+            "sequence_logits": sequence_logits,
             "sequence_probs": sequence_probs,
             "expected_time": expected_time,
             "peak_time": peak_time,
@@ -316,10 +371,16 @@ class ConceptPrototypeDecoder(nn.Module):
             if not isinstance(feature_map, (list, tuple)):
                 raise ValueError("multi-scale decoder expects a feature-map pyramid")
             selected = []
-            for level, projector in zip(self.pyramid_levels, self.scale_projectors):
+            for level, pose_projector, motion_projector in zip(
+                self.pyramid_levels,
+                self.pose_scale_projectors,
+                self.motion_scale_projectors,
+            ):
                 if level >= len(feature_map) or level < -len(feature_map):
                     raise ValueError(f"pyramid level {level} is unavailable")
-                selected.append(self._project_tokens(feature_map[level], projector))
+                selected.append(self._project_scope_routed_tokens(
+                    feature_map[level], pose_projector, motion_projector
+                ))
             target_steps = max(item[2].shape[1] for item in selected)
             fused_logits = []
             for _, _, logits in selected:
@@ -342,18 +403,18 @@ class ConceptPrototypeDecoder(nn.Module):
                     weight * logits
                     for weight, logits in zip(scale_weights, fused_logits)
                 )
-            final_z, final_cosine, _ = selected[-1]
+            final_pose_z, final_cosine, _ = selected[-1]
         else:
             if isinstance(feature_map, (list, tuple)):
                 feature_map = feature_map[-1]
-            final_z, final_cosine, time_logits = self._project_tokens(
-                feature_map, self.projector
+            final_pose_z, final_cosine, time_logits = self._project_scope_routed_tokens(
+                feature_map, self.pose_projector, self.motion_projector
             )
 
         # Interaction concepts use a person-pair evidence signal. The signal is
         # inserted only for configured interaction concept ids; all other
         # concepts remain token-grounded.
-        interaction = self._interaction_logits(final_z, centers)
+        interaction = self._interaction_logits(final_pose_z, centers)
         grounding_cosine = final_cosine
         if interaction is not None and self.interaction_concepts:
             pair_cosine, interaction_logits = interaction
@@ -379,6 +440,7 @@ class ConceptPrototypeDecoder(nn.Module):
         return {
             "time_logits": time_logits,
             "time_probs": time_probs,
+            "sequence_logits": stats["sequence_logits"],
             "sequence_probs": stats["sequence_probs"],
             "expected_time": stats["expected_time"],
             "peak_time": stats["peak_time"],

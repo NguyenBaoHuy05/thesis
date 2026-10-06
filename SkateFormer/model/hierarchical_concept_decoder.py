@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Sequence
 
-import math
-
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -14,15 +12,70 @@ from model.concept_prototypes import ConceptPrototypeDecoder
 from model.concept_ontology import build_parent_index
 
 
+class OntologyMaskedConceptRefiner(nn.Module):
+    """Refine sequence logits without mixing unrelated ontology groups.
+
+    Each parent and its children form an independent residual MLP block.  This
+    is equivalent to a block-diagonal mask over concepts: evidence can be
+    refined among siblings, but it cannot leak between unrelated body-part or
+    temporal groups.  The per-concept residual scale starts at zero, making the
+    module an exact identity at initialization.
+    """
+
+    def __init__(
+        self,
+        num_concepts: int,
+        concept_to_parent: torch.Tensor,
+        num_parents: int,
+        hidden_dim: int = 128,
+    ):
+        super().__init__()
+        if int(hidden_dim) <= 0:
+            raise ValueError("refiner hidden_dim must be positive")
+        self.num_concepts = int(num_concepts)
+        self.num_parents = int(num_parents)
+        self.hidden_dim = int(hidden_dim)
+        self.blocks = nn.ModuleDict()
+        for parent_id in range(self.num_parents):
+            concept_ids = torch.nonzero(
+                concept_to_parent == parent_id, as_tuple=False
+            ).flatten()
+            if concept_ids.numel() == 0:
+                continue
+            self.register_buffer(
+                f"group_ids_{parent_id}", concept_ids, persistent=False
+            )
+            width = int(concept_ids.numel())
+            self.blocks[str(parent_id)] = nn.Sequential(
+                nn.Linear(width, self.hidden_dim),
+                nn.ReLU(),
+                nn.Linear(self.hidden_dim, width),
+            )
+        self.alpha = nn.Parameter(torch.zeros(self.num_concepts))
+
+    @property
+    def residual_scale(self) -> torch.Tensor:
+        return torch.tanh(self.alpha)
+
+    def forward(self, logits: torch.Tensor) -> torch.Tensor:
+        if logits.ndim != 2 or logits.shape[1] != self.num_concepts:
+            raise ValueError("concept logits must have shape [B, num_concepts]")
+        delta = torch.zeros_like(logits)
+        for parent_id, block in self.blocks.items():
+            concept_ids = getattr(self, f"group_ids_{parent_id}")
+            group_delta = block(logits.index_select(1, concept_ids))
+            delta = delta.index_copy(1, concept_ids, group_delta)
+        return logits + self.residual_scale.unsqueeze(0) * delta
+
+
 class HierarchicalConceptDecoder(nn.Module):
     """Ground concepts and parent groups without pairwise relations.
 
-    The base prototype decoder still produces temporally grounded unary
-    evidence. Separate scope heads and parent heads read the final backbone
-    representation. Parent predictions are auxiliary supervision: they train
-    the hierarchy head and may regularize concepts through fixed ontology
-    edges, but they never modify concept probabilities or action scores at
-    inference time.
+    Scope metadata routes spatial/context concepts through a pose projector and
+    temporal concepts through a motion-difference projector.  Adaptive MIL
+    pools the resulting per-time evidence, then an ontology-masked residual
+    refiner models sibling co-occurrence. Parent predictions remain auxiliary
+    supervision and never modify concept probabilities at inference time.
     """
 
     def __init__(
@@ -34,16 +87,14 @@ class HierarchicalConceptDecoder(nn.Module):
         multi_scale: bool = False,
         pyramid_dims: Sequence[int] | None = None,
         pyramid_levels: Iterable[int] | None = None,
-        temporal_pooling: str = "legacy_noisy_or",
+        temporal_pooling: str = "adaptive_mil",
         scale_fusion: str = "shared",
         num_people: int = 1,
         num_points: int | None = None,
         interaction_reasoning: bool = True,
         parent_enabled: bool = True,
-        concept_classifier: str = "prototype",
-        scope_enabled: bool = True,
-        scope_fusion: str = "fixed",
-        scope_scale: float = 0.25,
+        refiner_enabled: bool = True,
+        refiner_hidden_dim: int = 128,
         center_loss_mode: str = "legacy",
         center_positive_margin: float = 0.35,
         center_gap_margin: float = 0.30,
@@ -66,16 +117,7 @@ class HierarchicalConceptDecoder(nn.Module):
         self.num_concepts = int(num_concepts)
         self.num_parents = len(parent_names)
         self.parent_enabled = bool(parent_enabled)
-        self.concept_classifier = str(concept_classifier)
-        if self.concept_classifier not in {"prototype", "scope"}:
-            raise ValueError(
-                "concept_classifier must be 'prototype' or 'scope'"
-            )
-        self.scope_enabled = bool(scope_enabled)
-        if self.concept_classifier == "scope" and not self.scope_enabled:
-            raise ValueError(
-                "scope_enabled must be true when concept_classifier='scope'"
-            )
+        self.refiner_enabled = bool(refiner_enabled)
         self.register_buffer("concept_to_parent", concept_to_parent)
         self.register_buffer(
             "parent_child_count",
@@ -85,58 +127,57 @@ class HierarchicalConceptDecoder(nn.Module):
         interaction_concepts = [
             int(row["concept_id"])
             for row in metadata
-            if row.get("concept_name", "") in {
-                "context_multi_person",
-                "context_person_person_interaction",
-                "context_target_person",
-                "interaction_two_person",
-            }
-        ]
-        self.base = (
-            ConceptPrototypeDecoder(
-                feature_dim=feature_dim,
-                num_concepts=num_concepts,
-                temperature=temperature,
-                multi_scale=multi_scale,
-                pyramid_dims=pyramid_dims,
-                pyramid_levels=pyramid_levels,
-                temporal_pooling=temporal_pooling,
-                scale_fusion=scale_fusion,
-                num_people=num_people,
-                num_points=num_points,
-                interaction_concepts=(
-                    interaction_concepts if interaction_reasoning else []
-                ),
-                center_loss_mode=center_loss_mode,
-                center_positive_margin=center_positive_margin,
-                center_gap_margin=center_gap_margin,
-                center_gap_topk=center_gap_topk,
-                center_negative_margin=center_negative_margin,
-                center_negative_weight=center_negative_weight,
-                center_negative_topk=center_negative_topk,
-                center_separation_margin=center_separation_margin,
-                center_separation_topk=center_separation_topk,
+            if (
+                row.get("scope", "").strip().lower() == "context"
+                or row.get("concept_name", "") in {
+                    "context_multi_person",
+                    "context_person_person_interaction",
+                    "context_target_person",
+                    "interaction_two_person",
+                }
             )
-            if self.concept_classifier == "prototype"
-            else None
+        ]
+        scope_ids: dict[str, list[int]] = {}
+        for concept_id, row in enumerate(metadata):
+            scope = row.get("scope", "spatial").strip().lower() or "spatial"
+            scope_ids.setdefault(scope, []).append(concept_id)
+        self.scope_ids = {name: tuple(ids) for name, ids in scope_ids.items()}
+        temporal_concepts = self.scope_ids.get("temporal", ())
+        self.base = ConceptPrototypeDecoder(
+            feature_dim=feature_dim,
+            num_concepts=num_concepts,
+            temperature=temperature,
+            multi_scale=multi_scale,
+            pyramid_dims=pyramid_dims,
+            pyramid_levels=pyramid_levels,
+            temporal_pooling=temporal_pooling,
+            scale_fusion=scale_fusion,
+            num_people=num_people,
+            num_points=num_points,
+            temporal_concepts=temporal_concepts,
+            interaction_concepts=(
+                interaction_concepts if interaction_reasoning else []
+            ),
+            center_loss_mode=center_loss_mode,
+            center_positive_margin=center_positive_margin,
+            center_gap_margin=center_gap_margin,
+            center_gap_topk=center_gap_topk,
+            center_negative_margin=center_negative_margin,
+            center_negative_weight=center_negative_weight,
+            center_negative_topk=center_negative_topk,
+            center_separation_margin=center_separation_margin,
+            center_separation_topk=center_separation_topk,
         )
-        # How the time-constant scope logits are added to the per-time
-        # prototype logits. Fixed mode is legacy and unbounded. Bounded mode
-        # keeps the scope contribution in raw-logit units: scope_scale is the
-        # hard maximum and the per-concept gate remains learnable.
-        if scope_fusion not in {"fixed", "bounded"}:
-            raise ValueError("scope_fusion must be 'fixed' or 'bounded'")
-        if not 0.0 < float(scope_scale) < 1.0:
-            raise ValueError("scope_scale must be in (0, 1)")
-        self.scope_fusion = scope_fusion
-        self.scope_scale = float(scope_scale)
-        if (
-            self.scope_enabled
-            and scope_fusion == "bounded"
-            and self.concept_classifier == "prototype"
-        ):
-            gate_logit = math.log(self.scope_scale / (1.0 - self.scope_scale))
-            self.scope_gate_raw = nn.Parameter(torch.full((self.num_concepts,), gate_logit))
+        self.concept_refiner: nn.Module
+        if self.refiner_enabled:
+            self.concept_refiner = OntologyMaskedConceptRefiner(
+                num_concepts=self.num_concepts,
+                concept_to_parent=concept_to_parent,
+                num_parents=self.num_parents,
+                hidden_dim=refiner_hidden_dim,
+            )
+        else:
+            self.concept_refiner = nn.Identity()
         parent_level_ids: dict[int, list[int]] = {}
         for parent_id, parent_name in enumerate(self.parent_names):
             parent_level_ids.setdefault(int(parent_levels[parent_name]), []).append(parent_id)
@@ -152,36 +193,19 @@ class HierarchicalConceptDecoder(nn.Module):
             if self.parent_enabled else {}
         )
 
-        scope_ids: dict[str, list[int]] = {}
-        for concept_id, row in enumerate(metadata):
-            scope_ids.setdefault(row.get("scope", "spatial"), []).append(concept_id)
-        self.scope_ids = scope_ids
-        self.scope_heads = nn.ModuleDict(
-            {
-                scope: nn.Sequential(
-                    nn.LayerNorm(feature_dim),
-                    nn.Linear(feature_dim, len(concept_ids)),
-                )
-                for scope, concept_ids in sorted(scope_ids.items())
-            }
-            if self.scope_enabled else {}
-        )
-
     @property
     def multi_scale(self) -> bool:
-        return self.base is not None and self.base.multi_scale
+        return self.base.multi_scale
 
     @property
-    def temperature(self) -> torch.Tensor | None:
-        return self.base.temperature if self.base is not None else None
+    def temperature(self) -> torch.Tensor:
+        return self.base.temperature
 
     @property
-    def centers(self) -> torch.Tensor | None:
-        return self.base.centers if self.base is not None else None
+    def centers(self) -> torch.Tensor:
+        return self.base.centers
 
     def normalized_centers(self) -> torch.Tensor:
-        if self.base is None:
-            raise RuntimeError("scope concept classifier has no prototype centers")
         return self.base.normalized_centers()
 
     def _last_feature_map(
@@ -206,83 +230,32 @@ class HierarchicalConceptDecoder(nn.Module):
             else torch.zeros_like(parent_logits)
         )
         parent_for_child = parent_probs[:, self.concept_to_parent]
-        scope_logits = pooled.new_zeros((pooled.shape[0], self.num_concepts))
-        if self.scope_enabled:
-            for scope, concept_ids in self.scope_ids.items():
-                values = self.scope_heads[scope](pooled)
-                ids = torch.tensor(concept_ids, dtype=torch.long, device=pooled.device)
-                scope_logits[:, ids] = values
-
-        if self.concept_classifier == "scope":
-            # Direct ablation: the scope heads are the complete concept
-            # classifier. There is no prototype, temporal MIL, scale fusion,
-            # or center path in this mode.
-            sequence_probs = torch.sigmoid(scope_logits)
-            zeros = torch.zeros_like(sequence_probs)
-            return {
-                "time_logits": scope_logits.unsqueeze(1),
-                "time_probs": sequence_probs.unsqueeze(1),
-                "sequence_probs": sequence_probs,
-                "expected_time": zeros,
-                "peak_time": zeros,
-                "duration": sequence_probs,
-                "rising_activity": zeros,
-                "falling_activity": zeros,
-                "scale_weights": None,
-                "similarity": None,
-                "cosine_similarity": None,
-                "centers": None,
-                "parent_logits": parent_logits,
-                "parent_probs": parent_probs,
-                "parent_for_child": parent_for_child,
-                "scope_logits": scope_logits,
-                "scope_probs": sequence_probs,
-                "scope_term": scope_logits,
-            }
-
-        if self.base is None:  # pragma: no cover - guarded by classifier enum
-            raise RuntimeError("prototype concept classifier is unavailable")
         base = self.base(feature_output)
-        if not self.scope_enabled:
-            scope_term = torch.zeros_like(scope_logits)
-        elif self.scope_fusion == "bounded":
-            scope_term = (
-                self.scope_scale * torch.sigmoid(self.scope_gate_raw) * torch.tanh(scope_logits)
-            )
-        else:
-            scope_term = self.scope_scale * scope_logits
-        time_logits = base["time_logits"] + scope_term.unsqueeze(1)
-        time_probs = torch.sigmoid(time_logits)
-        temporal_stats = self.base._temporal_statistics(time_probs, time_logits)
+        raw_sequence_logits = base["sequence_logits"]
+        sequence_logits = self.concept_refiner(raw_sequence_logits)
+        sequence_probs = torch.sigmoid(sequence_logits)
         return {
             **base,
-            "time_logits": time_logits,
-            "time_probs": time_probs,
-            **temporal_stats,
+            "raw_sequence_logits": raw_sequence_logits,
+            "raw_sequence_probs": base["sequence_probs"],
+            "sequence_logits": sequence_logits,
+            "sequence_probs": sequence_probs,
             "parent_logits": parent_logits,
             "parent_probs": parent_probs,
             "parent_for_child": parent_for_child,
-            "scope_logits": scope_logits,
-            "scope_probs": (
-                torch.sigmoid(scope_logits)
-                if self.scope_enabled else torch.zeros_like(scope_logits)
-            ),
-            "scope_term": scope_term,
         }
 
     def center_grounding_loss(
         self, cosine_similarity: torch.Tensor | None, action_labels: torch.Tensor,
         support: torch.Tensor,
     ) -> torch.Tensor:
-        if self.base is None:
+        if cosine_similarity is None:
             return support.new_zeros(())
         return self.base.center_grounding_loss(cosine_similarity, action_labels, support)
 
     def center_separation_loss(
         self, support: torch.Tensor | None = None
     ) -> torch.Tensor:
-        if self.base is None:
-            return next(self.scope_heads.parameters()).new_zeros(())
         return self.base.center_separation_loss(support=support)
 
     def parent_graph_loss(

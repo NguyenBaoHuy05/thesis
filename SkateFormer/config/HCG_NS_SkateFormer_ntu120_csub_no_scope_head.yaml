@@ -1,9 +1,0 @@
-# Ablation: remove the scope-head contribution from the concept branch.
-# Everything else is inherited unchanged from the main V3-E experiment so
-# the comparison isolates the effect of scope fusion.
-base_config: HCG_NS_SkateFormer_ntu120_csub.yaml
-
-work_dir: ./work_dir/hcg_ns/ablation_ntu120_csub_no_scope_head
-
-prototype_args:
-  scope_enabled: false

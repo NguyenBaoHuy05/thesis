@@ -118,11 +118,10 @@ class HierarchicalSymbolicDecoder(nn.Module):
         return self.action_logit_scale * concept_score
 
     def concept_loss(
-        self, sequence_probs: torch.Tensor, action_labels: torch.Tensor,
+        self, sequence_logits: torch.Tensor, action_labels: torch.Tensor,
     ) -> torch.Tensor:
         targets = self.support[action_labels]
-        probs = sequence_probs.clamp(1e-6, 1.0 - 1e-6)
-        return F.binary_cross_entropy(probs, targets)
+        return F.binary_cross_entropy_with_logits(sequence_logits, targets)
 
     def parent_loss(
         self, parent_logits: torch.Tensor, action_labels: torch.Tensor,

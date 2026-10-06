@@ -57,8 +57,8 @@ prototype_args:
   temporal_pooling: legacy_noisy_or
   scale_fusion: shared
   interaction_reasoning: true
-  scope_fusion: bounded
-  scope_scale: 0.25
+  refiner_enabled: true
+  refiner_hidden_dim: 128
   parent_enabled: true
 
 residual_action_head: false

@@ -62,12 +62,27 @@ NTU120-CSub. `V3-D` chỉ chạy sau khi `V3-C` hoàn tất.
 Chạy mô hình chính đã chọn (V3-E):
 
 ```bash
-python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
+python main_hcg_ns.py --config config/HCG_NS_SkateFormer_ntu120_csub.yaml
 ```
 
 Các config V3 cũ được giữ để tái lập ablation. Ví dụ:
 
 ```bash
-python main_hcg_ns.py --config config/train/ablation_ntu120_csub_v31/V3_C.yaml
-python main_hcg_ns.py --config config/train/ablation_ntu120_csub_v31/V3_E.yaml
+python main_hcg_ns.py --config config/ablation_ntu120_csub_v31/V3_C.yaml
+python main_hcg_ns.py --config config/ablation_ntu120_csub_v31/V3_E.yaml
 ```
+
+## 17. Scope-routed pose/motion decoder
+
+The active decoder no longer contains a learned `scope_head`. Ontology scope
+metadata is now used for deterministic routing: `spatial` concepts use pose
+features, `temporal` concepts use first-order feature differences, and
+`context` concepts use pose/person-pair evidence when two people are present.
+Adaptive MIL produces sequence logits before an ontology-masked residual
+refiner. The refiner is block-diagonal by parent group and starts as an exact
+identity.
+
+The removed scope-head ablation configs and checkpoints from that decoder are
+not architecture-compatible with this version. The V3.1 configs now describe
+pooling/scale ablations under the new pose/motion decoder and must be retrained
+before their results are compared.

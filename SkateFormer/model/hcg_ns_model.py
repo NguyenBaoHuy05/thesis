@@ -43,6 +43,14 @@ class HCGNSSkateFormer(nn.Module):
         self.num_concepts = int(num_concepts)
         metadata = load_ontology_metadata(metadata_csv, num_concepts=num_concepts)
         prototype_args = dict(prototype_args or {})
+        removed_scope_options = {
+            "concept_classifier", "scope_enabled", "scope_fusion", "scope_scale",
+        }.intersection(prototype_args)
+        if removed_scope_options:
+            raise ValueError(
+                "scope-head options were removed; scope metadata now routes pose and "
+                "motion projectors: " + ", ".join(sorted(removed_scope_options))
+            )
         parent_enabled = bool(prototype_args.get("parent_enabled", True))
         all_pyramid_dims = tuple(args.get("channels", (96, 192, 192, 192)))
         pyramid_levels = tuple(prototype_args.get("pyramid_levels", (2, 3)))
@@ -61,19 +69,15 @@ class HCGNSSkateFormer(nn.Module):
             pyramid_dims=pyramid_dims,
             pyramid_levels=pyramid_levels,
             temporal_pooling=str(
-                prototype_args.get("temporal_pooling", "legacy_noisy_or")
+                prototype_args.get("temporal_pooling", "adaptive_mil")
             ),
             scale_fusion=str(prototype_args.get("scale_fusion", "shared")),
             num_people=int(args.get("num_people", 1)),
             num_points=int(args.get("num_points", 0)) or None,
             interaction_reasoning=bool(prototype_args.get("interaction_reasoning", True)),
             parent_enabled=parent_enabled,
-            concept_classifier=str(
-                prototype_args.get("concept_classifier", "prototype")
-            ),
-            scope_enabled=bool(prototype_args.get("scope_enabled", True)),
-            scope_fusion=str(prototype_args.get("scope_fusion", "fixed")),
-            scope_scale=float(prototype_args.get("scope_scale", 0.25)),
+            refiner_enabled=bool(prototype_args.get("refiner_enabled", True)),
+            refiner_hidden_dim=int(prototype_args.get("refiner_hidden_dim", 128)),
             center_loss_mode=str(prototype_args.get("center_loss_mode", "legacy")),
             center_positive_margin=float(
                 prototype_args.get("center_positive_margin", 0.35)
@@ -148,6 +152,9 @@ class HCGNSSkateFormer(nn.Module):
             "action_scores": action_scores,
             "time_logits": concepts["time_logits"],
             "time_probs": concepts["time_probs"],
+            "raw_sequence_logits": concepts["raw_sequence_logits"],
+            "raw_sequence_probs": concepts["raw_sequence_probs"],
+            "sequence_logits": concepts["sequence_logits"],
             "sequence_probs": concepts["sequence_probs"],
             "expected_time": concepts["expected_time"],
             "peak_time": concepts["peak_time"],
@@ -158,9 +165,6 @@ class HCGNSSkateFormer(nn.Module):
             "parent_probs": concepts["parent_probs"],
             "parent_for_child": concepts["parent_for_child"],
             "scale_weights": concepts["scale_weights"],
-            "scope_logits": concepts["scope_logits"],
-            "scope_probs": concepts["scope_probs"],
-            "scope_term": concepts["scope_term"],
             "cosine_similarity": concepts["cosine_similarity"],
             "centers": concepts["centers"],
             "residual_action_scores": residual_scores,
@@ -179,7 +183,9 @@ class HCGNSSkateFormer(nn.Module):
             **(weights or {}),
         }
         action_loss = F.cross_entropy(output["action_scores"], action_labels)
-        concept_loss = self.symbolic.concept_loss(output["sequence_probs"], action_labels)
+        concept_loss = self.symbolic.concept_loss(
+            output["sequence_logits"], action_labels
+        )
         if self.concept_decoder.parent_enabled:
             parent_loss = self.symbolic.parent_loss(
                 output["parent_logits"], action_labels
@@ -342,13 +348,6 @@ class HCGNSSkateFormer(nn.Module):
     def training_diagnostics(self) -> dict[str, Any]:
         """Return scalar decoder diagnostics suitable for per-epoch JSON logs."""
         base = self.concept_decoder.base
-        if base is None:
-            return {
-                "scope_head_parameter_count": float(sum(
-                    parameter.numel()
-                    for parameter in self.concept_decoder.scope_heads.parameters()
-                )),
-            }
         raw_centers = base.centers.detach()
         center_norms = raw_centers.norm(dim=-1)
         centers = base.normalized_centers().detach()
@@ -477,17 +476,15 @@ class HCGNSSkateFormer(nn.Module):
                     f"{name}_max": float(values.max().cpu()),
                 })
 
-        if hasattr(self.concept_decoder, "scope_gate_raw"):
-            effective_scope_scale = (
-                self.concept_decoder.scope_scale
-                * torch.sigmoid(self.concept_decoder.scope_gate_raw.detach())
-            )
+        refiner = self.concept_decoder.concept_refiner
+        if hasattr(refiner, "residual_scale"):
+            residual_scale = refiner.residual_scale.detach()
             diagnostics.update({
-                "scope_effective_scale_mean": float(effective_scope_scale.mean().cpu()),
-                "scope_effective_scale_std": float(
-                    effective_scope_scale.std(unbiased=False).cpu()
+                "refiner_residual_scale_mean": float(residual_scale.mean().cpu()),
+                "refiner_residual_scale_std": float(
+                    residual_scale.std(unbiased=False).cpu()
                 ),
-                "scope_effective_scale_min": float(effective_scope_scale.min().cpu()),
-                "scope_effective_scale_max": float(effective_scope_scale.max().cpu()),
+                "refiner_residual_scale_min": float(residual_scale.min().cpu()),
+                "refiner_residual_scale_max": float(residual_scale.max().cpu()),
             })
         return diagnostics

@@ -11,7 +11,7 @@ num_concepts: 102
 concept_csv: ./concepts/ntu_action_concept_v2_4.csv
 metadata_csv: ./concepts/ntu_concept_metadata_v2_4.csv
 weights: /kaggle/input/datasets/nguyenbaohuy05/skateformer-pretrain/ntu120_CSub/SkateFormer_j.pt
-work_dir: ./work_dir/hcg_ns/main_ntu120_csub
+work_dir: ./work_dir/hcg_ns/main_ntu120_csub_pose_motion_refiner
 
 train_feeder_args:
   data_path: /kaggle/input/datasets/nguyenbaohuy05/ntu120csubfull/NTU120_CSub.npz
@@ -60,8 +60,8 @@ prototype_args:
   temporal_pooling: adaptive_mil
   scale_fusion: per_concept
   interaction_reasoning: true
-  scope_fusion: bounded
-  scope_scale: 0.25
+  refiner_enabled: true
+  refiner_hidden_dim: 128
   parent_enabled: true
   center_loss_mode: pairwise_gap_hard_negative
   center_gap_margin: 0.20

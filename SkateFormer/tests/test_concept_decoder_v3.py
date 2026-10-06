@@ -13,7 +13,11 @@ from main_hcg_ns import (
     scheduled_learning_rate,
 )
 from model.concept_prototypes import AdaptiveTemporalMILPool, ConceptPrototypeDecoder
-from model.hierarchical_concept_decoder import HierarchicalConceptDecoder
+from model.concept_ontology import load_ontology_metadata
+from model.hierarchical_concept_decoder import (
+    HierarchicalConceptDecoder,
+    OntologyMaskedConceptRefiner,
+)
 from model.hierarchical_symbolic_decoder import HierarchicalSymbolicDecoder
 
 
@@ -59,6 +63,80 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         output["sequence_probs"].sum().backward()
         self.assertIsNotNone(decoder.scale_logits.grad)
         self.assertTrue(torch.isfinite(decoder.scale_logits.grad).all())
+
+    def test_scope_metadata_routes_pose_and_motion_projectors(self) -> None:
+        decoder = ConceptPrototypeDecoder(
+            feature_dim=8,
+            num_concepts=2,
+            temporal_concepts=[1],
+            temporal_pooling="adaptive_mil",
+        )
+        features = torch.randn(2, 8, 5, 3)
+        shifted = features + torch.randn(2, 8, 1, 3)
+        original = decoder(features)["time_logits"]
+        translated = decoder(shifted)["time_logits"]
+
+        # A time-constant pose translation changes pose evidence but cancels
+        # exactly in first-order temporal differences.
+        self.assertFalse(torch.allclose(original[:, :, 0], translated[:, :, 0]))
+        self.assertTrue(torch.allclose(
+            original[:, :, 1], translated[:, :, 1], atol=1e-6
+        ))
+        static_pose = torch.randn(2, 8, 1, 3).expand(-1, -1, 5, -1)
+        static_logits = decoder(static_pose)["time_logits"]
+        self.assertTrue(torch.allclose(
+            static_logits[:, :, 1], torch.zeros_like(static_logits[:, :, 1])
+        ))
+
+    def test_ontology_refiner_is_identity_then_stays_inside_parent_groups(self) -> None:
+        refiner = OntologyMaskedConceptRefiner(
+            num_concepts=3,
+            concept_to_parent=torch.tensor([0, 0, 1]),
+            num_parents=2,
+            hidden_dim=4,
+        )
+        logits = torch.randn(2, 3)
+        self.assertTrue(torch.equal(refiner(logits), logits))
+
+        with torch.no_grad():
+            refiner.alpha.fill_(0.5)
+        changed_other_parent = logits.clone()
+        changed_other_parent[:, 2] += 10.0
+        refined = refiner(logits)
+        refined_changed = refiner(changed_other_parent)
+        self.assertTrue(torch.allclose(
+            refined[:, :2], refined_changed[:, :2], atol=1e-6
+        ))
+
+    def test_full_scope_routed_multiscale_decoder_backward(self) -> None:
+        metadata = load_ontology_metadata(
+            "concepts/ntu_concept_metadata_v2_4.csv", num_concepts=102
+        )
+        decoder = HierarchicalConceptDecoder(
+            feature_dim=8,
+            metadata=metadata,
+            num_concepts=102,
+            multi_scale=True,
+            pyramid_dims=(8, 8),
+            pyramid_levels=(0, 1),
+            temporal_pooling="adaptive_mil",
+            scale_fusion="per_concept",
+            num_people=2,
+            num_points=2,
+            interaction_reasoning=True,
+        )
+        output = decoder([
+            torch.randn(2, 8, 6, 4),
+            torch.randn(2, 8, 3, 4),
+        ])
+        self.assertEqual(tuple(output["time_logits"].shape), (2, 6, 102))
+        self.assertEqual(tuple(output["sequence_logits"].shape), (2, 102))
+        self.assertEqual(decoder.base.temporal_mask.sum().item(), 25)
+        self.assertEqual(len(decoder.scope_ids["context"]), 3)
+        output["sequence_logits"].sum().backward()
+        self.assertIsNotNone(decoder.base.pose_scale_projectors[0][1].weight.grad)
+        self.assertIsNotNone(decoder.base.motion_scale_projectors[0][1].weight.grad)
+        self.assertIsNotNone(decoder.concept_refiner.alpha.grad)
 
     def test_margin_grounding_uses_positive_and_hard_negative_margins(self) -> None:
         decoder = ConceptPrototypeDecoder(
@@ -135,7 +213,7 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         ignored = decoder.center_separation_loss(cooccurring_support)
         penalized = decoder.center_separation_loss(separated_support)
         self.assertTrue(torch.allclose(ignored, torch.zeros_like(ignored)))
-        self.assertGreater(float(penalized), 0.5)
+        self.assertGreater(float(penalized.detach()), 0.5)
 
     def test_joint_stage_weight_and_learning_rate_schedules(self) -> None:
         target = {"concept": 0.25, "graph": 0.10}
@@ -186,73 +264,10 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         output = decoder(torch.randn(2, 8, 6, 2))
         self.assertTrue(torch.equal(output["parent_probs"], torch.zeros_like(output["parent_probs"])))
         self.assertEqual(tuple(output["sequence_probs"].shape), (2, 2))
+        self.assertEqual(tuple(output["sequence_logits"].shape), (2, 2))
         self.assertNotIn("soft_gate", output)
-        self.assertNotIn("raw_sequence_probs", output)
-
-    def test_scope_heads_can_be_the_direct_concept_classifier(self) -> None:
-        metadata = [
-            {
-                "concept_id": "0", "concept_name": "concept_a",
-                "scope": "spatial", "parent_name": "parent_a", "level": "2",
-            },
-            {
-                "concept_id": "1", "concept_name": "concept_b",
-                "scope": "temporal", "parent_name": "parent_b", "level": "2",
-            },
-        ]
-        decoder = HierarchicalConceptDecoder(
-            feature_dim=8,
-            metadata=metadata,
-            num_concepts=2,
-            concept_classifier="scope",
-            parent_enabled=False,
-        )
-        output = decoder(torch.randn(3, 8, 5, 2))
-
-        self.assertIsNone(decoder.base)
-        self.assertFalse(decoder.multi_scale)
-        self.assertEqual(tuple(output["sequence_probs"].shape), (3, 2))
-        self.assertTrue(torch.allclose(
-            output["sequence_probs"], output["scope_probs"]
-        ))
-        self.assertTrue(torch.allclose(
-            output["time_logits"].squeeze(1), output["scope_logits"]
-        ))
-        output["sequence_probs"].sum().backward()
-        for parameter in decoder.scope_heads.parameters():
-            self.assertIsNotNone(parameter.grad)
-
-    def test_scope_head_can_be_removed_from_prototype_concept_path(self) -> None:
-        metadata = [
-            {
-                "concept_id": "0", "concept_name": "concept_a",
-                "scope": "spatial", "parent_name": "parent_a", "level": "2",
-            },
-            {
-                "concept_id": "1", "concept_name": "concept_b",
-                "scope": "temporal", "parent_name": "parent_b", "level": "2",
-            },
-        ]
-        decoder = HierarchicalConceptDecoder(
-            feature_dim=8,
-            metadata=metadata,
-            num_concepts=2,
-            temporal_pooling="adaptive_mil",
-            scope_enabled=False,
-        )
-        features = torch.randn(3, 8, 5, 2)
-        base = decoder.base(features)
-        output = decoder(features)
-
-        self.assertEqual(len(decoder.scope_heads), 0)
-        self.assertFalse(hasattr(decoder, "scope_gate_raw"))
-        self.assertTrue(torch.equal(
-            output["scope_term"], torch.zeros_like(output["scope_term"])
-        ))
-        self.assertTrue(torch.allclose(output["time_logits"], base["time_logits"]))
-        self.assertTrue(torch.allclose(
-            output["sequence_probs"], base["sequence_probs"]
-        ))
+        self.assertIn("raw_sequence_probs", output)
+        self.assertFalse(hasattr(decoder, "scope_heads"))
 
     def test_legacy_floor_one_regression_is_identity(self) -> None:
         """A V2 checkpoint configured with floor=1 had an identity gate."""
@@ -331,7 +346,7 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         concepts = torch.tensor([[0.8, 0.2, 0.4]], requires_grad=True)
         parents = torch.tensor([[0.5, 0.6]], requires_grad=True)
         loss = decoder.parent_graph_loss(concepts, parents)
-        self.assertGreater(float(loss), 0.0)
+        self.assertGreater(float(loss.detach()), 0.0)
         loss.backward()
         self.assertGreater(float(concepts.grad[0, 0]), 0.0)
         self.assertEqual(float(concepts.grad[0, 1]), 0.0)
@@ -374,23 +389,23 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertIsNotNone(parent_logits.grad)
         self.assertTrue(torch.isfinite(parent_logits.grad).all())
 
-    def test_concept_loss_is_full_binary_cross_entropy(self) -> None:
+    def test_concept_loss_is_full_binary_cross_entropy_with_logits(self) -> None:
         symbolic = HierarchicalSymbolicDecoder(
             concept_csv="concepts/ntu_action_concept_v2_4.csv",
             metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
             num_classes=2,
             num_concepts=102,
         )
-        probabilities = torch.full((2, 102), 0.3, requires_grad=True)
+        logits = torch.full((2, 102), -0.3, requires_grad=True)
         labels = torch.tensor([0, 1])
-        expected = torch.nn.functional.binary_cross_entropy(
-            probabilities, symbolic.support[labels]
+        expected = torch.nn.functional.binary_cross_entropy_with_logits(
+            logits, symbolic.support[labels]
         )
-        actual = symbolic.concept_loss(probabilities, labels)
+        actual = symbolic.concept_loss(logits, labels)
         self.assertTrue(torch.allclose(actual, expected))
         actual.backward()
         negative_mask = symbolic.support[labels] == 0
-        self.assertTrue((probabilities.grad[negative_mask] > 0).all())
+        self.assertTrue((logits.grad[negative_mask] > 0).all())
 
     def test_symbolic_decoder_has_no_class_bias(self) -> None:
         symbolic = HierarchicalSymbolicDecoder(
@@ -456,7 +471,10 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         v3_e = load_config("config/ablation_ntu120_csub_v31/V3_E.yaml")
 
         self.assertNotIn("base_config", main)
-        self.assertEqual(main["work_dir"], "./work_dir/hcg_ns/main_ntu120_csub")
+        self.assertEqual(
+            main["work_dir"],
+            "./work_dir/hcg_ns/main_ntu120_csub_pose_motion_refiner",
+        )
         self.assertEqual(main["stage1_name"], "joint_grounding_composition")
         self.assertEqual(main["stage1_epochs"], 15)
         self.assertEqual(main["stage2_epochs"], 0)
@@ -468,36 +486,28 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         )
         self.assertEqual(main["prototype_args"]["center_gap_margin"], 0.20)
         self.assertEqual(main["prototype_args"]["center_gap_topk"], 5)
+        self.assertTrue(main["prototype_args"]["refiner_enabled"])
+        self.assertEqual(main["prototype_args"]["refiner_hidden_dim"], 128)
+        self.assertNotIn("scope_fusion", main["prototype_args"])
+        self.assertNotIn("scope_scale", main["prototype_args"])
         self.assertEqual(v3_e["stage1_epochs"], 5)
         self.assertEqual(v3_e["stage2_epochs"], 10)
         self.assertNotIn("center_loss_mode", v3_e["prototype_args"])
 
-    def test_scope_head_ablation_config_disables_other_concept_paths(self) -> None:
-        config = load_config(
-            "config/HCG_NS_SkateFormer_ntu120_csub_scope_head.yaml"
-        )
-        prototype = config["prototype_args"]
-        self.assertEqual(prototype["concept_classifier"], "scope")
-        self.assertFalse(prototype["multi_scale"])
-        self.assertFalse(prototype["interaction_reasoning"])
-        self.assertFalse(prototype["parent_enabled"])
-        self.assertEqual(config["stage1_epochs"], 0)
-        self.assertEqual(config["stage2_epochs"], 15)
-        for name in ("parent", "graph", "center"):
-            self.assertEqual(config["stage2_loss_weights"][name], 0.0)
-
-    def test_no_scope_head_ablation_changes_only_scope_enabled(self) -> None:
+    def test_single_scale_ablation_changes_only_scale_settings(self) -> None:
         main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
         ablation = load_config(
-            "config/HCG_NS_SkateFormer_ntu120_csub_no_scope_head.yaml"
+            "config/HCG_NS_SkateFormer_ntu120_csub_single_scale.yaml"
         )
-        self.assertFalse(ablation["prototype_args"]["scope_enabled"])
+        self.assertFalse(ablation["prototype_args"]["multi_scale"])
+        self.assertEqual(ablation["prototype_args"]["scale_fusion"], "shared")
         for key, value in main.items():
             if key == "work_dir":
                 continue
             if key == "prototype_args":
                 expected = dict(value)
-                expected["scope_enabled"] = False
+                expected["multi_scale"] = False
+                expected["scale_fusion"] = "shared"
                 self.assertEqual(ablation[key], expected)
             else:
                 self.assertEqual(ablation[key], value, key)

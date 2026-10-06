@@ -203,28 +203,31 @@ remain compatible with the released checkpoints.
 
 ### Main HCG-NS model (NTU120 CSub)
 
-The selected thesis model is the standalone V3-E configuration. It combines the
-adaptive multi-scale concept decoder with fixed parent-concept graph regularization:
+The selected thesis model uses scope-routed prototype grounding: spatial and
+context concepts read pose features, temporal concepts read first-order feature
+differences, and adaptive MIL pools their per-time logits. An ontology-masked
+residual refiner operates only within sibling groups before the fixed symbolic
+decoder; parent predictions remain auxiliary supervision.
 
 ```bash
-python main_hcg_ns.py --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml
+python main_hcg_ns.py --config config/HCG_NS_SkateFormer_ntu120_csub.yaml
 ```
 
 The production ontology uses two `v2_4` files under `concepts/`: the binary
 action-concept matrix and the concept metadata that defines scopes and parent
 groups. Earlier V3 configs are kept only in
-`config/train/ablation_ntu120_csub_v31/` to reproduce the ablation table.
+`config/ablation_ntu120_csub_v31/` to reproduce the ablation table.
 
 ## Evaluation
 
 ```bash
 python eval_hcg_concepts.py \
-  --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
-  --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
+  --config config/HCG_NS_SkateFormer_ntu120_csub.yaml \
+  --checkpoint work_dir/hcg_ns/main_ntu120_csub_pose_motion_refiner/final_model.pt
 
 python eval_concept_intervention.py \
-  --config config/train/HCG_NS_SkateFormer_ntu120_csub.yaml \
-  --checkpoint work_dir/hcg_ns/main_ntu120_csub/final_model.pt
+  --config config/HCG_NS_SkateFormer_ntu120_csub.yaml \
+  --checkpoint work_dir/hcg_ns/main_ntu120_csub_pose_motion_refiner/final_model.pt
 ```
 
 ## Results

@@ -291,11 +291,9 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
         dump_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
             dump_path,
-            schema_version=np.asarray(4, dtype=np.int64),
+            schema_version=np.asarray(5, dtype=np.int64),
             concept_probability_semantics=np.asarray(
-                "direct_scope_head"
-                if model.concept_decoder.concept_classifier == "scope"
-                else "temporal_pool_without_parent_gate"
+                "scope_routed_pose_motion_mil_with_ontology_refiner"
             ),
             parent_role=np.asarray(
                 "auxiliary_supervision"
@@ -352,28 +350,35 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
 
         base = model.concept_decoder.base
         gradient_diagnostics = {
-            "scope_head_grad_norm": _gradient_norm(
-                model.concept_decoder.scope_heads.parameters()
+            "concept_refiner_grad_norm": _gradient_norm(
+                model.concept_decoder.concept_refiner.parameters()
             ),
             "parent_head_grad_norm": _gradient_norm(
                 model.concept_decoder.parent_heads.parameters()
             ),
             "symbolic_rule_grad_norm": _gradient_norm(model.symbolic.parameters()),
         }
-        if base is not None:
-            projector = base.scale_projectors if base.multi_scale else base.projector
-            gradient_diagnostics.update({
-                "center_grad_norm": _gradient_norm([base.centers]),
-                "prototype_projector_grad_norm": _gradient_norm(projector.parameters()),
-                "temperature_grad_abs": _gradient_norm([base.log_temperature]),
-                "scale_logits_grad_norm": _gradient_norm(
-                    [base.scale_logits] if base.multi_scale else []
-                ),
-                "adaptive_mil_grad_norm": _gradient_norm(
-                    base.adaptive_mil_pool.parameters()
-                    if base.adaptive_mil_pool is not None else []
-                ),
-            })
+        pose_projector = (
+            base.pose_scale_projectors if base.multi_scale else base.pose_projector
+        )
+        motion_projector = (
+            base.motion_scale_projectors if base.multi_scale else base.motion_projector
+        )
+        gradient_diagnostics.update({
+            "center_grad_norm": _gradient_norm([base.centers]),
+            "pose_projector_grad_norm": _gradient_norm(pose_projector.parameters()),
+            "motion_projector_grad_norm": _gradient_norm(
+                motion_projector.parameters()
+            ),
+            "temperature_grad_abs": _gradient_norm([base.log_temperature]),
+            "scale_logits_grad_norm": _gradient_norm(
+                [base.scale_logits] if base.multi_scale else []
+            ),
+            "adaptive_mil_grad_norm": _gradient_norm(
+                base.adaptive_mil_pool.parameters()
+                if base.adaptive_mil_pool is not None else []
+            ),
+        })
         trainable_parameters = [
             parameter for parameter in model.parameters() if parameter.requires_grad
         ]

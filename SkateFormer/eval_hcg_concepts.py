@@ -63,6 +63,15 @@ def load_full_checkpoint(model: HCGNSSkateFormer, path: Path, device: torch.devi
         print(f"First missing keys: {missing[:5]}")
     if unexpected:
         print(f"First unexpected keys: {unexpected[:5]}")
+    decoder_missing = [
+        key for key in missing if key.startswith("concept_decoder.")
+    ]
+    if decoder_missing:
+        raise RuntimeError(
+            "checkpoint is incompatible with the scope-routed pose/motion "
+            "concept decoder; missing decoder keys include: "
+            + ", ".join(decoder_missing[:5])
+        )
 
 
 def safe_div(num: np.ndarray, den: np.ndarray) -> np.ndarray:
@@ -161,21 +170,13 @@ def evaluate(
     parent_probs = []
     parent_targets = []
     parent_for_child = []
-    # The decoder returns either the scope contribution added to prototype
-    # logits or, for the direct ablation, the complete scope-head logits.
     decoder = model.concept_decoder
-    scope_logit_scale = (
-        decoder.scope_scale
-        if (
-            decoder.scope_enabled
-            and decoder.concept_classifier == "prototype"
-            and decoder.scope_fusion == "fixed"
-        )
-        else None
-    )
     logit_accumulators = {
         name: {"sum": 0.0, "sum_sq": 0.0, "sum_abs": 0.0, "count": 0}
-        for name in ("base_time_logits", "scaled_scope_logits", "combined_time_logits")
+        for name in (
+            "time_logits", "raw_sequence_logits", "refined_sequence_logits",
+            "refiner_delta",
+        )
     }
     saturated_low = 0
     saturated_high = 0
@@ -192,13 +193,14 @@ def evaluate(
         parent_targets.append(model.symbolic.parent_support[label].cpu().numpy())
         parent_for_child.append(output["parent_for_child"].cpu().numpy())
 
-        combined_logits = output["time_logits"].float()
-        scaled_scope_logits = output["scope_term"].float().unsqueeze(1)
-        base_logits = combined_logits - scaled_scope_logits
+        time_logits = output["time_logits"].float()
+        raw_sequence_logits = output["raw_sequence_logits"].float()
+        refined_sequence_logits = output["sequence_logits"].float()
         for name, values in (
-            ("base_time_logits", base_logits),
-            ("scaled_scope_logits", scaled_scope_logits),
-            ("combined_time_logits", combined_logits),
+            ("time_logits", time_logits),
+            ("raw_sequence_logits", raw_sequence_logits),
+            ("refined_sequence_logits", refined_sequence_logits),
+            ("refiner_delta", refined_sequence_logits - raw_sequence_logits),
         ):
             values = values.detach()
             accumulator = logit_accumulators[name]
@@ -207,10 +209,10 @@ def evaluate(
             accumulator["sum_abs"] += values.abs().sum().item()
             accumulator["count"] += values.numel()
 
-        combined_probs = torch.sigmoid(combined_logits)
-        saturated_low += int((combined_probs < 0.01).sum().item())
-        saturated_high += int((combined_probs > 0.99).sum().item())
-        sigmoid_count += combined_probs.numel()
+        refined_probs = torch.sigmoid(refined_sequence_logits)
+        saturated_low += int((refined_probs < 0.01).sum().item())
+        saturated_high += int((refined_probs > 0.99).sum().item())
+        sigmoid_count += refined_probs.numel()
 
     scores = np.concatenate(action_scores)
     action_labels = np.concatenate(labels)
@@ -230,19 +232,21 @@ def evaluate(
             "std": float(variance ** 0.5),
             "mean_abs": float(accumulator["sum_abs"] / count),
         }
-    base_mean_abs = logit_summaries["base_time_logits"]["mean_abs"]
-    base_std = logit_summaries["base_time_logits"]["std"]
+    raw_mean_abs = logit_summaries["raw_sequence_logits"]["mean_abs"]
+    raw_std = logit_summaries["raw_sequence_logits"]["std"]
     temperature = decoder.temperature
-    direct_scope = decoder.concept_classifier == "scope"
-    scope_logit_diagnostics = {
-        "concept_classifier": decoder.concept_classifier,
-        "scope_enabled": decoder.scope_enabled,
-        "scope_fusion": (
-            "disabled" if not decoder.scope_enabled
-            else "direct" if direct_scope
-            else decoder.scope_fusion
-        ),
-        "scope_logit_scale": scope_logit_scale,
+    decoder_logit_diagnostics = {
+        "architecture": "scope_routed_pose_motion_prototypes",
+        "scope_counts": {
+            name: len(concept_ids)
+            for name, concept_ids in decoder.scope_ids.items()
+        },
+        "scope_routing": {
+            "spatial": "pose",
+            "temporal": "motion_difference",
+            "context": "pose_person_pair_when_available",
+        },
+        "refiner_enabled": decoder.refiner_enabled,
         "temperature": (
             float(temperature.item()) if temperature is not None else None
         ),
@@ -250,22 +254,18 @@ def evaluate(
             float(1.0 / temperature.item()) if temperature is not None else None
         ),
         **logit_summaries,
-        "scaled_scope_to_base_mean_abs_ratio": (
-            None if direct_scope else float(
-                logit_summaries["scaled_scope_logits"]["mean_abs"]
-                / max(base_mean_abs, 1e-12)
-            )
+        "refiner_delta_to_raw_mean_abs_ratio": float(
+            logit_summaries["refiner_delta"]["mean_abs"]
+            / max(raw_mean_abs, 1e-12)
         ),
-        "scaled_scope_to_base_std_ratio": (
-            None if direct_scope else float(
-                logit_summaries["scaled_scope_logits"]["std"]
-                / max(base_std, 1e-12)
-            )
+        "refiner_delta_to_raw_std_ratio": float(
+            logit_summaries["refiner_delta"]["std"]
+            / max(raw_std, 1e-12)
         ),
-        "combined_sigmoid_saturation_below_0_01": float(
+        "refined_sigmoid_saturation_below_0_01": float(
             saturated_low / max(sigmoid_count, 1)
         ),
-        "combined_sigmoid_saturation_above_0_99": float(
+        "refined_sigmoid_saturation_above_0_99": float(
             saturated_high / max(sigmoid_count, 1)
         ),
     }
@@ -312,7 +312,7 @@ def evaluate(
             "violation_rate": float((hierarchy_delta > 0.0).mean()),
             "violation_mean": float(np.maximum(hierarchy_delta, 0.0).mean()),
         },
-        "scope_logit_diagnostics": scope_logit_diagnostics,
+        "decoder_logit_diagnostics": decoder_logit_diagnostics,
         "per_concept": concept_rows,
     }
     return result, concept_names
@@ -377,7 +377,7 @@ def main() -> None:
     write_outputs(result, output_dir)
     print(json.dumps({k: result[k] for k in (
         "action", "concept", "parent", "known_negative", "hierarchy",
-        "scope_logit_diagnostics",
+        "decoder_logit_diagnostics",
     )}, indent=2))
 
 
