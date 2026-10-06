@@ -108,6 +108,15 @@ class ConceptPrototypeDecoder(nn.Module):
         num_people: int = 1,
         num_points: int | None = None,
         interaction_concepts: Iterable[int] | None = None,
+        center_loss_mode: str = "legacy",
+        center_positive_margin: float = 0.35,
+        center_gap_margin: float = 0.30,
+        center_gap_topk: int = 5,
+        center_negative_margin: float = 0.10,
+        center_negative_weight: float = 0.5,
+        center_negative_topk: int = 10,
+        center_separation_margin: float = 0.15,
+        center_separation_topk: int = 5,
     ):
         super().__init__()
         self.feature_dim = feature_dim
@@ -133,6 +142,43 @@ class ConceptPrototypeDecoder(nn.Module):
         self.interaction_concepts = tuple(
             sorted(set(int(i) for i in (interaction_concepts or [])))
         )
+        self.center_loss_mode = str(center_loss_mode)
+        if self.center_loss_mode not in {
+            "legacy", "margin_hard_negative", "pairwise_gap_hard_negative"
+        }:
+            raise ValueError(
+                "center_loss_mode must be 'legacy', 'margin_hard_negative', "
+                "or 'pairwise_gap_hard_negative'"
+            )
+        self.center_positive_margin = float(center_positive_margin)
+        self.center_gap_margin = float(center_gap_margin)
+        self.center_gap_topk = int(center_gap_topk)
+        self.center_negative_margin = float(center_negative_margin)
+        self.center_negative_weight = float(center_negative_weight)
+        self.center_negative_topk = int(center_negative_topk)
+        self.center_separation_margin = float(center_separation_margin)
+        self.center_separation_topk = int(center_separation_topk)
+        if not -1.0 <= self.center_negative_margin <= 1.0:
+            raise ValueError("center_negative_margin must be in [-1, 1]")
+        if (
+            self.center_loss_mode == "margin_hard_negative"
+            and not self.center_negative_margin < self.center_positive_margin <= 1.0
+        ):
+            raise ValueError(
+                "absolute center margins must satisfy negative < positive <= 1"
+            )
+        if not 0.0 <= self.center_gap_margin <= 2.0:
+            raise ValueError("center_gap_margin must be in [0, 2]")
+        if self.center_negative_weight < 0.0:
+            raise ValueError("center_negative_weight must be non-negative")
+        if (
+            self.center_gap_topk <= 0
+            or self.center_negative_topk <= 0
+            or self.center_separation_topk <= 0
+        ):
+            raise ValueError("center hard-negative top-k values must be positive")
+        if not -1.0 <= self.center_separation_margin <= 1.0:
+            raise ValueError("center_separation_margin must be in [-1, 1]")
 
         if self.multi_scale:
             dims = tuple(int(dim) for dim in (pyramid_dims or (feature_dim,)))
@@ -351,18 +397,99 @@ class ConceptPrototypeDecoder(nn.Module):
         action_labels: torch.Tensor,
         support: torch.Tensor,
     ) -> torch.Tensor:
-        """Pull supported centers toward an observed token or pair evidence."""
+        """Ground positive concepts and reject the most similar negatives.
+
+        The legacy objective pulls every positive concept toward cosine 1. The
+        absolute-margin objective stops at a fixed positive cosine. The
+        pairwise-gap objective instead requires each positive to outrank the
+        mean of the top-k negatives by a configurable cosine margin.
+        """
         if cosine_similarity.ndim != 4:
             raise ValueError("cosine_similarity must have shape [B,T,V,K]")
         positive = support[action_labels].to(cosine_similarity.dtype)
         best_token_similarity = cosine_similarity.amax(dim=(1, 2))
-        loss = ((1.0 - best_token_similarity) * positive).sum(dim=1)
-        normalizer = positive.sum(dim=1).clamp_min(1.0)
-        return (loss / normalizer).mean()
+        positive_normalizer = positive.sum(dim=1).clamp_min(1.0)
+        if self.center_loss_mode == "legacy":
+            loss = ((1.0 - best_token_similarity) * positive).sum(dim=1)
+            return (loss / positive_normalizer).mean()
 
-    def center_separation_loss(self, margin: float = 0.15) -> torch.Tensor:
+        negative_mask = positive <= 0.0
+        negative_candidates = best_token_similarity.masked_fill(
+            ~negative_mask, float("-inf")
+        )
+        selected_topk = min(
+            max(self.center_gap_topk, self.center_negative_topk),
+            self.num_concepts,
+        )
+        selected_negative_similarity = negative_candidates.topk(
+            selected_topk, dim=1
+        ).values
+        if self.center_loss_mode == "pairwise_gap_hard_negative":
+            gap_topk = min(self.center_gap_topk, selected_topk)
+            gap_negative_similarity = selected_negative_similarity[:, :gap_topk]
+            valid_gap_negative = torch.isfinite(gap_negative_similarity)
+            has_negative = valid_gap_negative.any(dim=1, keepdim=True)
+            topk_negative_mean = (
+                gap_negative_similarity.masked_fill(~valid_gap_negative, 0.0).sum(
+                    dim=1, keepdim=True
+                )
+                / valid_gap_negative.sum(dim=1, keepdim=True).clamp_min(1)
+            )
+            positive_gap = best_token_similarity - topk_negative_mean
+            positive_loss = (
+                F.relu(self.center_gap_margin - positive_gap)
+                * positive
+                * has_negative.to(positive.dtype)
+            ).sum(dim=1) / positive_normalizer
+        else:
+            positive_loss = (
+                F.relu(self.center_positive_margin - best_token_similarity)
+                * positive
+            ).sum(dim=1) / positive_normalizer
+
+        negative_topk = min(self.center_negative_topk, selected_topk)
+        hard_negative_similarity = selected_negative_similarity[:, :negative_topk]
+        valid_negative = torch.isfinite(hard_negative_similarity)
+        negative_loss = (
+            F.relu(hard_negative_similarity - self.center_negative_margin)
+            .masked_fill(~valid_negative, 0.0)
+            .sum(dim=1)
+            / valid_negative.sum(dim=1).clamp_min(1)
+        )
+        return (
+            positive_loss + self.center_negative_weight * negative_loss
+        ).mean()
+
+    def center_separation_loss(self, support: torch.Tensor | None = None) -> torch.Tensor:
         centers = self.normalized_centers()
         similarity = centers @ centers.t()
         eye = torch.eye(similarity.shape[0], device=similarity.device, dtype=torch.bool)
-        off_diagonal = similarity.masked_fill(eye, -1.0)
-        return F.relu(off_diagonal - margin).mean()
+        if self.center_loss_mode == "legacy":
+            off_diagonal = similarity.masked_fill(eye, -1.0)
+            return F.relu(off_diagonal - self.center_separation_margin).mean()
+
+        if support is None:
+            raise ValueError("support is required for hard-negative center separation")
+        support = support.to(device=similarity.device, dtype=similarity.dtype)
+        if support.ndim != 2 or support.shape[1] != self.num_concepts:
+            raise ValueError("support must have shape [num_actions, num_concepts]")
+
+        # Centers are negatives only when their concepts never co-occur in an
+        # annotated action. This avoids repelling semantically compatible
+        # concepts while focusing the loss on each center's nearest negatives.
+        cooccurs = (support.t() @ support) > 0
+        negative_pair = ~cooccurs
+        negative_pair.masked_fill_(eye, False)
+        candidates = similarity.masked_fill(~negative_pair, float("-inf"))
+        topk = min(self.center_separation_topk, max(self.num_concepts - 1, 1))
+        hard_negative_similarity = candidates.topk(topk, dim=1).values
+        valid_negative = torch.isfinite(hard_negative_similarity)
+        if not bool(valid_negative.any()):
+            return similarity.sum() * 0.0
+        per_center = (
+            F.relu(hard_negative_similarity - self.center_separation_margin)
+            .masked_fill(~valid_negative, 0.0)
+            .sum(dim=1)
+            / valid_negative.sum(dim=1).clamp_min(1)
+        )
+        return per_center.mean()

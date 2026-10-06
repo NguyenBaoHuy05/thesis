@@ -13,31 +13,39 @@ from feeders.prompt_tools import split_prompts_by_part, split_vector
 
 
 
-def custom_collate_fn(batch, dataset=None):
+def custom_collate_fn(batch):
     """
     Custom collate function that handles:
     1. Stacking tensors
     2. Batching prompts by body part
     3. Ready for CLIP tokenization on main process
-
-    `dataset` must be the Feeder instance backing this batch - prompts_by_part
-    doesn't depend on which sample it's generated for (it's built purely from
-    dataset.concept_df / dataset.ordered_concept_dict), so it's generated once
-    per batch here rather than once per sample in Feeder.__getitem__.
     """
     data_numpy = torch.stack([torch.from_numpy(item[0]) for item in batch])
     label = torch.tensor([item[1] for item in batch])
-
+    
     # Concept vectors grouped by body part - collate into dict of tensors
     concept_vectors_by_part = {}
     for key in batch[0][2].keys():
         concept_vectors_by_part[key] = torch.stack([
             torch.from_numpy(item[2][key]) for item in batch
         ])
-
-    prompts_by_part = split_prompts_by_part(dataset.concept_df, dataset.ordered_concept_dict)
-
-    return data_numpy, label, concept_vectors_by_part, prompts_by_part
+    
+    # Prompts by part - collate into dict of lists
+    # Structure: {'head': [prompt1, prompt2, ...], 'hand': [...], ...}
+    prompts_by_part = {}
+    body_parts = ['head', 'hand', 'arm', 'hip', 'leg', 'foot', 'full_body', 'temporal']
+    
+    for bp in body_parts:
+        # prompts_by_part[bp] = [item[3][bp] for item in batch]
+        # only append once overall
+        for item in batch:
+            prompts_by_part[bp] = item[3][bp]
+            break
+    
+    # action names
+    # action_names = [item[4] for item in batch]
+    
+    return data_numpy, label, concept_vectors_by_part, prompts_by_part#, action_names
 
 
 class Feeder(Dataset):
@@ -153,6 +161,7 @@ class Feeder(Dataset):
             data_numpy: Skeleton data (C, T, V, M)
             label: Action class label (int)
             concept_vectors_by_part: Dict of concept vectors grouped by body part
+            prompts_by_part: Dict of prompt strings (NOT tokenized yet)
         """
         data_numpy = self.data[index]
         label = self.label[index]
@@ -161,11 +170,9 @@ class Feeder(Dataset):
         concept_vector = self.concept_matrix_np[label]
         # Split concept vector by body part
         concept_vectors_by_part = split_vector(concept_vector, self.ordered_concept_dict)
-        # Prompts are the same regardless of `index` (built purely from self.concept_df /
-        # self.ordered_concept_dict) and custom_collate_fn only ever keeps one batch's worth
-        # of them anyway, so generating them here would mean computing (and discarding)
-        # batch_size-1 copies per batch. Generated once per batch in custom_collate_fn instead.
-
+        # get prompts by part
+        prompts_by_part = split_prompts_by_part(self.concept_df, self.ordered_concept_dict)
+        
         # Process skeleton data
         data_numpy = np.array(data_numpy)
         valid_frame_num = np.sum(data_numpy.sum(0).sum(-1).sum(-1) != 0)
@@ -203,7 +210,7 @@ class Feeder(Dataset):
             data_numpy[:, :-1] = data_numpy[:, 1:] - data_numpy[:, :-1]
             data_numpy[:, -1] = 0
 
-        return data_numpy, label, concept_vectors_by_part
+        return data_numpy, label, concept_vectors_by_part, prompts_by_part#, action_name
 
     def top_k(self, score, top_k):
         rank = score.argsort()

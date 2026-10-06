@@ -1,7 +1,7 @@
 # Skeleton CRL Training Configuration
 
 # WandB configuration
-use_wandb: False
+use_wandb: True
 wandb_project: SkeletonACLv5
 wandb_entity: null  # Set to your WandB username
 wandb_name: v5exp10
@@ -9,7 +9,7 @@ wandb_name: v5exp10
 #baseline-bce-clip-ln-aug-div-logic-ln #-fc2-sgd-steplr-aug-78concep
 
 # Work directory
-work_dir: ./work_dir/ntu120/xsub/bone
+work_dir: /data_hdd/talha/nsai/scal/work_dir/v5exp10
 #v7_exp2_adamw_mld64_bce_0.1cont_rmsn_oldBIN64 
 #baseline-bce-clip-ln-aug-div-logic-ln #-fc2-sgd-steplr-aug-78concep
 
@@ -46,10 +46,10 @@ show_topk: [1, 5]
 
 model: hgcn.hypergcn_large.Model
 model_args:
-  pretrain_chkpt: HyperGCN/large/ntu120/xsub/bone/runs-139-136776.pt
+  pretrain_chkpt: /data_hdd/talha/nsai/scal/hgcn/hgcn_l_b.pt
   num_class: 120
-  spatial_concepts: 53
-  temporal_concepts: 21
+  spatial_concepts: 52 # 53 # concepts to be predicted by GCN
+  temporal_concepts: 26 # 27
   num_point: 25
   num_person: 2
   hyper_joints: 3
@@ -69,11 +69,11 @@ logic_model:
 
 # Feeder
 feeder: feeders.feeder_ntu.Feeder
-num_worker: 0
+num_worker: 32
 
 train_feeder_args:
-  data_path: data/ntu120/NTU120_CSub.npz
-  concepts_csv: concepts/ntu_rgbd_60_120.csv
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSub.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: train
   random_choose: False
   random_shift: False
@@ -86,11 +86,11 @@ train_feeder_args:
   use_mmap: False
   bone: True
   vel: False
-  remove_null_concept: False
+  remove_null_concept: True
 
 test_feeder_args:
-  data_path: data/ntu120/NTU120_CSub.npz
-  concepts_csv: concepts/ntu_rgbd_60_120.csv
+  data_path: /data_hdd/talha/nsai/GAP/data/ntu120/NTU120_CSub.npz
+  concepts_csv: /data_hdd/talha/nsai/scal/feeders/ntu_rgbd_spatial_temporal.csv
   split: test
   window_size: 64
   p_interval: [0.95]
@@ -99,7 +99,7 @@ test_feeder_args:
   debug: False
   use_mmap: False
   normalization: True
-  remove_null_concept: False
+  remove_null_concept: True
 
 # =============================================================================
 # OPTIMIZATION PARAMETERS 
@@ -170,7 +170,7 @@ lora_args:
   position: all
   r: 16
   root_path: ''
-  save_path: ./work_dir/lora/
+  save_path: /data_hdd/talha/nsai/GAP/work_dir/lora/
   seed: 1
   shots: 16
 

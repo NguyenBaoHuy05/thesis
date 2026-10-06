@@ -7,7 +7,11 @@ from pathlib import Path
 
 import torch
 
-from main_hcg_ns import load_config
+from main_hcg_ns import (
+    interpolate_loss_weights,
+    load_config,
+    scheduled_learning_rate,
+)
 from model.concept_prototypes import AdaptiveTemporalMILPool, ConceptPrototypeDecoder
 from model.hierarchical_concept_decoder import HierarchicalConceptDecoder
 from model.hierarchical_symbolic_decoder import HierarchicalSymbolicDecoder
@@ -56,6 +60,102 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertIsNotNone(decoder.scale_logits.grad)
         self.assertTrue(torch.isfinite(decoder.scale_logits.grad).all())
 
+    def test_margin_grounding_uses_positive_and_hard_negative_margins(self) -> None:
+        decoder = ConceptPrototypeDecoder(
+            feature_dim=2,
+            num_concepts=3,
+            center_loss_mode="margin_hard_negative",
+            center_positive_margin=0.35,
+            center_negative_margin=0.10,
+            center_negative_weight=0.5,
+            center_negative_topk=1,
+        )
+        cosine = torch.tensor([[[[0.20, 0.30, -0.10]]]], requires_grad=True)
+        support = torch.tensor([[1.0, 0.0, 0.0]])
+        loss = decoder.center_grounding_loss(cosine, torch.tensor([0]), support)
+
+        # Positive hinge: .35 - .20 = .15. Hard negative hinge:
+        # .5 * (.30 - .10) = .10.
+        self.assertTrue(torch.allclose(loss, torch.tensor(0.25)))
+        loss.backward()
+        self.assertLess(float(cosine.grad[0, 0, 0, 0]), 0.0)
+        self.assertGreater(float(cosine.grad[0, 0, 0, 1]), 0.0)
+        self.assertEqual(float(cosine.grad[0, 0, 0, 2]), 0.0)
+
+    def test_pairwise_gap_grounding_uses_topk_negative_mean(self) -> None:
+        decoder = ConceptPrototypeDecoder(
+            feature_dim=2,
+            num_concepts=3,
+            center_loss_mode="pairwise_gap_hard_negative",
+            center_gap_margin=0.20,
+            center_gap_topk=2,
+            center_negative_margin=0.10,
+            center_negative_weight=0.5,
+            center_negative_topk=1,
+        )
+        cosine = torch.tensor([[[[0.20, 0.30, -0.10]]]], requires_grad=True)
+        support = torch.tensor([[1.0, 0.0, 0.0]])
+        loss = decoder.center_grounding_loss(cosine, torch.tensor([0]), support)
+
+        # Top-2 negative mean: (.30 - .10) / 2 = .10.
+        # Gap hinge: .20 - (.20 - .10) = .10. Negative hinge:
+        # .5 * (.30 - .10) = .10.
+        self.assertTrue(torch.allclose(loss, torch.tensor(0.20)))
+        loss.backward()
+        self.assertLess(float(cosine.grad[0, 0, 0, 0]), 0.0)
+        self.assertGreater(float(cosine.grad[0, 0, 0, 1]), 0.0)
+        self.assertGreater(float(cosine.grad[0, 0, 0, 2]), 0.0)
+
+        satisfied = torch.tensor([[[[0.50, 0.10, -0.20]]]])
+        zero_loss = decoder.center_grounding_loss(
+            satisfied, torch.tensor([0]), support
+        )
+        self.assertTrue(torch.allclose(zero_loss, torch.zeros_like(zero_loss)))
+
+    def test_hard_negative_separation_ignores_cooccurring_concepts(self) -> None:
+        decoder = ConceptPrototypeDecoder(
+            feature_dim=2,
+            num_concepts=3,
+            center_loss_mode="margin_hard_negative",
+            center_separation_margin=0.15,
+            center_separation_topk=1,
+        )
+        with torch.no_grad():
+            decoder.centers.copy_(torch.tensor([
+                [1.0, 0.0],
+                [1.0, 0.01],
+                [-1.0, 0.0],
+            ]))
+        cooccurring_support = torch.tensor([
+            [1.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+        ])
+        separated_support = torch.eye(3)
+
+        ignored = decoder.center_separation_loss(cooccurring_support)
+        penalized = decoder.center_separation_loss(separated_support)
+        self.assertTrue(torch.allclose(ignored, torch.zeros_like(ignored)))
+        self.assertGreater(float(penalized), 0.5)
+
+    def test_joint_stage_weight_and_learning_rate_schedules(self) -> None:
+        target = {"concept": 0.25, "graph": 0.10}
+        start = {"graph": 0.0}
+        expected_graph = [0.0, 0.025, 0.05, 0.075, 0.10, 0.10]
+        actual_graph = [
+            interpolate_loss_weights(target, start, epoch, 5)["graph"]
+            for epoch in range(1, 7)
+        ]
+        self.assertTrue(torch.allclose(
+            torch.tensor(actual_graph), torch.tensor(expected_graph)
+        ))
+        self.assertTrue(all(
+            interpolate_loss_weights(target, start, epoch, 5)["concept"] == 0.25
+            for epoch in range(1, 7)
+        ))
+        schedule = {1: 1e-4, 6: 5e-5}
+        self.assertEqual(scheduled_learning_rate(1e-4, schedule, 5), 1e-4)
+        self.assertEqual(scheduled_learning_rate(1e-4, schedule, 6), 5e-5)
+
     def test_parent_disabled_keeps_concept_path_without_gate_output(self) -> None:
         metadata = [
             {
@@ -88,6 +188,71 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertEqual(tuple(output["sequence_probs"].shape), (2, 2))
         self.assertNotIn("soft_gate", output)
         self.assertNotIn("raw_sequence_probs", output)
+
+    def test_scope_heads_can_be_the_direct_concept_classifier(self) -> None:
+        metadata = [
+            {
+                "concept_id": "0", "concept_name": "concept_a",
+                "scope": "spatial", "parent_name": "parent_a", "level": "2",
+            },
+            {
+                "concept_id": "1", "concept_name": "concept_b",
+                "scope": "temporal", "parent_name": "parent_b", "level": "2",
+            },
+        ]
+        decoder = HierarchicalConceptDecoder(
+            feature_dim=8,
+            metadata=metadata,
+            num_concepts=2,
+            concept_classifier="scope",
+            parent_enabled=False,
+        )
+        output = decoder(torch.randn(3, 8, 5, 2))
+
+        self.assertIsNone(decoder.base)
+        self.assertFalse(decoder.multi_scale)
+        self.assertEqual(tuple(output["sequence_probs"].shape), (3, 2))
+        self.assertTrue(torch.allclose(
+            output["sequence_probs"], output["scope_probs"]
+        ))
+        self.assertTrue(torch.allclose(
+            output["time_logits"].squeeze(1), output["scope_logits"]
+        ))
+        output["sequence_probs"].sum().backward()
+        for parameter in decoder.scope_heads.parameters():
+            self.assertIsNotNone(parameter.grad)
+
+    def test_scope_head_can_be_removed_from_prototype_concept_path(self) -> None:
+        metadata = [
+            {
+                "concept_id": "0", "concept_name": "concept_a",
+                "scope": "spatial", "parent_name": "parent_a", "level": "2",
+            },
+            {
+                "concept_id": "1", "concept_name": "concept_b",
+                "scope": "temporal", "parent_name": "parent_b", "level": "2",
+            },
+        ]
+        decoder = HierarchicalConceptDecoder(
+            feature_dim=8,
+            metadata=metadata,
+            num_concepts=2,
+            temporal_pooling="adaptive_mil",
+            scope_enabled=False,
+        )
+        features = torch.randn(3, 8, 5, 2)
+        base = decoder.base(features)
+        output = decoder(features)
+
+        self.assertEqual(len(decoder.scope_heads), 0)
+        self.assertFalse(hasattr(decoder, "scope_gate_raw"))
+        self.assertTrue(torch.equal(
+            output["scope_term"], torch.zeros_like(output["scope_term"])
+        ))
+        self.assertTrue(torch.allclose(output["time_logits"], base["time_logits"]))
+        self.assertTrue(torch.allclose(
+            output["sequence_probs"], base["sequence_probs"]
+        ))
 
     def test_legacy_floor_one_regression_is_identity(self) -> None:
         """A V2 checkpoint configured with floor=1 had an identity gate."""
@@ -286,15 +451,56 @@ class ConceptDecoderV3Tests(unittest.TestCase):
                     self.assertNotIn("hard_negative", config[profile])
                 self.assertNotIn("parent_weight", config)
 
-    def test_main_config_is_standalone_v3_e(self) -> None:
+    def test_main_config_uses_joint_training_without_mutating_v3_e(self) -> None:
         main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
         v3_e = load_config("config/ablation_ntu120_csub_v31/V3_E.yaml")
 
         self.assertNotIn("base_config", main)
         self.assertEqual(main["work_dir"], "./work_dir/hcg_ns/main_ntu120_csub")
-        for key, value in v3_e.items():
-            if key != "work_dir":
-                self.assertEqual(main[key], value, key)
+        self.assertEqual(main["stage1_name"], "joint_grounding_composition")
+        self.assertEqual(main["stage1_epochs"], 15)
+        self.assertEqual(main["stage2_epochs"], 0)
+        self.assertEqual(main["stage1_loss_weights"], main["loss_weights"])
+        self.assertEqual(main["stage1_loss_warmup_start_weights"], {"graph": 0.0})
+        self.assertEqual(
+            main["prototype_args"]["center_loss_mode"],
+            "pairwise_gap_hard_negative",
+        )
+        self.assertEqual(main["prototype_args"]["center_gap_margin"], 0.20)
+        self.assertEqual(main["prototype_args"]["center_gap_topk"], 5)
+        self.assertEqual(v3_e["stage1_epochs"], 5)
+        self.assertEqual(v3_e["stage2_epochs"], 10)
+        self.assertNotIn("center_loss_mode", v3_e["prototype_args"])
+
+    def test_scope_head_ablation_config_disables_other_concept_paths(self) -> None:
+        config = load_config(
+            "config/HCG_NS_SkateFormer_ntu120_csub_scope_head.yaml"
+        )
+        prototype = config["prototype_args"]
+        self.assertEqual(prototype["concept_classifier"], "scope")
+        self.assertFalse(prototype["multi_scale"])
+        self.assertFalse(prototype["interaction_reasoning"])
+        self.assertFalse(prototype["parent_enabled"])
+        self.assertEqual(config["stage1_epochs"], 0)
+        self.assertEqual(config["stage2_epochs"], 15)
+        for name in ("parent", "graph", "center"):
+            self.assertEqual(config["stage2_loss_weights"][name], 0.0)
+
+    def test_no_scope_head_ablation_changes_only_scope_enabled(self) -> None:
+        main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
+        ablation = load_config(
+            "config/HCG_NS_SkateFormer_ntu120_csub_no_scope_head.yaml"
+        )
+        self.assertFalse(ablation["prototype_args"]["scope_enabled"])
+        for key, value in main.items():
+            if key == "work_dir":
+                continue
+            if key == "prototype_args":
+                expected = dict(value)
+                expected["scope_enabled"] = False
+                self.assertEqual(ablation[key], expected)
+            else:
+                self.assertEqual(ablation[key], value, key)
 
 
 if __name__ == "__main__":

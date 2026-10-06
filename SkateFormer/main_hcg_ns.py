@@ -293,9 +293,14 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
             dump_path,
             schema_version=np.asarray(4, dtype=np.int64),
             concept_probability_semantics=np.asarray(
-                "temporal_pool_without_parent_gate"
+                "direct_scope_head"
+                if model.concept_decoder.concept_classifier == "scope"
+                else "temporal_pool_without_parent_gate"
             ),
-            parent_role=np.asarray("auxiliary_supervision"),
+            parent_role=np.asarray(
+                "auxiliary_supervision"
+                if model.concept_decoder.parent_enabled else "disabled"
+            ),
             concept_probs=concept_array,
             concept_targets=concept_target_array,
             concept_negative_targets=concept_negative_array,
@@ -319,27 +324,94 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
     return result
 
 
+def _gradient_norm(parameters) -> torch.Tensor:
+    squared_norms = [
+        parameter.grad.detach().float().norm(2).square()
+        for parameter in parameters
+        if parameter.grad is not None
+    ]
+    if not squared_norms:
+        return torch.zeros((), dtype=torch.float32)
+    return torch.stack(squared_norms).sum().sqrt()
+
+
 def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
                 loss_weights: dict[str, float] | None = None) -> dict[str, float]:
     model.train()
     totals: dict[str, float] = {}
     steps = 0
+    examples = 0
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     for batch in loader:
         data, index_t, label, _, _ = move_batch(batch, device)
         output = model(data, index_t)
         losses = model.compute_loss(output, label, loss_weights)
         optimizer.zero_grad(set_to_none=True)
         losses["total"].backward()
+
+        base = model.concept_decoder.base
+        gradient_diagnostics = {
+            "scope_head_grad_norm": _gradient_norm(
+                model.concept_decoder.scope_heads.parameters()
+            ),
+            "parent_head_grad_norm": _gradient_norm(
+                model.concept_decoder.parent_heads.parameters()
+            ),
+            "symbolic_rule_grad_norm": _gradient_norm(model.symbolic.parameters()),
+        }
+        if base is not None:
+            projector = base.scale_projectors if base.multi_scale else base.projector
+            gradient_diagnostics.update({
+                "center_grad_norm": _gradient_norm([base.centers]),
+                "prototype_projector_grad_norm": _gradient_norm(projector.parameters()),
+                "temperature_grad_abs": _gradient_norm([base.log_temperature]),
+                "scale_logits_grad_norm": _gradient_norm(
+                    [base.scale_logits] if base.multi_scale else []
+                ),
+                "adaptive_mil_grad_norm": _gradient_norm(
+                    base.adaptive_mil_pool.parameters()
+                    if base.adaptive_mil_pool is not None else []
+                ),
+            })
+        trainable_parameters = [
+            parameter for parameter in model.parameters() if parameter.requires_grad
+        ]
         if grad_clip is not None:
-            torch.nn.utils.clip_grad_norm_(
-                [parameter for parameter in model.parameters() if parameter.requires_grad],
-                grad_clip,
+            total_grad_norm = torch.nn.utils.clip_grad_norm_(
+                trainable_parameters, grad_clip,
             )
+            gradient_diagnostics["gradient_clip_fraction"] = (
+                total_grad_norm > grad_clip
+            ).to(torch.float32)
+        else:
+            total_grad_norm = _gradient_norm(trainable_parameters)
+            gradient_diagnostics["gradient_clip_fraction"] = torch.zeros(
+                (), device=total_grad_norm.device
+            )
+        gradient_diagnostics["total_grad_norm_before_clip"] = total_grad_norm
         optimizer.step()
         for name, value in losses.items():
             totals[name] = totals.get(name, 0.0) + float(value.detach().cpu())
+        for name, value in gradient_diagnostics.items():
+            totals[name] = totals.get(name, 0.0) + float(value.detach().cpu())
         steps += 1
-    return {name: value / max(steps, 1) for name, value in totals.items()}
+        examples += int(label.shape[0])
+    statistics = {name: value / max(steps, 1) for name, value in totals.items()}
+    statistics.update({
+        "train_steps": float(steps),
+        "train_examples": float(examples),
+    })
+    if device.type == "cuda":
+        statistics.update({
+            "cuda_peak_allocated_mb": float(
+                torch.cuda.max_memory_allocated(device) / (1024 ** 2)
+            ),
+            "cuda_peak_reserved_mb": float(
+                torch.cuda.max_memory_reserved(device) / (1024 ** 2)
+            ),
+        })
+    return statistics
 
 
 def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray) -> np.ndarray:
@@ -368,6 +440,52 @@ def git_commit(root: Path) -> str | None:
     except OSError:
         return None
     return result.stdout.strip() if result.returncode == 0 else None
+
+
+def interpolate_loss_weights(
+    target: dict[str, float] | None,
+    start: dict[str, float] | None,
+    epoch: int,
+    warmup_epochs: int,
+) -> dict[str, float] | None:
+    """Linearly warm selected loss weights while leaving the rest unchanged."""
+    if target is None:
+        return None
+    result = {name: float(value) for name, value in target.items()}
+    if not start or warmup_epochs <= 0:
+        return result
+    unknown = set(start) - set(result)
+    if unknown:
+        raise ValueError(
+            "loss warm-up contains weights absent from its target profile: "
+            + ", ".join(sorted(unknown))
+        )
+    if warmup_epochs == 1:
+        progress = 1.0
+    else:
+        progress = min(max((int(epoch) - 1) / (warmup_epochs - 1), 0.0), 1.0)
+    for name, start_value in start.items():
+        target_value = result[name]
+        result[name] = float(start_value) + progress * (
+            target_value - float(start_value)
+        )
+    return result
+
+
+def scheduled_learning_rate(
+    default: float, schedule: dict[int | str, float] | None, epoch: int
+) -> float:
+    """Return the latest 1-indexed stage-local learning-rate milestone."""
+    learning_rate = float(default)
+    for milestone, value in sorted(
+        ((int(key), float(item)) for key, item in (schedule or {}).items()),
+        key=lambda item: item[0],
+    ):
+        if milestone <= 0:
+            raise ValueError("learning-rate milestones must be positive")
+        if int(epoch) >= milestone:
+            learning_rate = value
+    return learning_rate
 
 
 def main() -> None:
@@ -430,16 +548,33 @@ def main() -> None:
     history = []
     for epoch in range(total_epochs):
         if epoch < stage1:
-            stage_name = "parent_grounding"
-            active_loss_weights = stage1_loss_weights
-            active_lr = stage1_lr
+            stage_epoch = epoch + 1
+            stage_name = str(cfg.get("stage1_name", "parent_grounding"))
+            active_loss_weights = interpolate_loss_weights(
+                stage1_loss_weights,
+                cfg.get("stage1_loss_warmup_start_weights"),
+                stage_epoch,
+                int(cfg.get("stage1_loss_warmup_epochs", 0)),
+            )
+            active_lr = scheduled_learning_rate(
+                stage1_lr, cfg.get("stage1_lr_schedule"), stage_epoch
+            )
+            for group in optimizer.param_groups:
+                group["lr"] = active_lr
         elif epoch < stage1 + stage2:
-            stage_name = "unary_symbolic_composition"
-            active_loss_weights = stage2_loss_weights
-            active_lr = stage2_lr
-            if epoch == stage1:
-                for group in optimizer.param_groups:
-                    group["lr"] = stage2_lr
+            stage_epoch = epoch - stage1 + 1
+            stage_name = str(cfg.get("stage2_name", "unary_symbolic_composition"))
+            active_loss_weights = interpolate_loss_weights(
+                stage2_loss_weights,
+                cfg.get("stage2_loss_warmup_start_weights"),
+                stage_epoch,
+                int(cfg.get("stage2_loss_warmup_epochs", 0)),
+            )
+            active_lr = scheduled_learning_rate(
+                stage2_lr, cfg.get("stage2_lr_schedule"), stage_epoch
+            )
+            for group in optimizer.param_groups:
+                group["lr"] = active_lr
         else:
             stage_name = "selective_backbone_adaptation"
             active_loss_weights = stage3_loss_weights
@@ -457,11 +592,23 @@ def main() -> None:
             float(cfg.get("grad_clip", 1.0)) if cfg.get("grad_clip", True) else None,
             active_loss_weights,
         )
+        train_stats.update(model.training_diagnostics())
         row = {
             "epoch": epoch + 1,
             "stage": stage_name,
             "loss_profile": stage_name,
+            "loss_weights": {
+                name: float(value)
+                for name, value in (active_loss_weights or {}).items()
+            },
             "learning_rate": active_lr,
+            "optimizer_learning_rates": [
+                float(group["lr"]) for group in optimizer.param_groups
+            ],
+            "grad_clip": (
+                float(cfg.get("grad_clip", 1.0))
+                if cfg.get("grad_clip", True) else None
+            ),
             "model": "HCG-NS-SkateFormer-RF",
             "relation_components": (
                 ["parent_concept_graph_regularizer"]

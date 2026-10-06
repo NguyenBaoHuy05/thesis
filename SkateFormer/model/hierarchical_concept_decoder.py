@@ -40,8 +40,19 @@ class HierarchicalConceptDecoder(nn.Module):
         num_points: int | None = None,
         interaction_reasoning: bool = True,
         parent_enabled: bool = True,
+        concept_classifier: str = "prototype",
+        scope_enabled: bool = True,
         scope_fusion: str = "fixed",
         scope_scale: float = 0.25,
+        center_loss_mode: str = "legacy",
+        center_positive_margin: float = 0.35,
+        center_gap_margin: float = 0.30,
+        center_gap_topk: int = 5,
+        center_negative_margin: float = 0.10,
+        center_negative_weight: float = 0.5,
+        center_negative_topk: int = 10,
+        center_separation_margin: float = 0.15,
+        center_separation_topk: int = 5,
     ):
         super().__init__()
         if len(metadata) != int(num_concepts):
@@ -55,6 +66,16 @@ class HierarchicalConceptDecoder(nn.Module):
         self.num_concepts = int(num_concepts)
         self.num_parents = len(parent_names)
         self.parent_enabled = bool(parent_enabled)
+        self.concept_classifier = str(concept_classifier)
+        if self.concept_classifier not in {"prototype", "scope"}:
+            raise ValueError(
+                "concept_classifier must be 'prototype' or 'scope'"
+            )
+        self.scope_enabled = bool(scope_enabled)
+        if self.concept_classifier == "scope" and not self.scope_enabled:
+            raise ValueError(
+                "scope_enabled must be true when concept_classifier='scope'"
+            )
         self.register_buffer("concept_to_parent", concept_to_parent)
         self.register_buffer(
             "parent_child_count",
@@ -71,18 +92,33 @@ class HierarchicalConceptDecoder(nn.Module):
                 "interaction_two_person",
             }
         ]
-        self.base = ConceptPrototypeDecoder(
-            feature_dim=feature_dim,
-            num_concepts=num_concepts,
-            temperature=temperature,
-            multi_scale=multi_scale,
-            pyramid_dims=pyramid_dims,
-            pyramid_levels=pyramid_levels,
-            temporal_pooling=temporal_pooling,
-            scale_fusion=scale_fusion,
-            num_people=num_people,
-            num_points=num_points,
-            interaction_concepts=interaction_concepts if interaction_reasoning else [],
+        self.base = (
+            ConceptPrototypeDecoder(
+                feature_dim=feature_dim,
+                num_concepts=num_concepts,
+                temperature=temperature,
+                multi_scale=multi_scale,
+                pyramid_dims=pyramid_dims,
+                pyramid_levels=pyramid_levels,
+                temporal_pooling=temporal_pooling,
+                scale_fusion=scale_fusion,
+                num_people=num_people,
+                num_points=num_points,
+                interaction_concepts=(
+                    interaction_concepts if interaction_reasoning else []
+                ),
+                center_loss_mode=center_loss_mode,
+                center_positive_margin=center_positive_margin,
+                center_gap_margin=center_gap_margin,
+                center_gap_topk=center_gap_topk,
+                center_negative_margin=center_negative_margin,
+                center_negative_weight=center_negative_weight,
+                center_negative_topk=center_negative_topk,
+                center_separation_margin=center_separation_margin,
+                center_separation_topk=center_separation_topk,
+            )
+            if self.concept_classifier == "prototype"
+            else None
         )
         # How the time-constant scope logits are added to the per-time
         # prototype logits. Fixed mode is legacy and unbounded. Bounded mode
@@ -94,42 +130,58 @@ class HierarchicalConceptDecoder(nn.Module):
             raise ValueError("scope_scale must be in (0, 1)")
         self.scope_fusion = scope_fusion
         self.scope_scale = float(scope_scale)
-        if scope_fusion == "bounded":
+        if (
+            self.scope_enabled
+            and scope_fusion == "bounded"
+            and self.concept_classifier == "prototype"
+        ):
             gate_logit = math.log(self.scope_scale / (1.0 - self.scope_scale))
             self.scope_gate_raw = nn.Parameter(torch.full((self.num_concepts,), gate_logit))
         parent_level_ids: dict[int, list[int]] = {}
         for parent_id, parent_name in enumerate(self.parent_names):
             parent_level_ids.setdefault(int(parent_levels[parent_name]), []).append(parent_id)
         self.parent_level_ids = parent_level_ids
-        self.parent_heads = nn.ModuleDict({
-            str(level): nn.Sequential(
-                nn.LayerNorm(feature_dim),
-                nn.Linear(feature_dim, len(parent_ids)),
-            )
-            for level, parent_ids in sorted(parent_level_ids.items())
-        })
+        self.parent_heads = nn.ModuleDict(
+            {
+                str(level): nn.Sequential(
+                    nn.LayerNorm(feature_dim),
+                    nn.Linear(feature_dim, len(parent_ids)),
+                )
+                for level, parent_ids in sorted(parent_level_ids.items())
+            }
+            if self.parent_enabled else {}
+        )
 
         scope_ids: dict[str, list[int]] = {}
         for concept_id, row in enumerate(metadata):
             scope_ids.setdefault(row.get("scope", "spatial"), []).append(concept_id)
         self.scope_ids = scope_ids
-        self.scope_heads = nn.ModuleDict({
-            scope: nn.Sequential(
-                nn.LayerNorm(feature_dim),
-                nn.Linear(feature_dim, len(concept_ids)),
-            )
-            for scope, concept_ids in sorted(scope_ids.items())
-        })
+        self.scope_heads = nn.ModuleDict(
+            {
+                scope: nn.Sequential(
+                    nn.LayerNorm(feature_dim),
+                    nn.Linear(feature_dim, len(concept_ids)),
+                )
+                for scope, concept_ids in sorted(scope_ids.items())
+            }
+            if self.scope_enabled else {}
+        )
 
     @property
-    def temperature(self) -> torch.Tensor:
-        return self.base.temperature
+    def multi_scale(self) -> bool:
+        return self.base is not None and self.base.multi_scale
 
     @property
-    def centers(self) -> torch.Tensor:
-        return self.base.centers
+    def temperature(self) -> torch.Tensor | None:
+        return self.base.temperature if self.base is not None else None
+
+    @property
+    def centers(self) -> torch.Tensor | None:
+        return self.base.centers if self.base is not None else None
 
     def normalized_centers(self) -> torch.Tensor:
+        if self.base is None:
+            raise RuntimeError("scope concept classifier has no prototype centers")
         return self.base.normalized_centers()
 
     def _last_feature_map(
@@ -140,7 +192,6 @@ class HierarchicalConceptDecoder(nn.Module):
     def forward(
         self, feature_output: torch.Tensor | Sequence[torch.Tensor]
     ) -> dict[str, Any]:
-        base = self.base(feature_output)
         feature_map = self._last_feature_map(feature_output)
         pooled = feature_map.mean(dim=(2, 3))
         parent_logits = pooled.new_zeros((pooled.shape[0], self.num_parents))
@@ -156,11 +207,45 @@ class HierarchicalConceptDecoder(nn.Module):
         )
         parent_for_child = parent_probs[:, self.concept_to_parent]
         scope_logits = pooled.new_zeros((pooled.shape[0], self.num_concepts))
-        for scope, concept_ids in self.scope_ids.items():
-            values = self.scope_heads[scope](pooled)
-            ids = torch.tensor(concept_ids, dtype=torch.long, device=pooled.device)
-            scope_logits[:, ids] = values
-        if self.scope_fusion == "bounded":
+        if self.scope_enabled:
+            for scope, concept_ids in self.scope_ids.items():
+                values = self.scope_heads[scope](pooled)
+                ids = torch.tensor(concept_ids, dtype=torch.long, device=pooled.device)
+                scope_logits[:, ids] = values
+
+        if self.concept_classifier == "scope":
+            # Direct ablation: the scope heads are the complete concept
+            # classifier. There is no prototype, temporal MIL, scale fusion,
+            # or center path in this mode.
+            sequence_probs = torch.sigmoid(scope_logits)
+            zeros = torch.zeros_like(sequence_probs)
+            return {
+                "time_logits": scope_logits.unsqueeze(1),
+                "time_probs": sequence_probs.unsqueeze(1),
+                "sequence_probs": sequence_probs,
+                "expected_time": zeros,
+                "peak_time": zeros,
+                "duration": sequence_probs,
+                "rising_activity": zeros,
+                "falling_activity": zeros,
+                "scale_weights": None,
+                "similarity": None,
+                "cosine_similarity": None,
+                "centers": None,
+                "parent_logits": parent_logits,
+                "parent_probs": parent_probs,
+                "parent_for_child": parent_for_child,
+                "scope_logits": scope_logits,
+                "scope_probs": sequence_probs,
+                "scope_term": scope_logits,
+            }
+
+        if self.base is None:  # pragma: no cover - guarded by classifier enum
+            raise RuntimeError("prototype concept classifier is unavailable")
+        base = self.base(feature_output)
+        if not self.scope_enabled:
+            scope_term = torch.zeros_like(scope_logits)
+        elif self.scope_fusion == "bounded":
             scope_term = (
                 self.scope_scale * torch.sigmoid(self.scope_gate_raw) * torch.tanh(scope_logits)
             )
@@ -178,18 +263,27 @@ class HierarchicalConceptDecoder(nn.Module):
             "parent_probs": parent_probs,
             "parent_for_child": parent_for_child,
             "scope_logits": scope_logits,
-            "scope_probs": torch.sigmoid(scope_logits),
+            "scope_probs": (
+                torch.sigmoid(scope_logits)
+                if self.scope_enabled else torch.zeros_like(scope_logits)
+            ),
             "scope_term": scope_term,
         }
 
     def center_grounding_loss(
-        self, cosine_similarity: torch.Tensor, action_labels: torch.Tensor,
+        self, cosine_similarity: torch.Tensor | None, action_labels: torch.Tensor,
         support: torch.Tensor,
     ) -> torch.Tensor:
+        if self.base is None:
+            return support.new_zeros(())
         return self.base.center_grounding_loss(cosine_similarity, action_labels, support)
 
-    def center_separation_loss(self, margin: float = 0.15) -> torch.Tensor:
-        return self.base.center_separation_loss(margin=margin)
+    def center_separation_loss(
+        self, support: torch.Tensor | None = None
+    ) -> torch.Tensor:
+        if self.base is None:
+            return next(self.scope_heads.parameters()).new_zeros(())
+        return self.base.center_separation_loss(support=support)
 
     def parent_graph_loss(
         self, sequence_probs: torch.Tensor, parent_probs: torch.Tensor,

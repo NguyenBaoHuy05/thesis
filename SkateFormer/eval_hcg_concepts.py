@@ -161,10 +161,18 @@ def evaluate(
     parent_probs = []
     parent_targets = []
     parent_for_child = []
-    # The decoder returns the exact scope contribution it added to the
-    # prototype logits ("fixed" or "bounded" fusion); it is broadcast over T.
+    # The decoder returns either the scope contribution added to prototype
+    # logits or, for the direct ablation, the complete scope-head logits.
     decoder = model.concept_decoder
-    scope_logit_scale = decoder.scope_scale if decoder.scope_fusion == "fixed" else None
+    scope_logit_scale = (
+        decoder.scope_scale
+        if (
+            decoder.scope_enabled
+            and decoder.concept_classifier == "prototype"
+            and decoder.scope_fusion == "fixed"
+        )
+        else None
+    )
     logit_accumulators = {
         name: {"sum": 0.0, "sum_sq": 0.0, "sum_abs": 0.0, "count": 0}
         for name in ("base_time_logits", "scaled_scope_logits", "combined_time_logits")
@@ -224,17 +232,35 @@ def evaluate(
         }
     base_mean_abs = logit_summaries["base_time_logits"]["mean_abs"]
     base_std = logit_summaries["base_time_logits"]["std"]
+    temperature = decoder.temperature
+    direct_scope = decoder.concept_classifier == "scope"
     scope_logit_diagnostics = {
-        "scope_fusion": decoder.scope_fusion,
-        "scope_logit_scale": scope_logit_scale,
-        "temperature": float(decoder.temperature.item()),
-        "prototype_logit_bound": float(1.0 / decoder.temperature.item()),
-        **logit_summaries,
-        "scaled_scope_to_base_mean_abs_ratio": float(
-            logit_summaries["scaled_scope_logits"]["mean_abs"] / max(base_mean_abs, 1e-12)
+        "concept_classifier": decoder.concept_classifier,
+        "scope_enabled": decoder.scope_enabled,
+        "scope_fusion": (
+            "disabled" if not decoder.scope_enabled
+            else "direct" if direct_scope
+            else decoder.scope_fusion
         ),
-        "scaled_scope_to_base_std_ratio": float(
-            logit_summaries["scaled_scope_logits"]["std"] / max(base_std, 1e-12)
+        "scope_logit_scale": scope_logit_scale,
+        "temperature": (
+            float(temperature.item()) if temperature is not None else None
+        ),
+        "prototype_logit_bound": (
+            float(1.0 / temperature.item()) if temperature is not None else None
+        ),
+        **logit_summaries,
+        "scaled_scope_to_base_mean_abs_ratio": (
+            None if direct_scope else float(
+                logit_summaries["scaled_scope_logits"]["mean_abs"]
+                / max(base_mean_abs, 1e-12)
+            )
+        ),
+        "scaled_scope_to_base_std_ratio": (
+            None if direct_scope else float(
+                logit_summaries["scaled_scope_logits"]["std"]
+                / max(base_std, 1e-12)
+            )
         ),
         "combined_sigmoid_saturation_below_0_01": float(
             saturated_low / max(sigmoid_count, 1)

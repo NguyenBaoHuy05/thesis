@@ -1,9 +1,7 @@
-# Main HCG-NS model: selected from the V3 ablation series.
-#
-# This is the standalone, fully resolved V3-E configuration.  It keeps the
-# adaptive multi-scale concept decoder from V3-C and adds the fixed
-# parent-concept graph regularizer.  Historical V3 configs remain under
-# ablation_ntu120_csub_v31 for experiment reproducibility.
+# Main HCG-NS model evolved from the selected V3-E ablation.
+# It jointly trains grounding and symbolic composition, warms the graph loss,
+# and uses pairwise-gap hard-negative center regularization. Historical V3
+# configs remain under ablation_ntu120_csub_v31 for exact reproducibility.
 seed: 1
 device: [0]
 num_worker: 0
@@ -65,6 +63,14 @@ prototype_args:
   scope_fusion: bounded
   scope_scale: 0.25
   parent_enabled: true
+  center_loss_mode: pairwise_gap_hard_negative
+  center_gap_margin: 0.20
+  center_gap_topk: 5
+  center_negative_margin: 0.10
+  center_negative_weight: 0.50
+  center_negative_topk: 10
+  center_separation_margin: 0.15
+  center_separation_topk: 5
 
 residual_action_head: false
 residual_action_weight: 0.1
@@ -78,8 +84,11 @@ test_p_interval: [0.95]
 base_lr: 0.0001
 weight_decay: 0.0001
 grad_clip: 1.0
-stage1_epochs: 5
-stage2_epochs: 10
+# Jointly optimize grounding and symbolic composition. Graph supervision is
+# introduced smoothly below instead of using a separate parent-only stage.
+stage1_name: joint_grounding_composition
+stage1_epochs: 15
+stage2_epochs: 0
 stage3_epochs: 0
 
 checkpoint_max_missing_ratio: 0.02
@@ -91,14 +100,19 @@ loss_weights:
   graph: 0.10
   center: 0.05
 
-# Ground parent concepts first; the graph teacher is not used yet.
+# Single joint objective. Only the graph term is warmed up because its parent
+# teacher is least reliable at initialization.
 stage1_loss_weights:
-  concept: 0.10
-  parent: 1.0
-  graph: 0.0
-  center: 0.10
+  concept: 0.25
+  parent: 0.25
+  graph: 0.10
+  center: 0.05
 
-# Then regularize child concepts with the fixed parent-concept graph.
+stage1_loss_warmup_epochs: 5
+stage1_loss_warmup_start_weights:
+  graph: 0.0
+
+# Retained as a compatible fallback profile; stage 2 has zero epochs.
 stage2_loss_weights:
   concept: 0.25
   parent: 0.25
@@ -107,5 +121,8 @@ stage2_loss_weights:
 
 stage1_lr: 0.0001
 stage2_lr: 0.00005
+stage1_lr_schedule:
+  1: 0.0001
+  6: 0.00005
 stage3_decoder_lr: 0.00005
 stage3_backbone_lr: 0.00001

@@ -1,0 +1,10 @@
+# Single-scale counterpart of the main HCG-NS NTU120-CSub experiment.
+# Keep the multi-scale configuration unchanged as the comparison baseline.
+base_config: HCG_NS_SkateFormer_ntu120_csub.yaml
+
+# Use a separate output directory so this run cannot overwrite the baseline.
+work_dir: ./work_dir/hcg_ns/main_ntu120_csub_single_scale
+
+prototype_args:
+  multi_scale: false
+  scale_fusion: shared

@@ -38,12 +38,6 @@ class TransformerDecoderLayerOptimal(nn.Module):
         self.dropout3 = nn.Dropout(dropout)
 
         self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        # This layer has no self-attention (decoder-only cross-attention design), but
-        # newer PyTorch's nn.TransformerDecoder.forward() unconditionally reads
-        # `self.layers[0].self_attn.batch_first` for its causal-mask fast path.
-        # Alias it to multihead_attn (same batch_first=False layout this class assumes)
-        # so that lookup succeeds; it is never otherwise used by forward() below.
-        self.self_attn = self.multihead_attn
 
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
@@ -62,12 +56,7 @@ class TransformerDecoderLayerOptimal(nn.Module):
     def forward(self, tgt: Tensor, memory: Tensor, tgt_mask: Optional[Tensor] = None,
                 memory_mask: Optional[Tensor] = None,
                 tgt_key_padding_mask: Optional[Tensor] = None,
-                memory_key_padding_mask: Optional[Tensor] = None,
-                tgt_is_causal: Optional[bool] = None,
-                memory_is_causal: bool = False) -> Tensor:
-        # tgt_is_causal / memory_is_causal accepted for API-compatibility with newer
-        # PyTorch's nn.TransformerDecoder.forward(), which now always passes them.
-        # This layer does no causal masking, so they are unused.
+                memory_key_padding_mask: Optional[Tensor] = None) -> Tensor:
         tgt = tgt + self.dropout1(tgt)
         tgt = self.norm1(tgt)
         tgt2 = self.multihead_attn(tgt, memory, memory)[0]
