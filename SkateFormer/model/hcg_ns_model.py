@@ -78,6 +78,21 @@ class HCGNSSkateFormer(nn.Module):
             parent_enabled=parent_enabled,
             refiner_enabled=bool(prototype_args.get("refiner_enabled", True)),
             refiner_hidden_dim=int(prototype_args.get("refiner_hidden_dim", 128)),
+            temporal_gru_enabled=bool(
+                prototype_args.get("temporal_gru_enabled", False)
+            ),
+            temporal_gru_hidden_dim=int(
+                prototype_args.get("temporal_gru_hidden_dim", 64)
+            ),
+            temporal_gru_layers=int(
+                prototype_args.get("temporal_gru_layers", 1)
+            ),
+            temporal_gru_dropout=float(
+                prototype_args.get("temporal_gru_dropout", 0.0)
+            ),
+            temporal_gru_residual_init=float(
+                prototype_args.get("temporal_gru_residual_init", 0.0)
+            ),
             center_loss_mode=str(prototype_args.get("center_loss_mode", "legacy")),
             center_positive_margin=float(
                 prototype_args.get("center_positive_margin", 0.35)
@@ -475,6 +490,24 @@ class HCGNSSkateFormer(nn.Module):
                     f"{name}_min": float(values.min().cpu()),
                     f"{name}_max": float(values.max().cpu()),
                 })
+
+        temporal_gru = base.temporal_gru
+        if temporal_gru is not None:
+            residual_scale = temporal_gru.residual_scale.detach()
+            diagnostics.update({
+                "temporal_gru_residual_scale_mean": float(
+                    residual_scale.mean().cpu()
+                ),
+                "temporal_gru_residual_scale_std": float(
+                    residual_scale.std(unbiased=False).cpu()
+                ),
+                "temporal_gru_residual_scale_min": float(
+                    residual_scale.min().cpu()
+                ),
+                "temporal_gru_residual_scale_max": float(
+                    residual_scale.max().cpu()
+                ),
+            })
 
         refiner = self.concept_decoder.concept_refiner
         if hasattr(refiner, "residual_scale"):

@@ -95,6 +95,11 @@ class HierarchicalConceptDecoder(nn.Module):
         parent_enabled: bool = True,
         refiner_enabled: bool = True,
         refiner_hidden_dim: int = 128,
+        temporal_gru_enabled: bool = False,
+        temporal_gru_hidden_dim: int = 64,
+        temporal_gru_layers: int = 1,
+        temporal_gru_dropout: float = 0.0,
+        temporal_gru_residual_init: float = 0.0,
         center_loss_mode: str = "legacy",
         center_positive_margin: float = 0.35,
         center_gap_margin: float = 0.30,
@@ -155,6 +160,11 @@ class HierarchicalConceptDecoder(nn.Module):
             num_people=num_people,
             num_points=num_points,
             temporal_concepts=temporal_concepts,
+            temporal_gru_enabled=temporal_gru_enabled,
+            temporal_gru_hidden_dim=temporal_gru_hidden_dim,
+            temporal_gru_layers=temporal_gru_layers,
+            temporal_gru_dropout=temporal_gru_dropout,
+            temporal_gru_residual_init=temporal_gru_residual_init,
             interaction_concepts=(
                 interaction_concepts if interaction_reasoning else []
             ),

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import unittest
-from pathlib import Path
 
 import torch
 
@@ -12,7 +11,11 @@ from main_hcg_ns import (
     load_config,
     scheduled_learning_rate,
 )
-from model.concept_prototypes import AdaptiveTemporalMILPool, ConceptPrototypeDecoder
+from model.concept_prototypes import (
+    AdaptiveTemporalMILPool,
+    ConceptPrototypeDecoder,
+    TemporalConceptGRU,
+)
 from model.concept_ontology import load_ontology_metadata
 from model.hierarchical_concept_decoder import (
     HierarchicalConceptDecoder,
@@ -39,6 +42,52 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         for parameter in (pool.beta_raw, pool.mix_raw, pool.bias):
             self.assertIsNotNone(parameter.grad)
             self.assertTrue(torch.isfinite(parameter.grad).all())
+
+    def test_temporal_gru_is_identity_at_initialization(self) -> None:
+        temporal_gru = TemporalConceptGRU(
+            num_temporal_concepts=3,
+            hidden_dim=5,
+            residual_init=0.0,
+        )
+        logits = torch.randn(2, 7, 3, requires_grad=True)
+        output = temporal_gru(logits)
+        self.assertTrue(torch.equal(output, logits))
+        output.sum().backward()
+        self.assertIsNotNone(temporal_gru.alpha.grad)
+        self.assertTrue(torch.isfinite(temporal_gru.alpha.grad).all())
+
+    def test_temporal_gru_changes_only_temporal_concepts(self) -> None:
+        decoder = ConceptPrototypeDecoder(
+            feature_dim=8,
+            num_concepts=4,
+            temporal_concepts=[1, 3],
+            temporal_pooling="adaptive_mil",
+            temporal_gru_enabled=True,
+            temporal_gru_hidden_dim=6,
+        )
+        logits = torch.randn(2, 9, 4)
+        unchanged = decoder._apply_temporal_gru(logits)
+        self.assertTrue(torch.equal(unchanged, logits))
+
+        with torch.no_grad():
+            decoder.temporal_gru.alpha.fill_(0.5)
+        contextualized = decoder._apply_temporal_gru(logits)
+        self.assertTrue(torch.equal(contextualized[:, :, 0], logits[:, :, 0]))
+        self.assertTrue(torch.equal(contextualized[:, :, 2], logits[:, :, 2]))
+        self.assertFalse(torch.equal(contextualized[:, :, 1], logits[:, :, 1]))
+        self.assertFalse(torch.equal(contextualized[:, :, 3], logits[:, :, 3]))
+
+    def test_temporal_gru_is_order_sensitive_before_mil(self) -> None:
+        temporal_gru = TemporalConceptGRU(
+            num_temporal_concepts=2,
+            hidden_dim=4,
+        )
+        with torch.no_grad():
+            temporal_gru.alpha.fill_(1.0)
+        logits = torch.tensor([[[1.0, -1.0], [0.0, 0.5], [-0.5, 1.0]]])
+        forward = temporal_gru(logits)
+        reversed_then_restored = temporal_gru(logits.flip(1)).flip(1)
+        self.assertFalse(torch.allclose(forward, reversed_then_restored))
 
     def test_per_concept_scale_weights(self) -> None:
         decoder = ConceptPrototypeDecoder(
@@ -124,6 +173,8 @@ class ConceptDecoderV3Tests(unittest.TestCase):
             num_people=2,
             num_points=2,
             interaction_reasoning=True,
+            temporal_gru_enabled=True,
+            temporal_gru_hidden_dim=16,
         )
         output = decoder([
             torch.randn(2, 8, 6, 4),
@@ -136,6 +187,7 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         output["sequence_logits"].sum().backward()
         self.assertIsNotNone(decoder.base.pose_scale_projectors[0][1].weight.grad)
         self.assertIsNotNone(decoder.base.motion_scale_projectors[0][1].weight.grad)
+        self.assertIsNotNone(decoder.base.temporal_gru.alpha.grad)
         self.assertIsNotNone(decoder.concept_refiner.alpha.grad)
 
     def test_margin_grounding_uses_positive_and_hard_negative_margins(self) -> None:
@@ -429,51 +481,13 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         expected = torch.logit(probabilities)
         self.assertTrue(torch.allclose(symbolic._score_evidence(probabilities), expected))
 
-    def test_ntu120_csub_ablation_configs_resolve(self) -> None:
-        config_dir = Path("config/ablation_ntu120_csub_v31")
-        expected = {
-            "V2_R.yaml": ("legacy_noisy_or", False, "shared", True),
-            "V3_A.yaml": ("adaptive_mil", False, "shared", True),
-            "V3_B.yaml": ("legacy_noisy_or", True, "per_concept", True),
-            "V3_C.yaml": ("adaptive_mil", True, "per_concept", True),
-            "V3_D.yaml": ("adaptive_mil", True, "per_concept", False),
-            "V3_E.yaml": ("adaptive_mil", True, "per_concept", True),
-        }
-        for name, settings in expected.items():
-            with self.subTest(config=name):
-                config = load_config(config_dir / name)
-                prototype = config["prototype_args"]
-                self.assertEqual(config["num_classes"], 120)
-                self.assertEqual(config["num_concepts"], 102)
-                self.assertEqual(prototype["temporal_pooling"], settings[0])
-                self.assertEqual(prototype["multi_scale"], settings[1])
-                self.assertEqual(prototype["scale_fusion"], settings[2])
-                self.assertEqual(prototype["parent_enabled"], settings[3])
-                self.assertIn("ntu120_csub_v31", config["work_dir"])
-                if name == "V3_E.yaml":
-                    self.assertEqual(config["stage1_loss_weights"]["graph"], 0.0)
-                    self.assertEqual(config["stage2_loss_weights"]["graph"], 0.10)
-                for profile in (
-                    "loss_weights", "stage1_loss_weights", "stage2_loss_weights"
-                ):
-                    self.assertIn("concept", config[profile])
-                    self.assertNotIn("weak_concept", config[profile])
-                    self.assertNotIn("weak_positive", config[profile])
-                    self.assertNotIn("weak_negative", config[profile])
-                    self.assertNotIn("density", config[profile])
-                    self.assertNotIn("hierarchy", config[profile])
-                    self.assertNotIn("sparse", config[profile])
-                    self.assertNotIn("hard_negative", config[profile])
-                self.assertNotIn("parent_weight", config)
-
-    def test_main_config_uses_joint_training_without_mutating_v3_e(self) -> None:
+    def test_main_config_uses_temporal_gru_joint_training(self) -> None:
         main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
-        v3_e = load_config("config/ablation_ntu120_csub_v31/V3_E.yaml")
 
         self.assertNotIn("base_config", main)
         self.assertEqual(
             main["work_dir"],
-            "./work_dir/hcg_ns/main_ntu120_csub_pose_motion_refiner",
+            "./work_dir/hcg_ns/main_ntu120_csub_pose_motion_gru_refiner",
         )
         self.assertEqual(main["stage1_name"], "joint_grounding_composition")
         self.assertEqual(main["stage1_epochs"], 15)
@@ -488,29 +502,13 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertEqual(main["prototype_args"]["center_gap_topk"], 5)
         self.assertTrue(main["prototype_args"]["refiner_enabled"])
         self.assertEqual(main["prototype_args"]["refiner_hidden_dim"], 128)
+        self.assertTrue(main["prototype_args"]["temporal_gru_enabled"])
+        self.assertEqual(main["prototype_args"]["temporal_gru_hidden_dim"], 64)
+        self.assertEqual(main["prototype_args"]["temporal_gru_layers"], 1)
+        self.assertEqual(main["prototype_args"]["temporal_gru_dropout"], 0.0)
+        self.assertEqual(main["prototype_args"]["temporal_gru_residual_init"], 0.0)
         self.assertNotIn("scope_fusion", main["prototype_args"])
         self.assertNotIn("scope_scale", main["prototype_args"])
-        self.assertEqual(v3_e["stage1_epochs"], 5)
-        self.assertEqual(v3_e["stage2_epochs"], 10)
-        self.assertNotIn("center_loss_mode", v3_e["prototype_args"])
-
-    def test_single_scale_ablation_changes_only_scale_settings(self) -> None:
-        main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
-        ablation = load_config(
-            "config/HCG_NS_SkateFormer_ntu120_csub_single_scale.yaml"
-        )
-        self.assertFalse(ablation["prototype_args"]["multi_scale"])
-        self.assertEqual(ablation["prototype_args"]["scale_fusion"], "shared")
-        for key, value in main.items():
-            if key == "work_dir":
-                continue
-            if key == "prototype_args":
-                expected = dict(value)
-                expected["multi_scale"] = False
-                expected["scale_fusion"] = "shared"
-                self.assertEqual(ablation[key], expected)
-            else:
-                self.assertEqual(ablation[key], value, key)
 
 
 if __name__ == "__main__":

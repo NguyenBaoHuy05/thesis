@@ -78,11 +78,12 @@ The active decoder no longer contains a learned `scope_head`. Ontology scope
 metadata is now used for deterministic routing: `spatial` concepts use pose
 features, `temporal` concepts use first-order feature differences, and
 `context` concepts use pose/person-pair evidence when two people are present.
-Adaptive MIL produces sequence logits before an ontology-masked residual
-refiner. The refiner is block-diagonal by parent group and starts as an exact
-identity.
+For the active thesis model, a one-way residual GRU contextualizes only the
+ontology-temporal concept logits before adaptive MIL. Adaptive MIL produces
+sequence logits before an ontology-masked residual refiner. Both residual
+modules start as exact identities; the refiner remains block-diagonal by
+parent group.
 
-The removed scope-head ablation configs and checkpoints from that decoder are
-not architecture-compatible with this version. The V3.1 configs now describe
-pooling/scale ablations under the new pose/motion decoder and must be retrained
-before their results are compared.
+The removed scope-head/V3.1 ablation configs and checkpoints from that decoder
+are not architecture-compatible with this version. They remain recoverable
+from Git history if their historical results need to be reproduced.

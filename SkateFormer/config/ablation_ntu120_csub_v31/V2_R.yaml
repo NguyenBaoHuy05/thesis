@@ -1,6 +1,0 @@
-base_config: _base.yaml
-work_dir: ./work_dir/hcg_ns/ablation_ntu120_csub_v31/V2_R
-prototype_args:
-  multi_scale: false
-  temporal_pooling: legacy_noisy_or
-  scale_fusion: shared

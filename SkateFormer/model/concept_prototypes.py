@@ -85,6 +85,70 @@ class AdaptiveTemporalMILPool(nn.Module):
         return torch.sigmoid(self.pool_logits(time_logits))
 
 
+class TemporalConceptGRU(nn.Module):
+    """Add order-aware context to temporal concept logits before MIL pooling.
+
+    The GRU operates only on concepts marked temporal by the ontology.  A
+    learnable per-concept residual scale is initialized to zero, so enabling
+    this module preserves the original logits at initialization while allowing
+    training to introduce order-sensitive evidence gradually.
+    """
+
+    def __init__(
+        self,
+        num_temporal_concepts: int,
+        hidden_dim: int = 64,
+        num_layers: int = 1,
+        dropout: float = 0.0,
+        residual_init: float = 0.0,
+    ):
+        super().__init__()
+        if int(num_temporal_concepts) <= 0:
+            raise ValueError("num_temporal_concepts must be positive")
+        if int(hidden_dim) <= 0:
+            raise ValueError("temporal GRU hidden_dim must be positive")
+        if int(num_layers) <= 0:
+            raise ValueError("temporal GRU num_layers must be positive")
+        if not 0.0 <= float(dropout) < 1.0:
+            raise ValueError("temporal GRU dropout must lie in [0, 1)")
+        self.num_temporal_concepts = int(num_temporal_concepts)
+        self.hidden_dim = int(hidden_dim)
+        self.num_layers = int(num_layers)
+        self.gru = nn.GRU(
+            input_size=self.num_temporal_concepts,
+            hidden_size=self.hidden_dim,
+            num_layers=self.num_layers,
+            batch_first=True,
+            dropout=float(dropout) if self.num_layers > 1 else 0.0,
+            bidirectional=False,
+        )
+        self.output_projection = nn.Linear(
+            self.hidden_dim, self.num_temporal_concepts
+        )
+        self.alpha = nn.Parameter(
+            torch.full((self.num_temporal_concepts,), float(residual_init))
+        )
+
+    @property
+    def residual_scale(self) -> torch.Tensor:
+        return torch.tanh(self.alpha)
+
+    def forward(self, temporal_logits: torch.Tensor) -> torch.Tensor:
+        if temporal_logits.ndim != 3:
+            raise ValueError(
+                "temporal_logits must have shape [B,T,Kt], got "
+                f"{tuple(temporal_logits.shape)}"
+            )
+        if temporal_logits.shape[-1] != self.num_temporal_concepts:
+            raise ValueError(
+                f"temporal_logits has {temporal_logits.shape[-1]} concepts, "
+                f"expected {self.num_temporal_concepts}"
+            )
+        context, _ = self.gru(temporal_logits)
+        delta = self.output_projection(context)
+        return temporal_logits + self.residual_scale.view(1, 1, -1) * delta
+
+
 class ConceptPrototypeDecoder(nn.Module):
     """Convert SkateFormer feature maps into scope-routed concept evidence.
 
@@ -108,6 +172,11 @@ class ConceptPrototypeDecoder(nn.Module):
         num_people: int = 1,
         num_points: int | None = None,
         temporal_concepts: Iterable[int] | None = None,
+        temporal_gru_enabled: bool = False,
+        temporal_gru_hidden_dim: int = 64,
+        temporal_gru_layers: int = 1,
+        temporal_gru_dropout: float = 0.0,
+        temporal_gru_residual_init: float = 0.0,
         interaction_concepts: Iterable[int] | None = None,
         center_loss_mode: str = "legacy",
         center_positive_margin: float = 0.35,
@@ -148,6 +217,22 @@ class ConceptPrototypeDecoder(nn.Module):
             temporal_mask[list(temporal_ids)] = True
         self.temporal_concepts = temporal_ids
         self.register_buffer("temporal_mask", temporal_mask, persistent=False)
+        self.temporal_gru_enabled = bool(temporal_gru_enabled)
+        if self.temporal_gru_enabled and not temporal_ids:
+            raise ValueError(
+                "temporal_gru_enabled requires at least one temporal concept"
+            )
+        self.temporal_gru = (
+            TemporalConceptGRU(
+                num_temporal_concepts=len(temporal_ids),
+                hidden_dim=temporal_gru_hidden_dim,
+                num_layers=temporal_gru_layers,
+                dropout=temporal_gru_dropout,
+                residual_init=temporal_gru_residual_init,
+            )
+            if self.temporal_gru_enabled
+            else None
+        )
         self.interaction_concepts = tuple(
             sorted(set(int(i) for i in (interaction_concepts or [])))
         )
@@ -362,6 +447,17 @@ class ConceptPrototypeDecoder(nn.Module):
             "falling_activity": falling,
         }
 
+    def _apply_temporal_gru(self, time_logits: torch.Tensor) -> torch.Tensor:
+        """Contextualize only ontology-temporal logits, preserving all others."""
+        if self.temporal_gru is None:
+            return time_logits
+        temporal_ids = torch.as_tensor(
+            self.temporal_concepts, dtype=torch.long, device=time_logits.device
+        )
+        temporal_logits = time_logits.index_select(2, temporal_ids)
+        contextualized = self.temporal_gru(temporal_logits)
+        return time_logits.index_copy(2, temporal_ids, contextualized)
+
     def forward(
         self, feature_map: torch.Tensor | Sequence[torch.Tensor]
     ) -> dict[str, torch.Tensor]:
@@ -435,6 +531,7 @@ class ConceptPrototypeDecoder(nn.Module):
             grounding_cosine = grounding_cosine.clone()
             grounding_cosine[:, :, :, interaction_ids] = interaction_cosine[:, :, :, interaction_ids]
 
+        time_logits = self._apply_temporal_gru(time_logits)
         time_probs = torch.sigmoid(time_logits)
         stats = self._temporal_statistics(time_probs, time_logits)
         return {

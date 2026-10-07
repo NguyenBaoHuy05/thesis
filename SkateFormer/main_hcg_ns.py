@@ -291,9 +291,9 @@ def evaluate(model, loader, device, dump_path: Path | None = None,
         dump_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
             dump_path,
-            schema_version=np.asarray(5, dtype=np.int64),
+            schema_version=np.asarray(6, dtype=np.int64),
             concept_probability_semantics=np.asarray(
-                "scope_routed_pose_motion_mil_with_ontology_refiner"
+                "scope_routed_pose_motion_gru_mil_with_ontology_refiner"
             ),
             parent_role=np.asarray(
                 "auxiliary_supervision"
@@ -369,6 +369,10 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
             "pose_projector_grad_norm": _gradient_norm(pose_projector.parameters()),
             "motion_projector_grad_norm": _gradient_norm(
                 motion_projector.parameters()
+            ),
+            "temporal_gru_grad_norm": _gradient_norm(
+                base.temporal_gru.parameters()
+                if base.temporal_gru is not None else []
             ),
             "temperature_grad_abs": _gradient_norm([base.log_temperature]),
             "scale_logits_grad_norm": _gradient_norm(
