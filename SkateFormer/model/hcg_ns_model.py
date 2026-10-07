@@ -64,6 +64,7 @@ class HCGNSSkateFormer(nn.Module):
             feature_dim=feature_dim,
             metadata=metadata,
             num_concepts=num_concepts,
+            decoder_type=str(prototype_args.get("decoder_type", "prototype")),
             temperature=float(prototype_args.get("temperature", 0.07)),
             multi_scale=bool(prototype_args.get("multi_scale", False)),
             pyramid_dims=pyramid_dims,
@@ -363,71 +364,73 @@ class HCGNSSkateFormer(nn.Module):
     def training_diagnostics(self) -> dict[str, Any]:
         """Return scalar decoder diagnostics suitable for per-epoch JSON logs."""
         base = self.concept_decoder.base
-        raw_centers = base.centers.detach()
-        center_norms = raw_centers.norm(dim=-1)
-        centers = base.normalized_centers().detach()
-        center_similarity = centers @ centers.t()
-        off_diagonal_mask = ~torch.eye(
-            centers.shape[0], dtype=torch.bool, device=centers.device
-        )
-        pairwise = center_similarity[off_diagonal_mask]
-        nearest = center_similarity.masked_fill(
-            ~off_diagonal_mask, float("-inf")
-        ).amax(dim=1)
-        closest_flat_index = center_similarity.masked_fill(
-            ~off_diagonal_mask, float("-inf")
-        ).argmax()
-        closest_left_id = int(
-            (closest_flat_index // centers.shape[0]).detach().cpu().item()
-        )
-        closest_right_id = int(
-            (closest_flat_index % centers.shape[0]).detach().cpu().item()
-        )
-
-        diagnostics = {
-            "center_loss_mode": base.center_loss_mode,
-            "center_positive_margin": base.center_positive_margin,
-            "center_gap_margin": base.center_gap_margin,
-            "center_gap_topk": float(base.center_gap_topk),
-            "center_negative_margin": base.center_negative_margin,
-            "center_separation_margin": base.center_separation_margin,
-            "temperature": float(base.temperature.detach().cpu()),
-            "center_raw_norm_mean": float(center_norms.mean().cpu()),
-            "center_raw_norm_std": float(center_norms.std(unbiased=False).cpu()),
-            "center_raw_norm_min": float(center_norms.min().cpu()),
-            "center_raw_norm_max": float(center_norms.max().cpu()),
-            "center_pair_cosine_mean": float(pairwise.mean().cpu()),
-            "center_pair_cosine_std": float(pairwise.std(unbiased=False).cpu()),
-            "center_pair_cosine_min": float(pairwise.min().cpu()),
-            "center_pair_cosine_max": float(pairwise.max().cpu()),
-            "center_nearest_cosine_mean": float(nearest.mean().cpu()),
-            "center_nearest_cosine_max": float(nearest.max().cpu()),
-            "center_margin_violation_rate": float(
-                (pairwise > base.center_separation_margin).float().mean().cpu()
-            ),
-            "center_closest_pair_left_id": closest_left_id,
-            "center_closest_pair_right_id": closest_right_id,
-            "center_closest_pair_left_name": self.symbolic.concept_names[closest_left_id],
-            "center_closest_pair_right_name": self.symbolic.concept_names[closest_right_id],
-        }
-
-        support = self.symbolic.support.to(
-            device=center_similarity.device, dtype=center_similarity.dtype
-        )
-        negative_pair_mask = (support.t() @ support) <= 0
-        negative_pair_mask &= off_diagonal_mask
-        negative_pairwise = center_similarity[negative_pair_mask]
-        if negative_pairwise.numel() > 0:
+        diagnostics = {"decoder_type": self.concept_decoder.decoder_type}
+        raw_centers = getattr(base, "centers", None)
+        if raw_centers is not None:
+            raw_centers = raw_centers.detach()
+            center_norms = raw_centers.norm(dim=-1)
+            centers = base.normalized_centers().detach()
+            center_similarity = centers @ centers.t()
+            off_diagonal_mask = ~torch.eye(
+                centers.shape[0], dtype=torch.bool, device=centers.device
+            )
+            pairwise = center_similarity[off_diagonal_mask]
+            nearest = center_similarity.masked_fill(
+                ~off_diagonal_mask, float("-inf")
+            ).amax(dim=1)
+            closest_flat_index = center_similarity.masked_fill(
+                ~off_diagonal_mask, float("-inf")
+            ).argmax()
+            closest_left_id = int(
+                (closest_flat_index // centers.shape[0]).detach().cpu().item()
+            )
+            closest_right_id = int(
+                (closest_flat_index % centers.shape[0]).detach().cpu().item()
+            )
             diagnostics.update({
-                "center_negative_pair_cosine_mean": float(
-                    negative_pairwise.mean().cpu()
+                "center_loss_mode": base.center_loss_mode,
+                "center_positive_margin": base.center_positive_margin,
+                "center_gap_margin": base.center_gap_margin,
+                "center_gap_topk": float(base.center_gap_topk),
+                "center_negative_margin": base.center_negative_margin,
+                "center_separation_margin": base.center_separation_margin,
+                "temperature": float(base.temperature.detach().cpu()),
+                "center_raw_norm_mean": float(center_norms.mean().cpu()),
+                "center_raw_norm_std": float(center_norms.std(unbiased=False).cpu()),
+                "center_raw_norm_min": float(center_norms.min().cpu()),
+                "center_raw_norm_max": float(center_norms.max().cpu()),
+                "center_pair_cosine_mean": float(pairwise.mean().cpu()),
+                "center_pair_cosine_std": float(pairwise.std(unbiased=False).cpu()),
+                "center_pair_cosine_min": float(pairwise.min().cpu()),
+                "center_pair_cosine_max": float(pairwise.max().cpu()),
+                "center_nearest_cosine_mean": float(nearest.mean().cpu()),
+                "center_nearest_cosine_max": float(nearest.max().cpu()),
+                "center_margin_violation_rate": float(
+                    (pairwise > base.center_separation_margin).float().mean().cpu()
                 ),
-                "center_negative_pair_margin_violation_rate": float(
-                    (
-                        negative_pairwise > base.center_separation_margin
-                    ).float().mean().cpu()
-                ),
+                "center_closest_pair_left_id": closest_left_id,
+                "center_closest_pair_right_id": closest_right_id,
+                "center_closest_pair_left_name": self.symbolic.concept_names[closest_left_id],
+                "center_closest_pair_right_name": self.symbolic.concept_names[closest_right_id],
             })
+
+            support = self.symbolic.support.to(
+                device=center_similarity.device, dtype=center_similarity.dtype
+            )
+            negative_pair_mask = (support.t() @ support) <= 0
+            negative_pair_mask &= off_diagonal_mask
+            negative_pairwise = center_similarity[negative_pair_mask]
+            if negative_pairwise.numel() > 0:
+                diagnostics.update({
+                    "center_negative_pair_cosine_mean": float(
+                        negative_pairwise.mean().cpu()
+                    ),
+                    "center_negative_pair_margin_violation_rate": float(
+                        (
+                            negative_pairwise > base.center_separation_margin
+                        ).float().mean().cpu()
+                    ),
+                })
 
         scale_weights = base.scale_weights
         if scale_weights is not None:

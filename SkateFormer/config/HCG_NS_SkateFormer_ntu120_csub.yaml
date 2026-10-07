@@ -55,6 +55,7 @@ model_args:
   index_t: true
 
 prototype_args:
+  decoder_type: prototype
   multi_scale: true
   pyramid_levels: [2, 3]
   temporal_pooling: adaptive_mil

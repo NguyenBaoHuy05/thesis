@@ -219,6 +219,20 @@ action-concept matrix and the concept metadata that defines scopes and parent
 groups. Historical V3 scope-head ablations are not architecture-compatible
 with the active pose/motion/GRU decoder.
 
+### Prototype ablations
+
+Two non-prototype controls retain the active model's pose/motion routing,
+multi-scale fusion, temporal GRU, adaptive MIL, ontology refiner and symbolic
+decoder. `direct` replaces cosine prototypes with one linear concept head.
+`grouped` uses one multi-label head per ontology group and restricts anatomical
+groups to the corresponding NTU joint tokens. Neither variant creates concept
+centers or applies the center loss.
+
+```bash
+python main_hcg_ns.py --config config/ablation_prototype/direct.yaml
+python main_hcg_ns.py --config config/ablation_prototype/grouped.yaml
+```
+
 ## Evaluation
 
 ```bash

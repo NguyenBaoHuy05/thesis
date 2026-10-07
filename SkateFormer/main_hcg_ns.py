@@ -364,8 +364,16 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
         motion_projector = (
             base.motion_scale_projectors if base.multi_scale else base.motion_projector
         )
+        centers = getattr(base, "centers", None)
+        log_temperature = getattr(base, "log_temperature", None)
+        concept_heads = getattr(base, "concept_heads", None)
         gradient_diagnostics.update({
-            "center_grad_norm": _gradient_norm([base.centers]),
+            "center_grad_norm": _gradient_norm(
+                [centers] if centers is not None else []
+            ),
+            "concept_head_grad_norm": _gradient_norm(
+                concept_heads.parameters() if concept_heads is not None else []
+            ),
             "pose_projector_grad_norm": _gradient_norm(pose_projector.parameters()),
             "motion_projector_grad_norm": _gradient_norm(
                 motion_projector.parameters()
@@ -374,7 +382,9 @@ def train_epoch(model, loader, optimizer, device, grad_clip: float | None,
                 base.temporal_gru.parameters()
                 if base.temporal_gru is not None else []
             ),
-            "temperature_grad_abs": _gradient_norm([base.log_temperature]),
+            "temperature_grad_abs": _gradient_norm(
+                [log_temperature] if log_temperature is not None else []
+            ),
             "scale_logits_grad_norm": _gradient_norm(
                 [base.scale_logits] if base.multi_scale else []
             ),

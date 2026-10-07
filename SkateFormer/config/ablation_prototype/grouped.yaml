@@ -1,0 +1,15 @@
+# Structured non-prototype baseline: one independent multi-label head per
+# ontology group. Anatomical groups see only their NTU joint partitions;
+# temporal and participant groups retain whole-body/person-pair evidence.
+base_config: ../HCG_NS_SkateFormer_ntu120_csub.yaml
+work_dir: ./work_dir/hcg_ns/ablation_prototype_grouped
+
+prototype_args:
+  decoder_type: grouped
+
+loss_weights:
+  center: 0.0
+stage1_loss_weights:
+  center: 0.0
+stage2_loss_weights:
+  center: 0.0

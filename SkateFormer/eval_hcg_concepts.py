@@ -235,8 +235,14 @@ def evaluate(
     raw_mean_abs = logit_summaries["raw_sequence_logits"]["mean_abs"]
     raw_std = logit_summaries["raw_sequence_logits"]["std"]
     temperature = decoder.temperature
+    decoder_type = decoder.decoder_type
     decoder_logit_diagnostics = {
-        "architecture": "scope_routed_pose_motion_prototypes",
+        "architecture": {
+            "prototype": "scope_routed_pose_motion_prototypes",
+            "direct": "scope_routed_pose_motion_direct_heads",
+            "grouped": "ontology_grouped_pose_motion_heads",
+        }[decoder_type],
+        "decoder_type": decoder_type,
         "scope_counts": {
             name: len(concept_ids)
             for name, concept_ids in decoder.scope_ids.items()
@@ -252,6 +258,13 @@ def evaluate(
         ),
         "prototype_logit_bound": (
             float(1.0 / temperature.item()) if temperature is not None else None
+        ),
+        "head_group_counts": (
+            {
+                name: len(concept_ids)
+                for name, concept_ids in decoder.base.group_ids.items()
+            }
+            if decoder_type == "grouped" else None
         ),
         **logit_summaries,
         "refiner_delta_to_raw_mean_abs_ratio": float(

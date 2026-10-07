@@ -8,6 +8,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from model.concept_heads import ConceptHeadDecoder
 from model.concept_prototypes import ConceptPrototypeDecoder
 from model.concept_ontology import build_parent_index
 
@@ -83,6 +84,7 @@ class HierarchicalConceptDecoder(nn.Module):
         feature_dim: int,
         metadata: list[dict[str, str]],
         num_concepts: int = 78,
+        decoder_type: str = "prototype",
         temperature: float = 0.07,
         multi_scale: bool = False,
         pyramid_dims: Sequence[int] | None = None,
@@ -121,6 +123,11 @@ class HierarchicalConceptDecoder(nn.Module):
         self.parent_levels = parent_levels
         self.num_concepts = int(num_concepts)
         self.num_parents = len(parent_names)
+        self.decoder_type = str(decoder_type).strip().lower()
+        if self.decoder_type not in {"prototype", "direct", "grouped"}:
+            raise ValueError(
+                "decoder_type must be 'prototype', 'direct', or 'grouped'"
+            )
         self.parent_enabled = bool(parent_enabled)
         self.refiner_enabled = bool(refiner_enabled)
         self.register_buffer("concept_to_parent", concept_to_parent)
@@ -148,10 +155,9 @@ class HierarchicalConceptDecoder(nn.Module):
             scope_ids.setdefault(scope, []).append(concept_id)
         self.scope_ids = {name: tuple(ids) for name, ids in scope_ids.items()}
         temporal_concepts = self.scope_ids.get("temporal", ())
-        self.base = ConceptPrototypeDecoder(
+        common_decoder_args = dict(
             feature_dim=feature_dim,
             num_concepts=num_concepts,
-            temperature=temperature,
             multi_scale=multi_scale,
             pyramid_dims=pyramid_dims,
             pyramid_levels=pyramid_levels,
@@ -168,16 +174,27 @@ class HierarchicalConceptDecoder(nn.Module):
             interaction_concepts=(
                 interaction_concepts if interaction_reasoning else []
             ),
-            center_loss_mode=center_loss_mode,
-            center_positive_margin=center_positive_margin,
-            center_gap_margin=center_gap_margin,
-            center_gap_topk=center_gap_topk,
-            center_negative_margin=center_negative_margin,
-            center_negative_weight=center_negative_weight,
-            center_negative_topk=center_negative_topk,
-            center_separation_margin=center_separation_margin,
-            center_separation_topk=center_separation_topk,
         )
+        if self.decoder_type == "prototype":
+            self.base = ConceptPrototypeDecoder(
+                **common_decoder_args,
+                temperature=temperature,
+                center_loss_mode=center_loss_mode,
+                center_positive_margin=center_positive_margin,
+                center_gap_margin=center_gap_margin,
+                center_gap_topk=center_gap_topk,
+                center_negative_margin=center_negative_margin,
+                center_negative_weight=center_negative_weight,
+                center_negative_topk=center_negative_topk,
+                center_separation_margin=center_separation_margin,
+                center_separation_topk=center_separation_topk,
+            )
+        else:
+            self.base = ConceptHeadDecoder(
+                **common_decoder_args,
+                metadata=metadata,
+                decoder_type=self.decoder_type,
+            )
         self.concept_refiner: nn.Module
         if self.refiner_enabled:
             self.concept_refiner = OntologyMaskedConceptRefiner(
@@ -208,14 +225,16 @@ class HierarchicalConceptDecoder(nn.Module):
         return self.base.multi_scale
 
     @property
-    def temperature(self) -> torch.Tensor:
-        return self.base.temperature
+    def temperature(self) -> torch.Tensor | None:
+        return getattr(self.base, "temperature", None)
 
     @property
-    def centers(self) -> torch.Tensor:
-        return self.base.centers
+    def centers(self) -> torch.Tensor | None:
+        return getattr(self.base, "centers", None)
 
-    def normalized_centers(self) -> torch.Tensor:
+    def normalized_centers(self) -> torch.Tensor | None:
+        if not hasattr(self.base, "normalized_centers"):
+            return None
         return self.base.normalized_centers()
 
     def _last_feature_map(
@@ -266,6 +285,10 @@ class HierarchicalConceptDecoder(nn.Module):
     def center_separation_loss(
         self, support: torch.Tensor | None = None
     ) -> torch.Tensor:
+        if self.decoder_type != "prototype":
+            if support is None:
+                return self.concept_to_parent.new_zeros((), dtype=torch.float32)
+            return support.new_zeros(())
         return self.base.center_separation_loss(support=support)
 
     def parent_graph_loss(

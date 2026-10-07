@@ -16,6 +16,7 @@ from model.concept_prototypes import (
     ConceptPrototypeDecoder,
     TemporalConceptGRU,
 )
+from model.concept_heads import ConceptHeadDecoder
 from model.concept_ontology import load_ontology_metadata
 from model.hierarchical_concept_decoder import (
     HierarchicalConceptDecoder,
@@ -189,6 +190,76 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertIsNotNone(decoder.base.motion_scale_projectors[0][1].weight.grad)
         self.assertIsNotNone(decoder.base.temporal_gru.alpha.grad)
         self.assertIsNotNone(decoder.concept_refiner.alpha.grad)
+
+    def test_direct_head_is_a_nonprototype_control(self) -> None:
+        metadata = load_ontology_metadata(
+            "concepts/ntu_concept_metadata_v2_4.csv", num_concepts=102
+        )
+        decoder = HierarchicalConceptDecoder(
+            feature_dim=8,
+            metadata=metadata,
+            num_concepts=102,
+            decoder_type="direct",
+            multi_scale=True,
+            pyramid_dims=(8, 8),
+            pyramid_levels=(0, 1),
+            temporal_pooling="adaptive_mil",
+            scale_fusion="per_concept",
+            num_people=2,
+            num_points=24,
+            temporal_gru_enabled=True,
+            temporal_gru_hidden_dim=16,
+        )
+        output = decoder([
+            torch.randn(2, 8, 6, 48),
+            torch.randn(2, 8, 3, 48),
+        ])
+        self.assertIsNone(decoder.centers)
+        self.assertIsNone(decoder.temperature)
+        self.assertIsNone(output["cosine_similarity"])
+        self.assertEqual(tuple(output["sequence_logits"].shape), (2, 102))
+        self.assertEqual(float(decoder.center_separation_loss(torch.eye(2))), 0.0)
+        output["sequence_logits"].sum().backward()
+        self.assertIsNotNone(decoder.base.concept_heads["all"].weight.grad)
+        self.assertIsNotNone(decoder.base.pose_scale_projectors[0][1].weight.grad)
+        self.assertIsNotNone(decoder.base.motion_scale_projectors[0][1].weight.grad)
+
+    def test_grouped_heads_mask_anatomical_joint_partitions(self) -> None:
+        metadata = [
+            {
+                "concept_id": "0", "concept_name": "upper", "scope": "spatial",
+                "group": "upper_limb", "parent_name": "upper", "level": "2",
+            },
+            {
+                "concept_id": "1", "concept_name": "lower", "scope": "spatial",
+                "group": "lower_limb", "parent_name": "lower", "level": "2",
+            },
+            {
+                "concept_id": "2", "concept_name": "motion", "scope": "temporal",
+                "group": "temporal_direction", "parent_name": "motion", "level": "2",
+            },
+        ]
+        decoder = ConceptHeadDecoder(
+            feature_dim=8,
+            metadata=metadata,
+            decoder_type="grouped",
+            num_concepts=3,
+            num_people=1,
+            num_points=24,
+            temporal_concepts=(2,),
+        )
+        features = torch.randn(2, 8, 5, 24)
+        changed_lower_body = features.clone()
+        changed_lower_body[:, :, :, 8:16] += torch.arange(8).view(1, 8, 1, 1)
+        original = decoder(features)["time_logits"]
+        changed = decoder(changed_lower_body)["time_logits"]
+
+        self.assertEqual(
+            set(decoder.concept_heads),
+            {"upper_limb", "lower_limb", "temporal_direction"},
+        )
+        self.assertTrue(torch.allclose(original[:, :, 0], changed[:, :, 0]))
+        self.assertFalse(torch.allclose(original[:, :, 1], changed[:, :, 1]))
 
     def test_margin_grounding_uses_positive_and_hard_negative_margins(self) -> None:
         decoder = ConceptPrototypeDecoder(
@@ -507,8 +578,16 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertEqual(main["prototype_args"]["temporal_gru_layers"], 1)
         self.assertEqual(main["prototype_args"]["temporal_gru_dropout"], 0.0)
         self.assertEqual(main["prototype_args"]["temporal_gru_residual_init"], 0.0)
+        self.assertEqual(main["prototype_args"]["decoder_type"], "prototype")
         self.assertNotIn("scope_fusion", main["prototype_args"])
         self.assertNotIn("scope_scale", main["prototype_args"])
+
+        direct = load_config("config/ablation_prototype/direct.yaml")
+        grouped = load_config("config/ablation_prototype/grouped.yaml")
+        self.assertEqual(direct["prototype_args"]["decoder_type"], "direct")
+        self.assertEqual(grouped["prototype_args"]["decoder_type"], "grouped")
+        self.assertEqual(direct["stage1_loss_weights"]["center"], 0.0)
+        self.assertEqual(grouped["stage1_loss_weights"]["center"], 0.0)
 
 
 if __name__ == "__main__":

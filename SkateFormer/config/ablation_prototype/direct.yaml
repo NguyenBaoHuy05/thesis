@@ -1,0 +1,15 @@
+# Controlled prototype ablation: preserve token evidence, pose/motion routing,
+# temporal modules, refiner and symbolic composition; replace cosine prototypes
+# with one ordinary linear concept classifier.
+base_config: ../HCG_NS_SkateFormer_ntu120_csub.yaml
+work_dir: ./work_dir/hcg_ns/ablation_prototype_direct
+
+prototype_args:
+  decoder_type: direct
+
+loss_weights:
+  center: 0.0
+stage1_loss_weights:
+  center: 0.0
+stage2_loss_weights:
+  center: 0.0

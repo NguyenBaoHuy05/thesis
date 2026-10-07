@@ -87,3 +87,23 @@ parent group.
 The removed scope-head/V3.1 ablation configs and checkpoints from that decoder
 are not architecture-compatible with this version. They remain recoverable
 from Git history if their historical results need to be reproduced.
+
+## 18. Prototype impact controls
+
+The decoder now accepts `prototype_args.decoder_type` with three values:
+`prototype` (the main model), `direct` (a single ordinary linear concept head),
+and `grouped` (independent multi-label heads for the eight ontology groups).
+Both non-prototype variants keep pose/motion routing, multi-scale fusion,
+temporal GRU, adaptive MIL, the ontology-masked refiner, parent supervision and
+symbolic composition fixed. Their configs explicitly set the center-loss
+weight to zero because they contain neither centers nor cosine similarities.
+
+The grouped variant masks `head`, `upper_limb`, `lower_limb`, and `hip_torso`
+to their anatomical tokens in the reordered 24-joint NTU layout. Participant
+and temporal groups retain whole-body evidence, while interaction concepts can
+still use the person-pair branch.
+
+```bash
+python main_hcg_ns.py --config config/ablation_prototype/direct.yaml
+python main_hcg_ns.py --config config/ablation_prototype/grouped.yaml
+```
