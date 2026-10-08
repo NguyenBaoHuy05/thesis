@@ -3,6 +3,7 @@
 import argparse
 import ast
 import csv
+from collections import OrderedDict
 import json
 import os
 from pathlib import Path
@@ -224,13 +225,23 @@ class SymbolicConfigTests(unittest.TestCase):
                 self.assertEqual({k: v for k, v in config['model_args'].items()
                                   if not k.startswith('symbolic_') and k not in ('concept_csv', 'metadata_csv', 'num_concepts')},
                                  baseline['model_args'])
-                for key in ('model', 'weight_decay', 'step', 'warm_up_epoch', 'lr_decay_rate',
-                            'batch_size', 'test_batch_size', 'num_epoch', 'nesterov'):
+                for key in ('model', 'weight_decay', 'lr_decay_rate',
+                            'batch_size', 'test_batch_size', 'nesterov'):
                     self.assertEqual(config[key], baseline[key])
                 self.assertTrue(config['pretrained_finetune'])
                 self.assertIsNone(config['weights'])
                 self.assertEqual(config['optimizer'], 'SGD')
-                self.assertEqual(config['base_lr'], 1e-4)
+                if config.get('symbolic_only'):
+                    self.assertTrue(config['eval_before_train'])
+                    self.assertEqual(config['base_lr'], 1e-3)
+                    self.assertEqual(config['num_epoch'], 20)
+                    self.assertEqual(config['step'], [12, 17])
+                    self.assertEqual(config['warm_up_epoch'], 3)
+                    self.assertTrue(config['work_dir'].endswith('joint_symbolic_only'))
+                else:
+                    self.assertEqual(config['base_lr'], 1e-4)
+                    for key in ('step', 'warm_up_epoch', 'num_epoch'):
+                        self.assertEqual(config[key], baseline[key])
                 self.assertTrue(config['model_args']['symbolic_balance_loss'])
                 self.assertEqual(config['model_args']['symbolic_pos_weight_source'], 'train')
 
@@ -243,7 +254,7 @@ class SymbolicEvaluationTests(unittest.TestCase):
         definitions = ast.Module(body=[node for node in source.body
                                       if isinstance(node, ast.ClassDef) and node.name == 'Processor'],
                                  type_ignores=[])
-        namespace = {'torch': torch, 'np': np, 'json': json, 'os': os,
+        namespace = {'torch': torch, 'np': np, 'json': json, 'os': os, 'OrderedDict': OrderedDict,
                      'concept_metrics': concept_metrics, 'tqdm': lambda loader, **kwargs: loader}
         exec(compile(definitions, str(ROOT / 'main.py'), 'exec'), namespace)
         processor = namespace['Processor'].__new__(namespace['Processor'])
@@ -302,7 +313,8 @@ class SymbolicEvaluationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             processor.arg = argparse.Namespace(work_dir=directory, phase='train',
                                                feeder='feeders.feeder_ntu.Feeder',
-                                               model_saved_name='unused', show_topk=[1], concept_threshold=.5)
+                                               model_saved_name=os.path.join(directory, 'runs'),
+                                               show_topk=[1], concept_threshold=.5)
             with mock.patch.object(torch.Tensor, 'cuda', lambda tensor, *args, **kwargs: tensor):
                 processor.eval(epoch=3)
             metrics = json.loads((Path(directory) / 'epoch4_test_concept_metrics.json').read_text())

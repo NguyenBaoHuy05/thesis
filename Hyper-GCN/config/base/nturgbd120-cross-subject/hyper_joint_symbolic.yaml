@@ -1,7 +1,9 @@
-work_dir: ./work_dir/ntu120/xsub/joint_symbolic
+work_dir: ./work_dir/ntu120/xsub/joint_symbolic_only
 
 # Fine-tune a matching official checkpoint; supply its path with --weights.
 pretrained_finetune: True
+symbolic_only: True
+eval_before_train: True
 weights: null
 
 feeder: feeders.feeder_ntu.Feeder
@@ -47,18 +49,18 @@ model_args:
   symbolic_pos_weight_source: train
 
 weight_decay: 0.0004
-# Same SGD/schedule as baseline; lower LR for pretrained fine-tuning.
+# Short adapter-only experiment; pretrained backbone/classifier remain frozen.
 optimizer: SGD
-base_lr: 0.0001
+base_lr: 0.001
 lr_decay_rate: 0.1
-step: [110, 120]
-warm_up_epoch: 5
+step: [12, 17]
+warm_up_epoch: 3
 
 device: [0]
 num_worker: 0
 batch_size: 64
 test_batch_size: 64
-num_epoch: 140
+num_epoch: 20
 save_epoch: 0
 nesterov: True
 

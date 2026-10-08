@@ -28,6 +28,7 @@ from tqdm import tqdm
 
 from model.checkpoint import load_model_weights
 from model.symbolic_metrics import concept_metrics
+from model.training import configure_trainable_parameters, set_training_mode
 
 # from torchlight import DictAction
 
@@ -192,6 +193,12 @@ def get_parser():
         '--pretrained-finetune', type=str2bool, default=False,
         help='require --weights and allow newly initialized symbolic parameters during training')
     parser.add_argument(
+        '--symbolic-only', type=str2bool, default=False,
+        help='train only symbolic_graph; freeze pretrained parameters and BatchNorm statistics')
+    parser.add_argument(
+        '--eval-before-train', type=str2bool, default=False,
+        help='evaluate and retain the initial model before training (automatic for symbolic-only)')
+    parser.add_argument(
         '--concept-threshold', type=float, default=0.5,
         help='fixed sigmoid threshold for concept F1; do not tune this on the test set')
     parser.add_argument(
@@ -255,7 +262,7 @@ class Processor():
 
     def __init__(self, arg):
         self.arg = arg
-        if arg.phase == 'train' and arg.pretrained_finetune and not arg.weights:
+        if arg.phase == 'train' and (arg.pretrained_finetune or arg.symbolic_only) and not arg.weights:
             raise ValueError('Pretrained fine-tuning requires --weights with a matching Hyper-GCN checkpoint.')
         if not 0 < arg.concept_threshold < 1:
             raise ValueError('concept_threshold must be between 0 and 1')
@@ -279,6 +286,12 @@ class Processor():
         self.global_step = 0
         # pdb.set_trace()
         self.load_model()
+        if self.arg.phase == 'train':
+            counts = configure_trainable_parameters(self.model, self.arg.symbolic_only)
+            self.print_log('Parameters: {}'.format(counts))
+            if self.arg.symbolic_only:
+                self.print_log('Symbolic-only: backbone/classifier frozen, pretrained BN in eval; '
+                               'loss = CE + symbolic_graph_weight * concept BCE (no divergence).')
 
         if self.arg.phase == 'model_size':
             pass
@@ -289,6 +302,8 @@ class Processor():
         self.lr = self.arg.base_lr
         self.best_acc = 0
         self.best_acc_epoch = 0
+        self.best_weights_path = None
+        self.baseline_accuracy = {}
 
         self.model = self.model.cuda(self.output_device)
 
@@ -336,9 +351,15 @@ class Processor():
                 weights = torch.load(self.arg.weights, map_location='cpu')
             report = load_model_weights(
                 self.model, weights,
-                allow_new_symbolic=self.arg.phase == 'train' and self.arg.pretrained_finetune,
+                allow_new_symbolic=self.arg.phase == 'train' and (
+                    self.arg.pretrained_finetune or self.arg.symbolic_only),
                 ignore_weights=self.arg.ignore_weights,
             )
+            if self.arg.phase == 'train' and self.arg.symbolic_only:
+                missing_frozen = [key for key in report['initialized']
+                                  if not key.startswith('symbolic_graph.')]
+                if missing_frozen:
+                    raise ValueError('symbolic_only cannot freeze uninitialized pretrained keys: {}'.format(missing_frozen))
             self.print_log('Checkpoint load: {}'.format(report))
 
     def configure_symbolic(self):
@@ -376,16 +397,19 @@ class Processor():
                 writer.add_scalar('symbolic/' + name, value, self.global_step)
 
     def load_optimizer(self):
+        parameters = [p for p in self.model.parameters() if p.requires_grad]
+        if not parameters:
+            raise ValueError('No trainable parameters for optimizer')
         if self.arg.optimizer == 'SGD':
             self.optimizer = optim.SGD(
-                self.model.parameters(),
+                parameters,
                 lr=self.arg.base_lr,
                 momentum=0.9,
                 nesterov=self.arg.nesterov,
                 weight_decay=self.arg.weight_decay)
         elif self.arg.optimizer == 'Adam':
             self.optimizer = optim.Adam(
-                self.model.parameters(),
+                parameters,
                 lr=self.arg.base_lr,
                 weight_decay=self.arg.weight_decay)
         else:
@@ -438,7 +462,8 @@ class Processor():
         return split_time
 
     def train(self, epoch, save_model=False):
-        self.model.train()
+        symbolic_only = getattr(self.arg, 'symbolic_only', False)
+        set_training_mode(self.model, symbolic_only)
         self.print_log('Training epoch: {}'.format(epoch + 1))
         loader = self.data_loader['train']
         self.adjust_learning_rate(epoch)
@@ -466,7 +491,8 @@ class Processor():
             symbolic_weighted = data.new_zeros(())
             if isinstance(output, tuple):
                 ce_loss = self.loss(output[0], label)
-                h_loss = self.h_loss(output[1])
+                if not symbolic_only:
+                    h_loss = self.h_loss(output[1])
                 loss = ce_loss + h_loss
                 if len(output) > 2 and output[2] is not None:
                     model_ref = (
@@ -523,9 +549,14 @@ class Processor():
         self.log_symbolic_gates(self.train_writer)
 
         if save_model:
-            state_dict = self.model.state_dict()
-            weights = OrderedDict([[k.split('module.')[-1], v.cpu()] for k, v in state_dict.items()])
-            torch.save(weights, self.arg.model_saved_name + '-' + str(epoch+1) + '-' + str(int(self.global_step)) + '.pt')
+            self.save_checkpoint(epoch + 1)
+
+    def save_checkpoint(self, epoch_number):
+        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+        weights = OrderedDict((key, value.detach().cpu()) for key, value in model_ref.state_dict().items())
+        path = '{}-{}-{}.pt'.format(self.arg.model_saved_name, epoch_number, int(self.global_step))
+        torch.save(weights, path)
+        return path
 
     def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None):
         if wrong_file is not None:
@@ -536,6 +567,7 @@ class Processor():
         model_ref = self.model.module if hasattr(self.model, 'module') else self.model
         bridge = getattr(model_ref, 'symbolic_graph', None)
         self.print_log('Eval epoch: {}'.format(epoch + 1))
+        accuracies = {}
         for ln in loader_name:
             loss_value = []
             score_frag = []
@@ -578,9 +610,27 @@ class Processor():
             if 'ucla' in self.arg.feeder:
                 self.data_loader[ln].dataset.sample_name = np.arange(len(score))
             accuracy = self.data_loader[ln].dataset.top_k(score, 1)
-            if accuracy > self.best_acc:
+            accuracies[ln] = accuracy
+            initial_candidate = epoch == -1 and getattr(self, 'best_weights_path', None) is None
+            if accuracy > self.best_acc or initial_candidate:
                 self.best_acc = accuracy
                 self.best_acc_epoch = epoch + 1
+                if self.arg.phase == 'train':
+                    # Also save improvements between periodic saves, and retain
+                    # epoch 0 if fine-tuning never beats the initial checkpoint.
+                    self.best_weights_path = self.save_checkpoint(epoch + 1)
+
+            baseline = getattr(self, 'baseline_accuracy', {}).get(ln)
+            delta_pp = None if baseline is None else 100 * (accuracy - baseline)
+            action_metrics = dict(epoch=epoch + 1, top1=accuracy, initial_top1=baseline,
+                                  delta_from_initial_pp=delta_pp)
+            with open(os.path.join(self.arg.work_dir, 'epoch{}_{}_action_metrics.json'.format(epoch + 1, ln)),
+                      'w', encoding='utf-8') as handle:
+                json.dump(action_metrics, handle, indent=2, allow_nan=False)
+            if delta_pp is not None:
+                self.print_log('\tTop1 vs initial model: {:+.3f} percentage points.'.format(delta_pp))
+                if self.arg.phase == 'train':
+                    self.val_writer.add_scalar('acc/delta_from_initial_pp', delta_pp, self.global_step)
 
             print('Accuracy: ', accuracy, ' model: ', self.arg.model_saved_name)
             if self.arg.phase == 'train':
@@ -602,6 +652,8 @@ class Processor():
                 metrics = concept_metrics(logits, targets, bridge.metadata, self.arg.concept_threshold)
                 metrics['loss'] = symbolic_loss_sum / concept_sample_count
                 metrics['weighted_loss'] = model_ref.symbolic_graph_weight * metrics['loss']
+                metrics['action_top1'] = accuracy
+                metrics['delta_from_initial_pp'] = delta_pp
                 metrics_path = os.path.join(self.arg.work_dir, 'epoch{}_{}_concept_metrics.json'.format(epoch + 1, ln))
                 with open(metrics_path, 'w', encoding='utf-8') as handle:
                     json.dump(metrics, handle, indent=2, allow_nan=False)
@@ -637,6 +689,12 @@ class Processor():
             #     writer.writerows(confusion)
 
 
+        if wrong_file is not None:
+            f_w.close()
+        if result_file is not None:
+            f_r.close()
+        return accuracies
+
     def start(self):
         if self.arg.phase == 'train':
             self.print_log('Parameters:\n{}\n'.format(str(vars(self.arg))))
@@ -644,6 +702,12 @@ class Processor():
             def count_parameters(model):
                 return sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.print_log(f'# Parameters: {count_parameters(self.model)}')
+            if self.arg.symbolic_only or self.arg.eval_before_train:
+                self.print_log('Initial evaluation before any optimizer step (epoch 0).')
+                self.baseline_accuracy = self.eval(epoch=-1, save_score=self.arg.save_score)
+                with open(os.path.join(self.arg.work_dir, 'initial_evaluation.json'), 'w', encoding='utf-8') as handle:
+                    json.dump(dict(weights=self.arg.weights, top1=self.baseline_accuracy,
+                                   checkpoint=self.best_weights_path), handle, indent=2, allow_nan=False)
             for epoch in range(self.arg.start_epoch, self.arg.num_epoch):
                 save_model = (((epoch + 1) % self.arg.save_interval == 0) or (
                         epoch + 1 == self.arg.num_epoch)) and (epoch+1) > self.arg.save_epoch
@@ -654,8 +718,10 @@ class Processor():
                 self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
             # test the best model
-            weights_path = glob.glob(os.path.join(self.arg.work_dir, 'runs-'+str(self.best_acc_epoch)+'*'))[0]
-            weights = torch.load(weights_path)
+            weights_path = self.best_weights_path
+            if weights_path is None:
+                raise RuntimeError('No evaluated checkpoint available for best-model selection.')
+            weights = torch.load(weights_path, map_location='cpu')
             if type(self.arg.device) is list:
                 if len(self.arg.device) > 1:
                     weights = OrderedDict([['module.'+k, v.cuda(self.output_device)] for k, v in weights.items()])
@@ -664,7 +730,7 @@ class Processor():
             wf = weights_path.replace('.pt', '_wrong.txt')
             rf = weights_path.replace('.pt', '_right.txt')
             self.arg.print_log = False
-            self.eval(epoch=0, save_score=True, loader_name=['test'], wrong_file=wf, result_file=rf)
+            self.eval(epoch=self.best_acc_epoch - 1, save_score=True, loader_name=['test'], wrong_file=wf, result_file=rf)
             self.arg.print_log = True
 
 

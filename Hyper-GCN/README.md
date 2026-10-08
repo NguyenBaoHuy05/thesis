@@ -137,8 +137,13 @@ The configs in `config/symbolic/` and
 `config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` require a
 pretrained checkpoint. Select the official weights matching **base/large,
 NTU60/NTU120, modality and split**, and the checkpoint's `hyper_joints` setting.
-These configs use the baseline's SGD, augmentation, batch size and schedule,
-with `base_lr: 0.0001` for fine-tuning. `num_worker: 0` is retained for Windows;
+The configs in `config/symbolic/` use the baseline's SGD, augmentation, batch
+size and schedule, with `base_lr: 0.0001` for full fine-tuning.
+The active `hyper_joint_symbolic.yaml` instead runs a **symbolic-only experiment**:
+20 epochs, SGD LR 0.001, 3-epoch warmup and LR decay at epochs 12 and 17
+(zero-based scheduler indices). It uses a separate `joint_symbolic_only` work
+directory, keeping previous full fine-tuning results intact.
+`num_worker: 0` is retained for Windows;
 `save_epoch: 0` keeps every evaluated epoch available for best-model selection.
 Weights initialize the model; optimizer/scheduler state and original training
 epochs are not resumed. No dependency on the checkpoint filename is required.
@@ -147,13 +152,36 @@ epochs are not resumed. No dependency on the checkpoint filename is required.
 python main.py --config config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml --weights PATH_TO_OFFICIAL_CHECKPOINT.pt
 ```
 
+`symbolic_only: True` freezes every pretrained parameter, including the original
+classifier, and keeps pretrained BatchNorm statistics and dropout in eval mode
+at each training epoch. Only `symbolic_graph` is in train mode and the optimizer.
+The loss is `CE + 0.10 * balanced concept BCE`; divergence loss is not used.
+CE gradients still pass through the fixed classifier to the residual bridge;
+the whole model forward is **not** wrapped in `no_grad`. This tests a symbolic
+adapter on frozen pretrained features, not a new concept-only action classifier.
+
+Before training, `eval_before_train: True` (also automatic in symbolic-only mode)
+evaluates the initial model as epoch 0 and saves `initial_evaluation.json` and
+`runs-0-0.pt`. With an official checkpoint and a newly initialized bridge,
+the zero residual gate preserves the original action logits exactly. With an
+already trained symbolic checkpoint, epoch 0 instead measures that loaded model.
+Each `epochN_test_action_metrics.json` reports Top-1 and its change in percentage
+points from epoch 0. Improvements are saved independently of periodic saves;
+if every trained epoch is worse, final evaluation restores epoch 0. Inspect
+epoch-level concept metrics too: the action-best checkpoint may be the untrained
+symbolic initialization. For final scientific comparisons, use a held-out
+training validation split for model/threshold selection rather than test tuning.
+
+To retain full fine-tuning, use
+`config/symbolic/nturgbd120-cross-subject/hyper_joint.yaml` instead.
+
 Only the new symbolic branch may be missing when `pretrained_finetune: True`
 in train mode. Missing backbone/classifier keys, wrong tensor sizes and unexpected
 keys fail rather than silently leaving pretrained layers uninitialized.
 Test mode requires trained symbolic parameters. Old CSV-derived checkpoint
 buffers are rebuilt from the validated current tables, not restored.
 
-For a fair baseline comparison, fine-tune the same official checkpoint using
+For a fair **full fine-tuning** baseline comparison, fine-tune the same official checkpoint using
 the baseline config and the same fine-tuning LR and runtime options:
 
 ```bash
