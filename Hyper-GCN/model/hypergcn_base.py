@@ -395,13 +395,21 @@ class Model(nn.Module):
         symbolic_concept_logits = None
         if self.symbolic_graph is not None:
             c_new = x.size(1)
-            feature_map = x.reshape(N, M, c_new, T, V).permute(
+            t_new = x.size(2)
+            expected_channels = self.symbolic_graph.feature_dim
+            if c_new != expected_channels:
+                raise RuntimeError(
+                    f'Symbolic channel mismatch: backbone emits {c_new} channels, '
+                    f'but symbolic bridge expects {expected_channels}. '
+                    'Use c_new=x.size(1) and feature_dim=self.embedding_channels * 2.'
+                )
+            feature_map = x.reshape(N, M, c_new, t_new, V).permute(
                 0, 2, 3, 1, 4
-            ).reshape(N, c_new, T, M * V)
+            ).reshape(N, c_new, t_new, M * V)
             feature_map, symbolic_concept_logits = self.symbolic_graph(feature_map)
-            x = feature_map.reshape(N, c_new, T, M, V).permute(
+            x = feature_map.reshape(N, c_new, t_new, M, V).permute(
                 0, 3, 1, 2, 4
-            ).contiguous().reshape(N * M, c_new, T, V)
+            ).contiguous().reshape(N * M, c_new, t_new, V)
         # N*M,C,T,V
         c_new = x.size(1)
         x = x.view(N, M, c_new, -1)
