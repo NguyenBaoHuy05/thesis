@@ -448,7 +448,33 @@ def replay_symbolic(rulebook: dict[str, Any], concept_probs: np.ndarray) -> np.n
     score_weights = concept * concept_idf[None, :]
     concept_score = concept_evidence @ score_weights.T
     concept_score /= np.maximum(score_weights.sum(axis=1, keepdims=True).T, 1e-6)
-    return float(coefficients.get("action_logit_scale", 1.0)) * concept_score
+    action_logit_scale = float(coefficients.get("action_logit_scale", 1.0))
+    score = action_logit_scale * concept_score
+    if coefficients.get("negative_score_enabled", False):
+        negative = np.asarray(dense["negative"], dtype=np.float64)
+        margin = float(coefficients.get("negative_score_margin", 0.0))
+        temperature = float(coefficients.get("negative_score_temperature", 0.25))
+        violation = temperature * np.logaddexp(
+            0.0, (concept_evidence - margin) / temperature
+        )
+        weighted = violation[:, None, :] * negative[None, :, :]
+        weighted = np.where(negative[None, :, :] > 0.0, weighted, -np.inf)
+        topk = min(int(coefficients.get("negative_score_topk", 5)), negative.shape[1])
+        selected_ids = np.argpartition(weighted, -topk, axis=2)[:, :, -topk:]
+        selected_values = np.take_along_axis(weighted, selected_ids, axis=2)
+        expanded_weights = np.broadcast_to(negative[None, :, :], weighted.shape)
+        selected_weights = np.take_along_axis(expanded_weights, selected_ids, axis=2)
+        valid = np.isfinite(selected_values)
+        penalty = np.where(valid, selected_values, 0.0).sum(axis=2)
+        penalty /= np.maximum(
+            np.where(valid, selected_weights, 0.0).sum(axis=2), 1e-6
+        )
+        score -= (
+            action_logit_scale
+            * float(coefficients.get("negative_score_weight", 0.25))
+            * penalty
+        )
+    return score
 
 def git_commit(root: Path) -> str | None:
     try:
@@ -537,6 +563,16 @@ def main() -> None:
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
+        negative_score_enabled=bool(cfg.get("negative_score_enabled", False)),
+        negative_score_weight=float(cfg.get("negative_score_weight", 0.25)),
+        negative_score_topk=int(cfg.get("negative_score_topk", 5)),
+        negative_score_margin=(
+            None if cfg.get("negative_score_margin") is None
+            else float(cfg["negative_score_margin"])
+        ),
+        negative_score_temperature=float(
+            cfg.get("negative_score_temperature", 0.25)
+        ),
     ).to(device)
     load_checkpoint(
         model, resolve(root, cfg.get("weights")), device,
@@ -658,10 +694,12 @@ def main() -> None:
     (work_dir / "final_rules.json").write_text(
         json.dumps(rulebook, ensure_ascii=False, indent=2), encoding="utf-8"
     )
+    print(f"Starting final test evaluation on {len(test_loader.dataset)} samples...")
     final_metrics = evaluate(
         model, test_loader, device,
         dump_path=work_dir / "test_predictions.npz", detailed=True,
     )
+    print("Final test evaluation completed.")
     final_metrics.update({
         "final_epoch": final_epoch,
         "checkpoint": str(final_path),
@@ -675,7 +713,7 @@ def main() -> None:
         replay = replay_symbolic(rulebook, predictions["concept_probs"])
         reference = predictions["action_scores"].astype(np.float64)
         verification = {
-            "format_version": 4,
+            "format_version": 5,
             "model": "HCG-NS-SkateFormer-RF",
             "relation_components": [],
             "max_abs_error": float(np.max(np.abs(replay - reference))),

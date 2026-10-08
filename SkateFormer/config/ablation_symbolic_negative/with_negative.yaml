@@ -1,0 +1,13 @@
+# Controlled symbolic-negative ablation. The positive prototype decoder,
+# temporal GRU, refiner, losses, and schedule are inherited unchanged.
+base_config: ../HCG_NS_SkateFormer_ntu120_csub.yaml
+work_dir: ./work_dir/hcg_ns/ablation_symbolic_negative
+
+# Penalize only the five strongest contradictions among ontology-negative
+# concepts for each candidate action. In logit mode, margin 0.0 corresponds
+# to p(concept) = 0.5.
+negative_score_enabled: true
+negative_score_weight: 0.25
+negative_score_topk: 5
+negative_score_margin: 0.0
+negative_score_temperature: 0.25

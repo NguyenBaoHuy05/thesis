@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import unittest
 
+import numpy as np
 import torch
 
 from main_hcg_ns import (
     interpolate_loss_weights,
     load_config,
+    replay_symbolic,
     scheduled_learning_rate,
 )
 from model.concept_prototypes import (
@@ -552,6 +554,66 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         expected = torch.logit(probabilities)
         self.assertTrue(torch.allclose(symbolic._score_evidence(probabilities), expected))
 
+    def test_negative_symbolic_branch_penalizes_contradictions(self) -> None:
+        symbolic = HierarchicalSymbolicDecoder(
+            concept_csv="concepts/ntu_action_concept_v2_4.csv",
+            metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
+            num_classes=2,
+            num_concepts=102,
+            concept_score_mode="logit",
+            negative_score_enabled=True,
+            negative_score_weight=0.25,
+            negative_score_topk=5,
+            negative_score_margin=0.0,
+            negative_score_temperature=0.25,
+        )
+        negative_id = int(torch.nonzero(
+            symbolic.negative_support[0], as_tuple=False
+        )[0].item())
+        low = torch.full((1, 102), 0.1)
+        high = low.clone()
+        high[0, negative_id] = 0.9
+        low_terms = symbolic.score_terms(low)
+        high_terms = symbolic.score_terms(high)
+        self.assertIn("negative", high_terms)
+        self.assertLess(
+            float(high_terms["negative"][0, 0]),
+            float(low_terms["negative"][0, 0]),
+        )
+        self.assertTrue(torch.allclose(
+            symbolic(high), sum(high_terms.values()), atol=1e-7
+        ))
+
+    def test_negative_symbolic_branch_is_disabled_by_default(self) -> None:
+        symbolic = HierarchicalSymbolicDecoder(
+            concept_csv="concepts/ntu_action_concept_v2_4.csv",
+            metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
+            num_classes=2,
+            num_concepts=102,
+        )
+        self.assertIsNone(symbolic.negative_raw)
+        self.assertNotIn("negative", symbolic.score_terms(torch.rand(2, 102)))
+
+    def test_negative_rulebook_replay_matches_symbolic_forward(self) -> None:
+        symbolic = HierarchicalSymbolicDecoder(
+            concept_csv="concepts/ntu_action_concept_v2_4.csv",
+            metadata_csv="concepts/ntu_concept_metadata_v2_4.csv",
+            num_classes=2,
+            num_concepts=102,
+            concept_score_mode="logit",
+            negative_score_enabled=True,
+            negative_score_weight=0.25,
+            negative_score_topk=5,
+            negative_score_margin=0.0,
+            negative_score_temperature=0.25,
+        )
+        probabilities = 0.01 + 0.98 * torch.rand(4, 102)
+        expected = symbolic(probabilities).detach().numpy()
+        actual = replay_symbolic(
+            symbolic.export_rulebook(), probabilities.numpy()
+        )
+        self.assertTrue(np.allclose(actual, expected, atol=1e-5))
+
     def test_main_config_uses_temporal_gru_joint_training(self) -> None:
         main = load_config("config/HCG_NS_SkateFormer_ntu120_csub.yaml")
 
@@ -588,6 +650,29 @@ class ConceptDecoderV3Tests(unittest.TestCase):
         self.assertEqual(grouped["prototype_args"]["decoder_type"], "grouped")
         self.assertEqual(direct["stage1_loss_weights"]["center"], 0.0)
         self.assertEqual(grouped["stage1_loss_weights"]["center"], 0.0)
+
+    def test_no_refiner_ablation_changes_only_refiner_and_work_dir(self) -> None:
+        negative = load_config(
+            "config/ablation_symbolic_negative/with_negative.yaml"
+        )
+        no_refiner = load_config(
+            "config/ablation_symbolic_negative/no_refiner.yaml"
+        )
+        self.assertTrue(no_refiner["negative_score_enabled"])
+        self.assertFalse(no_refiner["prototype_args"]["refiner_enabled"])
+        self.assertTrue(negative["prototype_args"]["refiner_enabled"])
+        self.assertEqual(
+            no_refiner["work_dir"],
+            "./work_dir/hcg_ns/ablation_symbolic_negative_no_refiner",
+        )
+        ignored = {"work_dir", "prototype_args"}
+        self.assertEqual(
+            {key: value for key, value in negative.items() if key not in ignored},
+            {key: value for key, value in no_refiner.items() if key not in ignored},
+        )
+        expected_prototype = dict(negative["prototype_args"])
+        expected_prototype["refiner_enabled"] = False
+        self.assertEqual(no_refiner["prototype_args"], expected_prototype)
 
 
 if __name__ == "__main__":

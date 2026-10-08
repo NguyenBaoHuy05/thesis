@@ -1,0 +1,8 @@
+# Controlled refiner ablation on top of the symbolic-negative model.
+# Everything is inherited from with_negative.yaml except the ontology-masked
+# residual concept refiner.
+base_config: ./with_negative.yaml
+work_dir: ./work_dir/hcg_ns/ablation_symbolic_negative_no_refiner
+
+prototype_args:
+  refiner_enabled: false

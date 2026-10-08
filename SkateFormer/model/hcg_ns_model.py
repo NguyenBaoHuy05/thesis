@@ -32,6 +32,11 @@ class HCGNSSkateFormer(nn.Module):
         action_logit_scale: float = 1.0,
         concept_score_mode: str = 'probability',
         concept_idf_power: float = 0.0,
+        negative_score_enabled: bool = False,
+        negative_score_weight: float = 0.25,
+        negative_score_topk: int = 5,
+        negative_score_margin: float | None = None,
+        negative_score_temperature: float = 0.25,
     ):
         super().__init__()
         args = dict(backbone_args)
@@ -128,6 +133,11 @@ class HCGNSSkateFormer(nn.Module):
             action_logit_scale=float(action_logit_scale),
             concept_score_mode=str(concept_score_mode),
             concept_idf_power=float(concept_idf_power),
+            negative_score_enabled=bool(negative_score_enabled),
+            negative_score_weight=float(negative_score_weight),
+            negative_score_topk=int(negative_score_topk),
+            negative_score_margin=negative_score_margin,
+            negative_score_temperature=float(negative_score_temperature),
         )
         self.residual_action_head_enabled = bool(residual_action_head)
         self.residual_action_weight = float(residual_action_weight)
@@ -365,6 +375,25 @@ class HCGNSSkateFormer(nn.Module):
         """Return scalar decoder diagnostics suitable for per-epoch JSON logs."""
         base = self.concept_decoder.base
         diagnostics = {"decoder_type": self.concept_decoder.decoder_type}
+        if self.symbolic.negative_raw is not None:
+            negative_weights = self.symbolic._negative_weights().detach()
+            active_negative_weights = negative_weights[
+                self.symbolic.negative_support.bool()
+            ]
+            diagnostics.update({
+                "symbolic_negative_weight_mean": float(
+                    active_negative_weights.mean().cpu()
+                ),
+                "symbolic_negative_weight_std": float(
+                    active_negative_weights.std(unbiased=False).cpu()
+                ),
+                "symbolic_negative_weight_min": float(
+                    active_negative_weights.min().cpu()
+                ),
+                "symbolic_negative_weight_max": float(
+                    active_negative_weights.max().cpu()
+                ),
+            })
         raw_centers = getattr(base, "centers", None)
         if raw_centers is not None:
             raw_centers = raw_centers.detach()

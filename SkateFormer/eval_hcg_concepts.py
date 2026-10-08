@@ -72,6 +72,17 @@ def load_full_checkpoint(model: HCGNSSkateFormer, path: Path, device: torch.devi
             "concept decoder; missing decoder keys include: "
             + ", ".join(decoder_missing[:5])
         )
+    negative_key = "symbolic.negative_raw"
+    if model.symbolic.negative_score_enabled and negative_key in missing:
+        raise RuntimeError(
+            "negative scoring is enabled by the config, but the checkpoint "
+            "does not contain symbolic.negative_raw"
+        )
+    if not model.symbolic.negative_score_enabled and negative_key in unexpected:
+        raise RuntimeError(
+            "checkpoint contains symbolic negative rules, but the supplied "
+            "config has negative_score_enabled=false"
+        )
 
 
 def safe_div(num: np.ndarray, den: np.ndarray) -> np.ndarray:
@@ -382,8 +393,19 @@ def main() -> None:
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
+        negative_score_enabled=bool(cfg.get("negative_score_enabled", False)),
+        negative_score_weight=float(cfg.get("negative_score_weight", 0.25)),
+        negative_score_topk=int(cfg.get("negative_score_topk", 5)),
+        negative_score_margin=(
+            None if cfg.get("negative_score_margin") is None
+            else float(cfg["negative_score_margin"])
+        ),
+        negative_score_temperature=float(
+            cfg.get("negative_score_temperature", 0.25)
+        ),
     ).to(device)
     load_full_checkpoint(model, checkpoint_path, device)
+    print(f"Starting test evaluation on {len(test_dataset)} samples...")
     result, _ = evaluate(model, test_loader, device, args.threshold)
 
     output_dir = Path(args.output_dir).resolve() if args.output_dir else checkpoint_path.parent

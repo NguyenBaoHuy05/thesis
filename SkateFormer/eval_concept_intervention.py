@@ -77,12 +77,7 @@ class Scorer:
 
     @torch.no_grad()
     def terms(self, seq: torch.Tensor) -> dict[str, torch.Tensor]:
-        concept_w = self.symbolic._weights()
-        concept_evidence = self.symbolic._score_evidence(seq)
-        score_w = concept_w * self.symbolic.concept_idf.unsqueeze(0)
-        concept = (concept_evidence @ score_w.t()) / score_w.sum(dim=1).clamp_min(1e-6)
-        concept = self.symbolic.action_logit_scale * concept
-        terms = {"concept": concept}
+        terms = self.symbolic.score_terms(seq)
         if self.residual_term is not None:
             terms["residual"] = self.residual_term
         return terms
@@ -257,6 +252,16 @@ def main() -> None:
         action_logit_scale=float(cfg.get("action_logit_scale", 1.0)),
         concept_score_mode=str(cfg.get("concept_score_mode", "probability")),
         concept_idf_power=float(cfg.get("concept_idf_power", 0.0)),
+        negative_score_enabled=bool(cfg.get("negative_score_enabled", False)),
+        negative_score_weight=float(cfg.get("negative_score_weight", 0.25)),
+        negative_score_topk=int(cfg.get("negative_score_topk", 5)),
+        negative_score_margin=(
+            None if cfg.get("negative_score_margin") is None
+            else float(cfg["negative_score_margin"])
+        ),
+        negative_score_temperature=float(
+            cfg.get("negative_score_temperature", 0.25)
+        ),
     ).to(device)
     load_full_checkpoint(model, checkpoint_path, device)
     model.eval()

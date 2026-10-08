@@ -233,6 +233,31 @@ python main_hcg_ns.py --config config/ablation_prototype/direct.yaml
 python main_hcg_ns.py --config config/ablation_prototype/grouped.yaml
 ```
 
+### Symbolic negative-evidence ablation
+
+The optional negative branch penalizes only the top-k strongest contradictions
+for each candidate action. It uses the complement of the binary support matrix
+as closed-world negative rules, learns non-negative rule weights, and keeps the
+positive symbolic score unchanged. The main config leaves this branch disabled
+so existing checkpoints and reported results retain their original behavior.
+
+```bash
+python main_hcg_ns.py --config config/ablation_symbolic_negative/with_negative.yaml
+```
+
+To evaluate an existing negative-branch checkpoint without retraining:
+
+```bash
+python eval_hcg_concepts.py --config config/ablation_symbolic_negative/with_negative.yaml --checkpoint work_dir/hcg_ns/ablation_symbolic_negative/final_model.pt
+```
+
+To isolate the effect of the ontology-masked concept refiner while retaining
+the negative symbolic branch:
+
+```bash
+python main_hcg_ns.py --config config/ablation_symbolic_negative/no_refiner.yaml
+```
+
 ## Evaluation
 
 ```bash
