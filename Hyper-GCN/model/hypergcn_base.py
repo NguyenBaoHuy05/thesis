@@ -312,7 +312,9 @@ class Model(nn.Module):
                  metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
                  symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
                  symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
-                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1):
+                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1,
+                 symbolic_hypergraph_mode="static_graph",
+                 symbolic_hypergraph_reg_weight=0.0):
         super(Model, self).__init__()
 
         if graph is None:
@@ -352,6 +354,9 @@ class Model(nn.Module):
         else:
             self.drop_out = lambda x: x
         self.symbolic_graph_weight = float(symbolic_graph_weight)
+        self.symbolic_hypergraph_reg_weight = float(symbolic_hypergraph_reg_weight)
+        if self.symbolic_hypergraph_reg_weight < 0:
+            raise ValueError("symbolic_hypergraph_reg_weight must be nonnegative")
         if symbolic_action_mode not in {"blackbox", "prototype"}:
             raise ValueError("symbolic_action_mode must be 'blackbox' or 'prototype'")
         if symbolic_action_mode == "prototype" and not symbolic_graph_enabled:
@@ -374,6 +379,7 @@ class Model(nn.Module):
                 pos_weight_source=symbolic_pos_weight_source,
                 action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
                 action_temperature=symbolic_action_temperature,
+                hypergraph_mode=symbolic_hypergraph_mode,
             )
 
     def forward(self, x):

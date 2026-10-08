@@ -162,6 +162,15 @@ feature path. Only concept query/bias and the concept-graph gate are optimized.
 The loss is `action CE + 0.10 * balanced concept BCE`; divergence is not used.
 This makes every action score decomposable into named concept contributions.
 
+The active model uses `symbolic_hypergraph_mode: learnable_v1`. Its 22 named
+hyperedges are initialized from 11 anatomical regions, 8 metadata groups and 3
+concept scopes. A trainable incidence residual and relative hyperedge weights
+perform normalized concept-to-edge-to-concept message passing. The structure
+regularizer (`symbolic_hypergraph_reg_weight: 0.01`) anchors memberships to this
+prior, discourages dense/non-binary incidence and prevents isolated concepts.
+The 120 action templates are deliberately excluded from hypergraph construction
+to avoid leaking the downstream decoder into the learned topology.
+
 Before training, `eval_before_train: True` (also automatic in symbolic-only mode)
 evaluates the initial concept decoder as epoch 0 and saves
 `initial_evaluation.json` and `runs-0-0.pt`. Initialize directly from the same
@@ -174,6 +183,10 @@ if every trained epoch is worse, final evaluation restores epoch 0. Inspect
 epoch-level concept metrics too: the action-best checkpoint may be the untrained
 symbolic initialization. For final scientific comparisons, use a held-out
 training validation split for model/threshold selection rather than test tuning.
+Each `epochN_test_hypergraph.json` records learned memberships, relative edge
+weights, top concepts per edge and the number of prior memberships changed at a
+0.5 threshold. TensorBoard also logs structure loss, prior/non-prior membership
+means and the learnable hypergraph gate.
 
 To retain full fine-tuning, use
 `config/symbolic/nturgbd120-cross-subject/hyper_joint.yaml` instead.

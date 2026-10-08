@@ -75,6 +75,8 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
             concept_csv=ROOT / 'concepts/ntu_action_concept_v2_4.csv',
             metadata_csv=ROOT / 'concepts/ntu_concept_metadata_v2_4.csv',
             symbolic_action_mode='prototype',
+            symbolic_hypergraph_mode='learnable_v1',
+            symbolic_hypergraph_reg_weight=.01,
         )
 
         class Block(nn.Module):
@@ -101,6 +103,7 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         fc_calls = []
         model.fc.register_forward_hook(lambda *args: fc_calls.append(True))
         configure_trainable_parameters(model, symbolic_only=True)
+        model.symbolic_graph.hypergraph_gate.data.fill_(.2)
         output, _, concepts = model(torch.randn(2, 3, 8, 25, 2))
         self.assertEqual(output.shape, (2, 120))
         self.assertEqual(concepts.shape, (2, 102))
@@ -108,11 +111,15 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         self.assertFalse(model.fc.weight.requires_grad)
         self.assertFalse(model.symbolic_graph.project_back.weight.requires_grad)
         self.assertFalse(model.symbolic_graph.residual_gate.requires_grad)
+        self.assertFalse(model.symbolic_graph.concept_graph_gate.requires_grad)
+        self.assertTrue(model.symbolic_graph.hypergraph_delta.requires_grad)
+        self.assertTrue(model.symbolic_graph.hyperedge_weight_raw.requires_grad)
         self.assertTrue(model.symbolic_graph.concept_queries.requires_grad)
         output.sum().backward()
         self.assertIsNone(model.fc.weight.grad)
         self.assertIsNone(model.symbolic_graph.project_back.weight.grad)
         self.assertIsNotNone(model.symbolic_graph.concept_queries.grad)
+        self.assertIsNotNone(model.symbolic_graph.hypergraph_delta.grad)
 
     def test_optimizer_gradients_and_pretrained_state_remain_frozen(self):
         torch.manual_seed(123)

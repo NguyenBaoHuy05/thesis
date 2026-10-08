@@ -54,6 +54,29 @@ def _concept_affinity(support):
     return _row_normalize(affinity)
 
 
+def _semantic_hypergraph(concept_part, metadata):
+    """Create named body/group/scope hyperedges without using action labels."""
+    groups = tuple(dict.fromkeys(row["group"].strip().lower() for row in metadata))
+    scopes = tuple(dict.fromkeys(row["scope"].strip().lower() for row in metadata))
+    edge_names = (
+        tuple("body:" + name for name in PART_NAMES)
+        + tuple("group:" + name for name in groups)
+        + tuple("scope:" + name for name in scopes)
+    )
+    incidence = torch.zeros(len(metadata), len(edge_names), dtype=torch.float32)
+    incidence[:, :len(PART_NAMES)] = (concept_part > 0).to(incidence)
+    group_offset = len(PART_NAMES)
+    scope_offset = group_offset + len(groups)
+    group_ids = {name: index for index, name in enumerate(groups)}
+    scope_ids = {name: index for index, name in enumerate(scopes)}
+    for concept_index, row in enumerate(metadata):
+        incidence[concept_index, group_offset + group_ids[row["group"].strip().lower()]] = 1
+        incidence[concept_index, scope_offset + scope_ids[row["scope"].strip().lower()]] = 1
+    if (incidence.sum(dim=0) == 0).any() or (incidence.sum(dim=1) == 0).any():
+        raise ValueError("semantic hypergraph contains an empty concept or hyperedge")
+    return incidence, edge_names
+
+
 class SymbolicHyperConceptBridge(nn.Module):
     """Parallel symbolic branch with learnable residual fusion."""
 
@@ -63,6 +86,7 @@ class SymbolicHyperConceptBridge(nn.Module):
         residual_init=0.0, graph_init=0.0,
         balance_loss=False, pos_weight_max=10.0, pos_weight_source="class",
         action_decoder="none", action_temperature=0.1,
+        hypergraph_mode="static_graph",
     ):
         super().__init__()
         if int(num_points) != 25:
@@ -86,16 +110,27 @@ class SymbolicHyperConceptBridge(nn.Module):
             raise ValueError("pos_weight_source must be 'class' or 'train'")
         if action_decoder not in {"none", "prototype"}:
             raise ValueError("action_decoder must be 'none' or 'prototype'")
+        if hypergraph_mode not in {"static_graph", "learnable_v1"}:
+            raise ValueError("hypergraph_mode must be 'static_graph' or 'learnable_v1'")
+        self.hypergraph_mode = hypergraph_mode
         self.action_decoder = action_decoder
         self.action_temperature = float(action_temperature)
         if not math.isfinite(self.action_temperature) or self.action_temperature <= 0:
             raise ValueError("symbolic action temperature must be finite and positive")
         self.metadata = metadata
         self.concept_names = [row["concept_name"] for row in metadata]
+        hypergraph_prior, hyperedge_names = _semantic_hypergraph(concept_part, metadata)
+        self.hyperedge_names = hyperedge_names
         # Rebuild CSV-derived buffers, rather than restoring stale mappings from weights.
         self.register_buffer("part_incidence", _body_part_incidence(), persistent=False)
         self.register_buffer("concept_part", concept_part, persistent=False)
         self.register_buffer("concept_affinity", concept_affinity, persistent=False)
+        self.register_buffer("hypergraph_prior", hypergraph_prior, persistent=False)
+        soft_prior = torch.where(
+            hypergraph_prior.bool(), torch.full_like(hypergraph_prior, 0.95),
+            torch.full_like(hypergraph_prior, 0.01),
+        )
+        self.register_buffer("hypergraph_prior_probability", soft_prior, persistent=False)
         self.register_buffer("support", support, persistent=False)
         self.register_buffer("positive_weight", torch.ones(self.num_concepts), persistent=False)
         # Persist training frequencies so test mode does not need the training dataset.
@@ -109,6 +144,17 @@ class SymbolicHyperConceptBridge(nn.Module):
         self.context_norm = nn.BatchNorm2d(self.feature_dim)
         self.residual_gate = nn.Parameter(torch.tensor(float(residual_init)))
         self.concept_graph_gate = nn.Parameter(torch.tensor(float(graph_init)))
+        if self.hypergraph_mode == "learnable_v1":
+            self.hypergraph_delta = nn.Parameter(torch.zeros_like(hypergraph_prior))
+            initial_edge_weight = math.log(math.expm1(1.0))
+            self.hyperedge_weight_raw = nn.Parameter(
+                torch.full((hypergraph_prior.shape[1],), initial_edge_weight)
+            )
+            self.hypergraph_gate = nn.Parameter(torch.tensor(float(graph_init)))
+        else:
+            self.register_parameter("hypergraph_delta", None)
+            self.register_parameter("hyperedge_weight_raw", None)
+            self.register_parameter("hypergraph_gate", None)
         nn.init.normal_(self.concept_queries, mean=0.0, std=0.02)
         nn.init.kaiming_normal_(self.project_back.weight, mode="fan_out")
         nn.init.ones_(self.context_norm.weight)
@@ -131,9 +177,26 @@ class SymbolicHyperConceptBridge(nn.Module):
         concept_features = torch.einsum(
             "qp,bctp->bctq", self.concept_part.to(feature_map), part_features
         )
-        concept_features = concept_features + torch.tanh(self.concept_graph_gate) * torch.einsum(
-            "qr,bctr->bctq", self.concept_affinity.to(feature_map), concept_features
-        )
+        if self.hypergraph_mode == "learnable_v1":
+            incidence = self.learned_hypergraph().to(feature_map)
+            edge_weight = F.softplus(self.hyperedge_weight_raw).to(feature_map)
+            edge_weight = edge_weight / edge_weight.mean().clamp_min(1e-12)
+            edge_degree = incidence.sum(dim=0).clamp_min(1e-12)
+            edge_features = torch.einsum(
+                "qe,bctq->bcte", incidence, concept_features
+            ) / edge_degree.view(1, 1, 1, -1)
+            edge_features = edge_features * edge_weight.view(1, 1, 1, -1)
+            node_degree = torch.einsum("qe,e->q", incidence, edge_weight).clamp_min(1e-12)
+            hypergraph_update = torch.einsum(
+                "qe,bcte->bctq", incidence, edge_features
+            ) / node_degree.view(1, 1, 1, -1)
+            concept_features = (
+                concept_features + torch.tanh(self.hypergraph_gate) * hypergraph_update
+            )
+        else:
+            concept_features = concept_features + torch.tanh(self.concept_graph_gate) * torch.einsum(
+                "qr,bctr->bctq", self.concept_affinity.to(feature_map), concept_features
+            )
         tokens = F.normalize(concept_features.permute(0, 2, 3, 1), dim=-1)
         queries = F.normalize(self.concept_queries, dim=-1)
         sequence_logits = torch.einsum("btqd,qd->btq", tokens, queries)
@@ -172,9 +235,72 @@ class SymbolicHyperConceptBridge(nn.Module):
         # Equal positive/negative mass prevents sparse all-zero matches from dominating.
         return (0.5 * positive_fit + 0.5 * negative_fit) / self.action_temperature
 
+    def learned_hypergraph(self):
+        if self.hypergraph_mode != "learnable_v1":
+            raise RuntimeError("learnable hypergraph V1 is not enabled")
+        prior_logits = torch.logit(self.hypergraph_prior_probability)
+        return torch.sigmoid(prior_logits + self.hypergraph_delta)
+
+    def structure_loss(self):
+        """Keep learned topology sparse, near its semantic prior and non-collapsed."""
+        if self.hypergraph_mode != "learnable_v1":
+            return self.concept_graph_gate.square() * 0.0
+        incidence = self.learned_hypergraph()
+        prior_anchor = F.mse_loss(incidence, self.hypergraph_prior_probability)
+        absent = self.hypergraph_prior == 0
+        sparsity = incidence.masked_select(absent).mean()
+        binarization = (incidence * (1.0 - incidence)).mean()
+        coverage = F.relu(0.5 - incidence.sum(dim=1)).mean()
+        edge_weight = F.softplus(self.hyperedge_weight_raw)
+        edge_weight = edge_weight / edge_weight.mean().clamp_min(1e-12)
+        edge_weight_anchor = (edge_weight - 1.0).square().mean()
+        return prior_anchor + 0.1 * (sparsity + binarization + edge_weight_anchor) + coverage
+
+    def hypergraph_snapshot(self, top_k=10):
+        """JSON-safe learned topology summary for monitoring and explanations."""
+        if self.hypergraph_mode != "learnable_v1":
+            raise RuntimeError("learnable hypergraph V1 is not enabled")
+        incidence = self.learned_hypergraph().detach().cpu()
+        prior = self.hypergraph_prior.detach().cpu()
+        edge_weight = F.softplus(self.hyperedge_weight_raw.detach().cpu())
+        edge_weight = edge_weight / edge_weight.mean().clamp_min(1e-12)
+        selected = incidence >= 0.5
+        return {
+            "mode": self.hypergraph_mode,
+            "num_concepts": self.num_concepts,
+            "num_hyperedges": len(self.hyperedge_names),
+            "structure_loss": float(self.structure_loss().detach().cpu()),
+            "mean_membership": float(incidence.mean().item()),
+            "mean_prior_membership": float(incidence[prior.bool()].mean().item()),
+            "mean_nonprior_membership": float(incidence[~prior.bool()].mean().item()),
+            "changed_memberships_at_0.5": int((selected != prior.bool()).sum().item()),
+            "hyperedges": [
+                {
+                    "name": name,
+                    "weight": float(edge_weight[edge].item()),
+                    "prior_concepts": int(prior[:, edge].sum().item()),
+                    "selected_concepts_at_0.5": int(selected[:, edge].sum().item()),
+                    "top_concepts": [
+                        {
+                            "name": self.concept_names[index],
+                            "membership": float(incidence[index, edge].item()),
+                            "in_prior": bool(prior[index, edge].item()),
+                        }
+                        for index in incidence[:, edge].topk(min(int(top_k), self.num_concepts)).indices.tolist()
+                    ],
+                }
+                for edge, name in enumerate(self.hyperedge_names)
+            ],
+        }
+
     def trainable_parameters(self):
         """Parameters that can affect the selected inference path."""
         if self.action_decoder == "prototype":
+            if self.hypergraph_mode == "learnable_v1":
+                return (
+                    self.concept_queries, self.concept_bias, self.hypergraph_delta,
+                    self.hyperedge_weight_raw, self.hypergraph_gate,
+                )
             return (self.concept_queries, self.concept_bias, self.concept_graph_gate)
         return tuple(self.parameters())
 
@@ -218,17 +344,22 @@ class SymbolicHyperConceptBridge(nn.Module):
     def audit(self):
         """Serializable schema, mapping and loss settings for each experiment."""
         training_positives = (self.training_class_counts.to(self.support) @ self.support).detach().cpu().tolist()
-        return {
+        result = {
             "num_classes": int(self.support.shape[0]),
             "num_concepts": self.num_concepts,
             "target_granularity": "action-class templates, not per-video annotations",
-            "affinity": "column cosine similarity + unit self-loops + row normalization",
+            "affinity": (
+                "learned body/group/scope hypergraph incidence"
+                if self.hypergraph_mode == "learnable_v1"
+                else "column cosine similarity + unit self-loops + row normalization"
+            ),
             "balance_loss": self.balance_loss,
             "pos_weight_source": self.pos_weight_source,
             "pos_weight_max": self.pos_weight_max,
             "pos_weight_ready": self._positive_weight_ready,
             "action_decoder": self.action_decoder,
             "action_temperature": self.action_temperature,
+            "hypergraph_mode": self.hypergraph_mode,
             "training_class_counts": self.training_class_counts.detach().cpu().tolist(),
             "body_parts_zero_based_joints": BODY_PART_JOINTS,
             "concepts": [
@@ -242,4 +373,7 @@ class SymbolicHyperConceptBridge(nn.Module):
                 for index, row in enumerate(self.metadata)
             ],
         }
+        if self.hypergraph_mode == "learnable_v1":
+            result["hypergraph"] = self.hypergraph_snapshot()
+        return result
 

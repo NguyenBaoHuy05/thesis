@@ -21,7 +21,9 @@ from model.checkpoint import load_model_weights
 from model.concept_schema import (
     BODY_PART_JOINTS, concept_parts, load_concept_tables,
 )
-from model.symbolic_hyperconcept import SymbolicHyperConceptBridge, _concept_affinity
+from model.symbolic_hyperconcept import (
+    SymbolicHyperConceptBridge, _concept_affinity, _semantic_hypergraph,
+)
 from model.symbolic_metrics import concept_metrics
 
 
@@ -96,6 +98,37 @@ class ConceptSchemaTests(unittest.TestCase):
 
 
 class ConceptGraphLossTests(unittest.TestCase):
+    def test_semantic_hypergraph_v1_is_anchored_learnable_and_auditable(self):
+        static = bridge()
+        prior, names = _semantic_hypergraph(static.concept_part, static.metadata)
+        self.assertEqual(prior.shape, (102, 22))
+        self.assertEqual(len(names), 22)
+        self.assertTrue((prior.sum(0) > 0).all())
+        self.assertTrue((prior.sum(1) >= 3).all())
+
+        model = bridge(action_decoder='prototype', hypergraph_mode='learnable_v1')
+        incidence = model.learned_hypergraph()
+        torch.testing.assert_close(incidence[model.hypergraph_prior.bool()],
+                                   torch.full_like(incidence[model.hypergraph_prior.bool()], .95))
+        torch.testing.assert_close(incidence[~model.hypergraph_prior.bool()],
+                                   torch.full_like(incidence[~model.hypergraph_prior.bool()], .01))
+        model.hypergraph_gate.data.fill_(.2)
+        features = torch.randn(3, 8, 4, 50)
+        labels = torch.tensor([0, 1, 2])
+        _, concepts = model(features)
+        loss = F.cross_entropy(model.action_logits(concepts), labels) + .01 * model.structure_loss()
+        loss.backward()
+        self.assertGreater(model.hypergraph_delta.grad.abs().sum().item(), 0.)
+        self.assertGreater(model.hyperedge_weight_raw.grad.abs().sum().item(), 0.)
+        trainable = {id(parameter) for parameter in model.trainable_parameters()}
+        self.assertIn(id(model.hypergraph_delta), trainable)
+        self.assertNotIn(id(model.concept_graph_gate), trainable)
+        snapshot = model.hypergraph_snapshot(top_k=5)
+        self.assertEqual(snapshot['num_hyperedges'], 22)
+        self.assertEqual(snapshot['changed_memberships_at_0.5'], 0)
+        self.assertEqual(len(snapshot['hyperedges'][0]['top_concepts']), 5)
+        json.dumps(snapshot, allow_nan=False)
+
     def test_cosine_invariance_and_isolated_concept(self):
         support = torch.tensor([[1., 1., 0.], [1., 0., 0.], [0., 1., 0.]])
         affinity = _concept_affinity(support)
@@ -253,6 +286,8 @@ class SymbolicConfigTests(unittest.TestCase):
                     self.assertTrue(config['work_dir'].endswith('joint_concept_action_adam'))
                     self.assertEqual(config['model_args']['symbolic_action_mode'], 'prototype')
                     self.assertEqual(config['model_args']['symbolic_action_temperature'], .1)
+                    self.assertEqual(config['model_args']['symbolic_hypergraph_mode'], 'learnable_v1')
+                    self.assertEqual(config['model_args']['symbolic_hypergraph_reg_weight'], .01)
                 else:
                     self.assertEqual(config['optimizer'], 'SGD')
                     self.assertEqual(config['nesterov'], baseline['nesterov'])

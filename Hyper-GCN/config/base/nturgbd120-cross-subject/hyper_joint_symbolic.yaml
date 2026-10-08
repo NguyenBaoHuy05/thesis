@@ -50,6 +50,9 @@ model_args:
   # No black-box FC at inference: fixed concept-template likelihood -> action.
   symbolic_action_mode: prototype
   symbolic_action_temperature: 0.10
+  # V1: learn a global concept-hyperedge incidence anchored to body/group/scope.
+  symbolic_hypergraph_mode: learnable_v1
+  symbolic_hypergraph_reg_weight: 0.01
 
 weight_decay: 0.0004
 # One-stage concept-to-action training; pretrained backbone/classifier remain frozen.

@@ -381,18 +381,20 @@ class Processor():
         audit = bridge.audit()
         with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
             json.dump(audit, handle, indent=2, allow_nan=False)
-        self.print_log('Symbolic: {} concepts, cosine affinity, balance={}, source={}, cap={}'.format(
-            bridge.num_concepts, bridge.balance_loss, bridge.pos_weight_source, bridge.pos_weight_max))
+        self.print_log('Symbolic: {} concepts, graph={}, balance={}, source={}, cap={}'.format(
+            bridge.num_concepts, bridge.hypergraph_mode, bridge.balance_loss,
+            bridge.pos_weight_source, bridge.pos_weight_max))
 
     def log_symbolic_gates(self, writer=None):
         model_ref = self.model.module if hasattr(self.model, 'module') else self.model
         bridge = getattr(model_ref, 'symbolic_graph', None)
         if bridge is None:
             return
-        values = {
-            'residual_gate': torch.tanh(bridge.residual_gate).detach().item(),
-            'concept_graph_gate': torch.tanh(bridge.concept_graph_gate).detach().item(),
-        }
+        values = {'residual_gate': torch.tanh(bridge.residual_gate).detach().item()}
+        if bridge.hypergraph_mode == 'learnable_v1':
+            values['hypergraph_gate'] = torch.tanh(bridge.hypergraph_gate).detach().item()
+        else:
+            values['concept_graph_gate'] = torch.tanh(bridge.concept_graph_gate).detach().item()
         self.print_log('\tSymbolic gates: {}'.format(values))
         if writer is not None:
             for name, value in values.items():
@@ -472,7 +474,9 @@ class Processor():
 
         loss_value = []
         acc_value = []
-        component_sums = dict(ce=0.0, divergence=0.0, symbolic=0.0, symbolic_weighted=0.0)
+        component_sums = dict(ce=0.0, divergence=0.0, symbolic=0.0,
+                              symbolic_weighted=0.0, hypergraph=0.0,
+                              hypergraph_weighted=0.0)
         sample_count = 0
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
@@ -491,6 +495,8 @@ class Processor():
             h_loss = data.new_zeros(())
             symbolic_loss = data.new_zeros(())
             symbolic_weighted = data.new_zeros(())
+            hypergraph_loss = data.new_zeros(())
+            hypergraph_weighted = data.new_zeros(())
             if isinstance(output, tuple):
                 ce_loss = self.loss(output[0], label)
                 if not symbolic_only:
@@ -505,6 +511,12 @@ class Processor():
                     symbolic_loss = model_ref.symbolic_graph.loss(output[2], label)
                     symbolic_weighted = model_ref.symbolic_graph_weight * symbolic_loss
                     loss = loss + symbolic_weighted
+                    hypergraph_loss = model_ref.symbolic_graph.structure_loss()
+                    hypergraph_weighted = (
+                        getattr(model_ref, 'symbolic_hypergraph_reg_weight', 0.0)
+                        * hypergraph_loss
+                    )
+                    loss = loss + hypergraph_weighted
                 output = output[0]
             else:
                 ce_loss = self.loss(output, label)
@@ -524,7 +536,9 @@ class Processor():
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
             components = dict(ce=ce_loss, divergence=h_loss, symbolic=symbolic_loss,
-                              symbolic_weighted=symbolic_weighted)
+                              symbolic_weighted=symbolic_weighted,
+                              hypergraph=hypergraph_loss,
+                              hypergraph_weighted=hypergraph_weighted)
             for name, component in components.items():
                 value = component.detach().item()
                 self.train_writer.add_scalar('loss/' + name, value, self.global_step)
@@ -656,6 +670,26 @@ class Processor():
                 metrics['weighted_loss'] = model_ref.symbolic_graph_weight * metrics['loss']
                 metrics['action_top1'] = accuracy
                 metrics['delta_from_initial_pp'] = delta_pp
+                if bridge.hypergraph_mode == 'learnable_v1':
+                    hypergraph = bridge.hypergraph_snapshot()
+                    metrics['hypergraph_structure_loss'] = hypergraph['structure_loss']
+                    hypergraph_path = os.path.join(
+                        self.arg.work_dir,
+                        'epoch{}_{}_hypergraph.json'.format(epoch + 1, ln),
+                    )
+                    with open(hypergraph_path, 'w', encoding='utf-8') as handle:
+                        json.dump(hypergraph, handle, indent=2, allow_nan=False)
+                    self.print_log(
+                        '\tHypergraph: structure={:.6f}, prior={:.4f}, nonprior={:.4f}, changed={}'.format(
+                            hypergraph['structure_loss'], hypergraph['mean_prior_membership'],
+                            hypergraph['mean_nonprior_membership'],
+                            hypergraph['changed_memberships_at_0.5'],
+                        )
+                    )
+                    if self.arg.phase == 'train':
+                        for name in ('structure_loss', 'mean_prior_membership',
+                                     'mean_nonprior_membership', 'changed_memberships_at_0.5'):
+                            self.val_writer.add_scalar('hypergraph/' + name, hypergraph[name], self.global_step)
                 metrics_path = os.path.join(self.arg.work_dir, 'epoch{}_{}_concept_metrics.json'.format(epoch + 1, ln))
                 with open(metrics_path, 'w', encoding='utf-8') as handle:
                     json.dump(metrics, handle, indent=2, allow_nan=False)
