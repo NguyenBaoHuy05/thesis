@@ -310,7 +310,8 @@ class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3, hyper_joints=0,
                  drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
                  metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
-                 symbolic_graph_temperature=0.20):
+                 symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
+                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class"):
         super(Model, self).__init__()
 
         if graph is None:
@@ -362,6 +363,9 @@ class Model(nn.Module):
                 num_classes=num_class, num_concepts=num_concepts,
                 num_people=num_person, num_points=num_point,
                 temperature=symbolic_graph_temperature,
+                balance_loss=symbolic_balance_loss,
+                pos_weight_max=symbolic_pos_weight_max,
+                pos_weight_source=symbolic_pos_weight_source,
             )
 
     def forward(self, x):

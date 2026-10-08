@@ -131,6 +131,84 @@ python ensemble.py --datasets ntu120/xsub --model base --joint-dir <the save pat
 
 # Pretrained Models
 
+## Symbolic branch: fine-tuning and monitoring
+
+The configs in `config/symbolic/` and
+`config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` require a
+pretrained checkpoint. Select the official weights matching **base/large,
+NTU60/NTU120, modality and split**, and the checkpoint's `hyper_joints` setting.
+These configs use the baseline's SGD, augmentation, batch size and schedule,
+with `base_lr: 0.0001` for fine-tuning. `num_worker: 0` is retained for Windows;
+`save_epoch: 0` keeps every evaluated epoch available for best-model selection.
+Weights initialize the model; optimizer/scheduler state and original training
+epochs are not resumed. No dependency on the checkpoint filename is required.
+
+```bash
+python main.py --config config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml --weights PATH_TO_OFFICIAL_CHECKPOINT.pt
+```
+
+Only the new symbolic branch may be missing when `pretrained_finetune: True`
+in train mode. Missing backbone/classifier keys, wrong tensor sizes and unexpected
+keys fail rather than silently leaving pretrained layers uninitialized.
+Test mode requires trained symbolic parameters. Old CSV-derived checkpoint
+buffers are rebuilt from the validated current tables, not restored.
+
+For a fair baseline comparison, fine-tune the same official checkpoint using
+the baseline config and the same fine-tuning LR and runtime options:
+
+```bash
+python main.py --config config/base/nturgbd120-cross-subject/hyper_joint.yaml --weights PATH_TO_OFFICIAL_CHECKPOINT.pt --pretrained-finetune True --base-lr 0.0001 --num-worker 0 --save-epoch 0 --work-dir work_dir/ntu120/xsub/joint_finetune_baseline
+```
+
+The concept CSV is validated against the NTU label order expressed by the v2.4
+action names. Column counts, binary values, unique contiguous metadata IDs and
+matching concept order are checked before building tensors. All rows are
+validated, including unused NTU120 rows in NTU60 experiments. Anatomical mapping
+correctly includes the head for hand-to-face/nose concepts and legs/feet for
+`lower_limb_kick_targeted`; unknown spatial concepts require an explicit mapping.
+The concept graph uses cosine similarity of class-support columns, unit
+self-loops and row normalization. A concept with no support has only its self-loop.
+
+The configs enable controlled BCE balancing:
+
+```yaml
+model_args:
+  symbolic_balance_loss: True
+  symbolic_pos_weight_source: train
+  symbolic_pos_weight_max: 10.0
+```
+
+`train` computes concept frequencies from training labels and class templates,
+without test labels. `class` instead assumes equal class frequencies. Positive
+weights are `clip(negative_count / positive_count, 1, cap)`; concepts with no
+positives use weight 1. Training class counts are saved with symbolic weights
+and used to rebuild BCE weights in test mode. Set `symbolic_balance_loss: False`
+for the unweighted ablation or evaluation of legacy symbolic checkpoints without
+training counts. Balancing changes calibration: the F1 threshold remains fixed
+at 0.5 (`--concept-threshold`); do not optimize it on test data.
+
+Monitoring outputs in each experiment directory:
+
+- TensorBoard: `loss/ce`, `loss/divergence`, `loss/symbolic`,
+  `loss/symbolic_weighted`, and `symbolic/residual_gate`,
+  `symbolic/concept_graph_gate` (after `tanh`).
+- Evaluation: concept macro/micro F1 and mAP, plus spatial/temporal/context
+  summaries in TensorBoard and `epochN_test_concept_metrics.json`.
+- `symbolic_audit.json`: concept mappings, zero-based joint groups, positive
+  class counts, training class frequencies and the actual BCE weights.
+
+`macro_f1` and `mAP` exclude concepts without positive evaluation targets;
+`macro_f1_all` includes every concept with zero F1 for undefined cases. Per-concept
+reports show positive target/prediction counts and `AP: null` when no positives
+exist. These are **action-class template targets**, not independent per-video
+concept annotations; concept scores alone do not establish explanation quality.
+
+CPU unit checks (no dataset training):
+
+```bash
+python -B -m unittest discover -s tests -v
+```
+
 We provide the pretrained weights, configs and training logs. 
 You can download pretrained models for producing the final results on NTU 60 & 120 in [Google Drive](https://drive.google.com/drive/folders/1Zi6l8NL_mp7I7v8FjizlRNTk7wZlNfkQ?usp=sharing).
 

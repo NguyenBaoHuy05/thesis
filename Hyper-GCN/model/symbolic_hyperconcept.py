@@ -2,108 +2,56 @@
 
 from __future__ import annotations
 
-import csv
-from pathlib import Path
+import math
 
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-
-PART_NAMES = (
-    "head", "torso", "left_arm", "right_arm", "left_hand", "right_hand",
-    "left_leg", "right_leg", "left_foot", "right_foot", "full_body",
+from model.concept_schema import (
+    BODY_PART_JOINTS, PART_NAMES, concept_parts, load_concept_tables,
 )
 
 
 def _row_normalize(values):
-    return values / values.sum(dim=-1, keepdim=True).clamp_min(1.0)
+    return values / values.sum(dim=-1, keepdim=True).clamp_min(1e-12)
 
 
 def _body_part_incidence():
-    groups = {
-        "head": [3], "torso": [0, 1, 2, 20],
-        "left_arm": [4, 5, 6], "right_arm": [8, 9, 10],
-        "left_hand": [7, 21, 22], "right_hand": [11, 23, 24],
-        "left_leg": [12, 13, 14], "right_leg": [16, 17, 18],
-        "left_foot": [15], "right_foot": [19],
-        "full_body": list(range(25)),
-    }
     matrix = torch.zeros(len(PART_NAMES), 25, dtype=torch.float32)
     for index, name in enumerate(PART_NAMES):
-        matrix[index, groups[name]] = 1.0
+        matrix[index, list(BODY_PART_JOINTS[name])] = 1.0
     return _row_normalize(matrix)
 
 
 def _concept_parts(name, scope, group):
-    name = name.strip().lower()
     row = torch.zeros(len(PART_NAMES), dtype=torch.float32)
     ids = {part: index for index, part in enumerate(PART_NAMES)}
-
-    def add(*parts):
-        for part in parts:
-            row[ids[part]] = 1.0
-
-    if name.startswith("head_"):
-        add("head")
-    elif name.startswith("hand_"):
-        add("left_hand", "right_hand")
-        if any(token in name for token in ("head_region", "face_region", "mouth_region")):
-            add("head")
-        if any(token in name for token in ("chest_region", "neck_region", "back_region")):
-            add("torso")
-    elif name.startswith("arm_"):
-        add("left_arm", "right_arm")
-        if "cross" in name or "chest" in name:
-            add("torso")
-    elif name.startswith("upper_limb_"):
-        add("left_arm", "right_arm", "left_hand", "right_hand")
-        if "head_region" in name:
-            add("head")
-    elif name.startswith("hip_"):
-        add("torso", "left_leg", "right_leg")
-    elif name.startswith("leg_"):
-        add("left_leg", "right_leg")
-    elif name.startswith("foot_"):
-        add("left_foot", "right_foot")
-    elif scope in {"temporal", "context"} or name.startswith("interaction_"):
-        add("full_body")
-    elif group == "head":
-        add("head")
-    else:
-        add("full_body")
+    for part in concept_parts(name, scope, group):
+        row[ids[part]] = 1.0
     return row
 
 
 def _load_concepts(concept_csv, metadata_csv, num_classes, num_concepts):
-    with Path(concept_csv).open("r", encoding="utf-8", newline="") as handle:
-        rows = list(csv.reader(handle))
-    if not rows or rows[0][0] != "action_class":
-        raise ValueError("concept CSV must start with action_class")
-    csv_names = rows[0][1:]
-    if len(csv_names) != int(num_concepts):
-        raise ValueError(
-            f"concept CSV has {len(csv_names)} concepts, expected {num_concepts}"
-        )
-    values = []
-    for row in rows[1:int(num_classes) + 1]:
-        values.append([float(value) for value in row[1:]])
-    if len(values) != int(num_classes):
-        raise ValueError("concept CSV has fewer action rows than num_classes")
-    with Path(metadata_csv).open("r", encoding="utf-8", newline="") as handle:
-        metadata = list(csv.DictReader(handle))
-    metadata.sort(key=lambda row: int(row["concept_id"]))
-    metadata_names = [row["concept_name"].strip() for row in metadata]
-    if csv_names != metadata_names:
-        raise ValueError("concept CSV and metadata concept order do not match")
+    values, metadata = load_concept_tables(
+        concept_csv, metadata_csv, num_classes, num_concepts,
+    )
     support = torch.tensor(values, dtype=torch.float32)
     part_map = torch.stack([
         _concept_parts(row["concept_name"], row.get("scope", ""), row.get("group", ""))
         for row in metadata
     ])
-    affinity = support.t() @ support
-    affinity.fill_diagonal_(1.0)
-    return support, _row_normalize(part_map), _row_normalize(affinity)
+    return support, _row_normalize(part_map), _concept_affinity(support), metadata
+
+
+def _concept_affinity(support):
+    # Normalize each concept across classes before measuring co-occurrence.
+    # Zero-support concepts have no off-diagonal edges and retain a self-loop.
+    columns = F.normalize(support, p=2, dim=0)
+    affinity = (columns.t() @ columns).clamp(0.0, 1.0)
+    affinity.fill_diagonal_(0.0)
+    affinity = affinity + torch.eye(support.shape[1], device=support.device, dtype=support.dtype)
+    return _row_normalize(affinity)
 
 
 class SymbolicHyperConceptBridge(nn.Module):
@@ -113,11 +61,12 @@ class SymbolicHyperConceptBridge(nn.Module):
         self, feature_dim, concept_csv, metadata_csv, num_classes,
         num_concepts=102, num_people=2, num_points=25, temperature=0.2,
         residual_init=0.0, graph_init=0.0,
+        balance_loss=False, pos_weight_max=10.0, pos_weight_source="class",
     ):
         super().__init__()
         if int(num_points) != 25:
             raise ValueError("symbolic bridge currently supports NTU's 25 joints only")
-        support, concept_part, concept_affinity = _load_concepts(
+        support, concept_part, concept_affinity, metadata = _load_concepts(
             concept_csv, metadata_csv, int(num_classes), int(num_concepts)
         )
         self.feature_dim = int(feature_dim)
@@ -125,10 +74,28 @@ class SymbolicHyperConceptBridge(nn.Module):
         self.num_people = int(num_people)
         self.num_points = int(num_points)
         self.temperature = float(temperature)
-        self.register_buffer("part_incidence", _body_part_incidence())
-        self.register_buffer("concept_part", concept_part)
-        self.register_buffer("concept_affinity", concept_affinity)
-        self.register_buffer("support", support)
+        if not math.isfinite(self.temperature) or self.temperature <= 0:
+            raise ValueError("symbolic temperature must be finite and positive")
+        self.balance_loss = bool(balance_loss)
+        self.pos_weight_max = float(pos_weight_max)
+        self.pos_weight_source = pos_weight_source
+        if not math.isfinite(self.pos_weight_max) or self.pos_weight_max < 1:
+            raise ValueError("pos_weight_max must be finite and >= 1")
+        if pos_weight_source not in {"class", "train"}:
+            raise ValueError("pos_weight_source must be 'class' or 'train'")
+        self.metadata = metadata
+        self.concept_names = [row["concept_name"] for row in metadata]
+        # Rebuild CSV-derived buffers, rather than restoring stale mappings from weights.
+        self.register_buffer("part_incidence", _body_part_incidence(), persistent=False)
+        self.register_buffer("concept_part", concept_part, persistent=False)
+        self.register_buffer("concept_affinity", concept_affinity, persistent=False)
+        self.register_buffer("support", support, persistent=False)
+        self.register_buffer("positive_weight", torch.ones(self.num_concepts), persistent=False)
+        # Persist training frequencies so test mode does not need the training dataset.
+        self.register_buffer("training_class_counts", torch.zeros(int(num_classes)))
+        self._positive_weight_ready = not self.balance_loss or pos_weight_source == "class"
+        if pos_weight_source == "class":
+            self._set_positive_weight(torch.ones(int(num_classes)))
         self.concept_queries = nn.Parameter(torch.empty(self.num_concepts, self.feature_dim))
         self.concept_bias = nn.Parameter(torch.zeros(self.num_concepts))
         self.project_back = nn.Conv2d(self.feature_dim, self.feature_dim, 1, bias=False)
@@ -179,8 +146,65 @@ class SymbolicHyperConceptBridge(nn.Module):
         return fused, sequence_logits.mean(dim=1)
 
     def loss(self, concept_logits, labels):
+        if self.balance_loss and not self._positive_weight_ready:
+            raise RuntimeError("training class counts are required for balanced concept loss")
         targets = self.support.to(
             device=concept_logits.device, dtype=concept_logits.dtype
         ).index_select(0, labels)
-        return F.binary_cross_entropy_with_logits(concept_logits, targets)
+        positive_weight = self.positive_weight.to(concept_logits) if self.balance_loss else None
+        return F.binary_cross_entropy_with_logits(
+            concept_logits, targets, pos_weight=positive_weight,
+        )
+
+    def _set_positive_weight(self, class_counts):
+        positives = class_counts.to(self.support) @ self.support
+        negatives = class_counts.sum().to(positives) - positives
+        weights = (negatives / positives.clamp_min(1.0)).clamp(1.0, self.pos_weight_max)
+        # No positive examples: leave negative-only supervision unweighted.
+        weights = torch.where(positives > 0, weights, torch.ones_like(weights))
+        self.positive_weight.copy_(weights)
+        self._positive_weight_ready = True
+
+    def set_training_class_counts(self, class_counts):
+        counts = torch.as_tensor(class_counts, device=self.support.device, dtype=torch.float32)
+        if (counts.shape != self.training_class_counts.shape or not torch.isfinite(counts).all()
+                or (counts < 0).any() or (counts != counts.round()).any() or counts.sum() <= 0):
+            raise ValueError("training class counts must be a nonempty, nonnegative integer vector")
+        self.training_class_counts.copy_(counts)
+        if self.pos_weight_source == "train":
+            self._set_positive_weight(counts)
+
+    def _load_from_state_dict(self, state_dict, prefix, local_metadata, strict,
+                              missing_keys, unexpected_keys, error_msgs):
+        super()._load_from_state_dict(
+            state_dict, prefix, local_metadata, strict, missing_keys, unexpected_keys, error_msgs,
+        )
+        if self.pos_weight_source == "train" and self.training_class_counts.sum() > 0:
+            self.set_training_class_counts(self.training_class_counts)
+
+    def audit(self):
+        """Serializable schema, mapping and loss settings for each experiment."""
+        training_positives = (self.training_class_counts.to(self.support) @ self.support).detach().cpu().tolist()
+        return {
+            "num_classes": int(self.support.shape[0]),
+            "num_concepts": self.num_concepts,
+            "target_granularity": "action-class templates, not per-video annotations",
+            "affinity": "column cosine similarity + unit self-loops + row normalization",
+            "balance_loss": self.balance_loss,
+            "pos_weight_source": self.pos_weight_source,
+            "pos_weight_max": self.pos_weight_max,
+            "pos_weight_ready": self._positive_weight_ready,
+            "training_class_counts": self.training_class_counts.detach().cpu().tolist(),
+            "body_parts_zero_based_joints": BODY_PART_JOINTS,
+            "concepts": [
+                {
+                    "name": row["concept_name"], "scope": row["scope"],
+                    "parts": concept_parts(row["concept_name"], row["scope"], row["group"]),
+                    "positive_classes": int(self.support[:, index].sum().item()),
+                    "positive_training_samples": int(training_positives[index]),
+                    "pos_weight": float(self.positive_weight[index].item()) if self.balance_loss else 1.0,
+                }
+                for index, row in enumerate(self.metadata)
+            ],
+        }
 

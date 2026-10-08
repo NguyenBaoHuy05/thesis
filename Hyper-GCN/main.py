@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import argparse
+import json
 import inspect
 import os
 import pickle
@@ -24,6 +25,9 @@ import torch.utils.data
 import yaml
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
+
+from model.checkpoint import load_model_weights
+from model.symbolic_metrics import concept_metrics
 
 # from torchlight import DictAction
 
@@ -185,6 +189,12 @@ def get_parser():
         default=None,
         help='the weights for network initialization')
     parser.add_argument(
+        '--pretrained-finetune', type=str2bool, default=False,
+        help='require --weights and allow newly initialized symbolic parameters during training')
+    parser.add_argument(
+        '--concept-threshold', type=float, default=0.5,
+        help='fixed sigmoid threshold for concept F1; do not tune this on the test set')
+    parser.add_argument(
         '--ignore-weights',
         type=str,
         default=[],
@@ -245,6 +255,10 @@ class Processor():
 
     def __init__(self, arg):
         self.arg = arg
+        if arg.phase == 'train' and arg.pretrained_finetune and not arg.weights:
+            raise ValueError('Pretrained fine-tuning requires --weights with a matching Hyper-GCN checkpoint.')
+        if not 0 < arg.concept_threshold < 1:
+            raise ValueError('concept_threshold must be between 0 and 1')
         self.save_arg()
         if arg.phase == 'train':
             if not arg.train_feeder_args['debug']:
@@ -271,6 +285,7 @@ class Processor():
         else:
             self.load_optimizer()
             self.load_data()
+            self.configure_symbolic()
         self.lr = self.arg.base_lr
         self.best_acc = 0
         self.best_acc_epoch = 0
@@ -313,35 +328,52 @@ class Processor():
         self.h_loss = DivergenceLoss().cuda(output_device)
 
         if self.arg.weights:
-            self.global_step = int(arg.weights[:-3].split('-')[-1])
             self.print_log('Load weights from {}.'.format(self.arg.weights))
             if '.pkl' in self.arg.weights:
-                with open(self.arg.weights, 'r') as f:
+                with open(self.arg.weights, 'rb') as f:
                     weights = pickle.load(f)
             else:
-                weights = torch.load(self.arg.weights)
+                weights = torch.load(self.arg.weights, map_location='cpu')
+            report = load_model_weights(
+                self.model, weights,
+                allow_new_symbolic=self.arg.phase == 'train' and self.arg.pretrained_finetune,
+                ignore_weights=self.arg.ignore_weights,
+            )
+            self.print_log('Checkpoint load: {}'.format(report))
 
-            weights = OrderedDict([[k.split('module.')[-1], v.cuda(output_device)] for k, v in weights.items()])
+    def configure_symbolic(self):
+        bridge = getattr(self.model, 'symbolic_graph', None)
+        if bridge is None:
+            return
+        if self.arg.phase == 'train':
+            labels = np.asarray(self.data_loader['train'].dataset.label)
+            num_classes = bridge.support.shape[0]
+            if (labels.ndim != 1 or not np.issubdtype(labels.dtype, np.integer)
+                    or labels.size == 0 or labels.min() < 0 or labels.max() >= num_classes):
+                raise ValueError('training labels must be integer NTU indices matching num_class')
+            bridge.set_training_class_counts(np.bincount(labels, minlength=num_classes))
+        elif bridge.balance_loss and not bridge._positive_weight_ready:
+            raise ValueError('Balanced test loss needs a symbolic checkpoint with training_class_counts; '
+                             'for legacy weights set symbolic_balance_loss=False explicitly.')
+        audit = bridge.audit()
+        with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
+            json.dump(audit, handle, indent=2, allow_nan=False)
+        self.print_log('Symbolic: {} concepts, cosine affinity, balance={}, source={}, cap={}'.format(
+            bridge.num_concepts, bridge.balance_loss, bridge.pos_weight_source, bridge.pos_weight_max))
 
-            keys = list(weights.keys())
-            for w in self.arg.ignore_weights:
-                for key in keys:
-                    if w in key:
-                        if weights.pop(key, None) is not None:
-                            self.print_log('Sucessfully Remove Weights: {}.'.format(key))
-                        else:
-                            self.print_log('Can Not Remove Weights: {}.'.format(key))
-
-            try:
-                self.model.load_state_dict(weights)
-            except:
-                state = self.model.state_dict()
-                diff = list(set(state.keys()).difference(set(weights.keys())))
-                print('Can not find these weights:')
-                for d in diff:
-                    print('  ' + d)
-                state.update(weights)
-                self.model.load_state_dict(state)
+    def log_symbolic_gates(self, writer=None):
+        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+        bridge = getattr(model_ref, 'symbolic_graph', None)
+        if bridge is None:
+            return
+        values = {
+            'residual_gate': torch.tanh(bridge.residual_gate).detach().item(),
+            'concept_graph_gate': torch.tanh(bridge.concept_graph_gate).detach().item(),
+        }
+        self.print_log('\tSymbolic gates: {}'.format(values))
+        if writer is not None:
+            for name, value in values.items():
+                writer.add_scalar('symbolic/' + name, value, self.global_step)
 
     def load_optimizer(self):
         if self.arg.optimizer == 'SGD':
@@ -413,6 +445,8 @@ class Processor():
 
         loss_value = []
         acc_value = []
+        component_sums = dict(ce=0.0, divergence=0.0, symbolic=0.0, symbolic_weighted=0.0)
+        sample_count = 0
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
         timer = dict(dataloader=0.001, model=0.001, statistics=0.001)
@@ -427,6 +461,9 @@ class Processor():
 
             # forward
             output = self.model(data)
+            h_loss = data.new_zeros(())
+            symbolic_loss = data.new_zeros(())
+            symbolic_weighted = data.new_zeros(())
             if isinstance(output, tuple):
                 ce_loss = self.loss(output[0], label)
                 h_loss = self.h_loss(output[1])
@@ -438,10 +475,12 @@ class Processor():
                         else self.model
                     )
                     symbolic_loss = model_ref.symbolic_graph.loss(output[2], label)
-                    loss = loss + model_ref.symbolic_graph_weight * symbolic_loss
+                    symbolic_weighted = model_ref.symbolic_graph_weight * symbolic_loss
+                    loss = loss + symbolic_weighted
                 output = output[0]
             else:
-                loss = self.loss(output, label)
+                ce_loss = self.loss(output, label)
+                loss = ce_loss
 
             # backward
             self.optimizer.zero_grad()
@@ -456,6 +495,13 @@ class Processor():
             acc_value.append(acc.data.item())
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
+            components = dict(ce=ce_loss, divergence=h_loss, symbolic=symbolic_loss,
+                              symbolic_weighted=symbolic_weighted)
+            for name, component in components.items():
+                value = component.detach().item()
+                self.train_writer.add_scalar('loss/' + name, value, self.global_step)
+                component_sums[name] += value * label.size(0)
+            sample_count += label.size(0)
 
 
             # statistics
@@ -471,6 +517,10 @@ class Processor():
         self.print_log(
             '\tMean training loss: {:.4f}. Mean training acc: {:.2f}%.'.format(np.mean(loss_value), np.mean(acc_value)*100))
         self.print_log('\tTime consumption: [Data]{dataloader}, [Network]{model}'.format(**proportion))
+        self.print_log('\tMean loss components: {}'.format({
+            name: total / max(sample_count, 1) for name, total in component_sums.items()
+        }))
+        self.log_symbolic_gates(self.train_writer)
 
         if save_model:
             state_dict = self.model.state_dict()
@@ -483,10 +533,16 @@ class Processor():
         if result_file is not None:
             f_r = open(result_file, 'w')
         self.model.eval()
+        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+        bridge = getattr(model_ref, 'symbolic_graph', None)
         self.print_log('Eval epoch: {}'.format(epoch + 1))
         for ln in loader_name:
             loss_value = []
             score_frag = []
+            concept_frag = []
+            concept_labels = []
+            symbolic_loss_sum = 0.0
+            concept_sample_count = 0
             step = 0
             process = tqdm(self.data_loader[ln], ncols=40)
             for batch_idx, (data, label, index) in enumerate(process):
@@ -496,6 +552,11 @@ class Processor():
                     output = self.model(data)
                     if isinstance(output, tuple):
                         loss = self.loss(output[0], label)
+                        if len(output) > 2 and output[2] is not None:
+                            symbolic_loss_sum += bridge.loss(output[2], label).item() * label.size(0)
+                            concept_sample_count += label.size(0)
+                            concept_frag.append(output[2].detach().cpu().numpy())
+                            concept_labels.append(label.cpu().numpy())
                         output = output[0]
                     else:
                         loss = self.loss(output, label)
@@ -534,6 +595,30 @@ class Processor():
                 self.print_log('\tTop{}: {:.2f}%'.format(
                     k, 100 * self.data_loader[ln].dataset.top_k(score, k)))
 
+            if concept_frag:
+                logits = np.concatenate(concept_frag)
+                labels = np.concatenate(concept_labels)
+                targets = bridge.support.detach().cpu().numpy()[labels]
+                metrics = concept_metrics(logits, targets, bridge.metadata, self.arg.concept_threshold)
+                metrics['loss'] = symbolic_loss_sum / concept_sample_count
+                metrics['weighted_loss'] = model_ref.symbolic_graph_weight * metrics['loss']
+                metrics_path = os.path.join(self.arg.work_dir, 'epoch{}_{}_concept_metrics.json'.format(epoch + 1, ln))
+                with open(metrics_path, 'w', encoding='utf-8') as handle:
+                    json.dump(metrics, handle, indent=2, allow_nan=False)
+                self.print_log('\tSymbolic: loss={:.4f}, macro-F1={}, mAP={}, active={}/{}'.format(
+                    metrics['loss'], metrics['macro_f1'], metrics['mAP'],
+                    metrics['concepts_with_positives'], metrics['num_concepts']))
+                if self.arg.phase == 'train':
+                    for name in ('macro_f1', 'macro_f1_all', 'micro_f1', 'mAP', 'loss', 'weighted_loss'):
+                        if metrics[name] is not None:
+                            self.val_writer.add_scalar('symbolic/' + name, metrics[name], self.global_step)
+                    for scope, summary in metrics['scopes'].items():
+                        for name in ('macro_f1', 'mAP'):
+                            if summary[name] is not None:
+                                self.val_writer.add_scalar('symbolic/{}/{}'.format(scope, name),
+                                                           summary[name], self.global_step)
+                self.log_symbolic_gates(self.val_writer if self.arg.phase == 'train' else None)
+
             if save_score:
                 with open('{}/epoch{}_{}_score.pkl'.format(
                         self.arg.work_dir, epoch + 1, ln), 'wb') as f:
@@ -555,7 +640,7 @@ class Processor():
     def start(self):
         if self.arg.phase == 'train':
             self.print_log('Parameters:\n{}\n'.format(str(vars(self.arg))))
-            self.global_step = self.arg.start_epoch * len(self.data_loader['train']) / self.arg.batch_size
+            self.global_step = self.arg.start_epoch * len(self.data_loader['train'])
             def count_parameters(model):
                 return sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.print_log(f'# Parameters: {count_parameters(self.model)}')

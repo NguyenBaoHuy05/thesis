@@ -1,5 +1,9 @@
 work_dir: ./work_dir/ntu120/xsub/joint_symbolic
 
+# Fine-tune a matching official checkpoint; supply its path with --weights.
+pretrained_finetune: True
+weights: null
+
 # feeder
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
@@ -39,9 +43,14 @@ model_args:
   num_concepts: 102
   symbolic_graph_weight: 0.10
   symbolic_graph_temperature: 0.20
+  symbolic_balance_loss: True
+  symbolic_pos_weight_max: 10.0
+  symbolic_pos_weight_source: train
 
 #optim
 weight_decay: 0.0004
+# Same SGD/schedule as baseline; lower LR for pretrained fine-tuning.
+optimizer: SGD
 base_lr: 0.0001
 lr_decay_rate: 0.1
 step: [110, 120]
