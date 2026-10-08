@@ -290,8 +290,10 @@ class Processor():
             counts = configure_trainable_parameters(self.model, self.arg.symbolic_only)
             self.print_log('Parameters: {}'.format(counts))
             if self.arg.symbolic_only:
+                action_mode = getattr(self.model, 'symbolic_action_mode', 'blackbox')
                 self.print_log('Symbolic-only: backbone/classifier frozen, pretrained BN in eval; '
-                               'loss = CE + symbolic_graph_weight * concept BCE (no divergence).')
+                               'action_mode={}; loss = CE + symbolic_graph_weight * concept BCE '
+                               '(no divergence).'.format(action_mode))
 
         if self.arg.phase == 'model_size':
             pass

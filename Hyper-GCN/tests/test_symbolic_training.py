@@ -18,6 +18,7 @@ from torch import nn
 import torch.optim as optim
 import yaml
 
+from model.hypergcn_base import Model as HyperGCNBase
 from model.symbolic_hyperconcept import SymbolicHyperConceptBridge
 from model.symbolic_metrics import concept_metrics
 from model.training import configure_trainable_parameters, set_training_mode
@@ -66,6 +67,53 @@ class TinyFeatureModel(nn.Module):
 
 
 class SymbolicOnlyTrainingTests(unittest.TestCase):
+    def test_prototype_mode_bypasses_blackbox_fc_and_residual_path(self):
+        model = HyperGCNBase(
+            num_class=120, num_point=25, num_person=2, hyper_joints=3,
+            graph='graph.ntu_rgb_d.Graph', graph_args={'labeling_mode': 'virtual_ensemble'},
+            symbolic_graph_enabled=True,
+            concept_csv=ROOT / 'concepts/ntu_action_concept_v2_4.csv',
+            metadata_csv=ROOT / 'concepts/ntu_concept_metadata_v2_4.csv',
+            symbolic_action_mode='prototype',
+        )
+
+        class Block(nn.Module):
+            def __init__(self, out_channels, stride=1):
+                super().__init__()
+                self.out_channels = out_channels
+                self.stride = stride
+
+            def forward(self, inputs):
+                outputs = inputs[:, :, ::self.stride]
+                if outputs.shape[1] < self.out_channels:
+                    outputs = torch.cat([outputs, outputs], dim=1)
+                return outputs[:, :self.out_channels], torch.zeros(1)
+
+        model.l1 = Block(128)
+        model.l2 = Block(128)
+        model.l3 = Block(128)
+        model.l4 = Block(256, 2)
+        model.l5 = Block(256)
+        model.l6 = Block(256)
+        model.l7 = Block(256, 2)
+        model.l8 = Block(256)
+        model.l9 = Block(256)
+        fc_calls = []
+        model.fc.register_forward_hook(lambda *args: fc_calls.append(True))
+        configure_trainable_parameters(model, symbolic_only=True)
+        output, _, concepts = model(torch.randn(2, 3, 8, 25, 2))
+        self.assertEqual(output.shape, (2, 120))
+        self.assertEqual(concepts.shape, (2, 102))
+        self.assertEqual(fc_calls, [])
+        self.assertFalse(model.fc.weight.requires_grad)
+        self.assertFalse(model.symbolic_graph.project_back.weight.requires_grad)
+        self.assertFalse(model.symbolic_graph.residual_gate.requires_grad)
+        self.assertTrue(model.symbolic_graph.concept_queries.requires_grad)
+        output.sum().backward()
+        self.assertIsNone(model.fc.weight.grad)
+        self.assertIsNone(model.symbolic_graph.project_back.weight.grad)
+        self.assertIsNotNone(model.symbolic_graph.concept_queries.grad)
+
     def test_optimizer_gradients_and_pretrained_state_remain_frozen(self):
         torch.manual_seed(123)
         model = TinyFeatureModel()
@@ -145,7 +193,10 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         arg = parser.parse_args(['--weights', 'official.pt'])
         self.assertTrue(arg.symbolic_only)
         self.assertTrue(arg.eval_before_train)
-        self.assertEqual(arg.base_lr, .001)
+        self.assertEqual(arg.optimizer, 'Adam')
+        self.assertEqual(arg.base_lr, 3e-4)
+        self.assertEqual(arg.warm_up_epoch, 1)
+        self.assertFalse(arg.nesterov)
         self.assertEqual(arg.num_epoch, 20)
         self.assertFalse(parser.parse_args(['--symbolic-only', 'False']).symbolic_only)
 

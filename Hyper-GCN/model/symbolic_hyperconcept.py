@@ -62,6 +62,7 @@ class SymbolicHyperConceptBridge(nn.Module):
         num_concepts=102, num_people=2, num_points=25, temperature=0.2,
         residual_init=0.0, graph_init=0.0,
         balance_loss=False, pos_weight_max=10.0, pos_weight_source="class",
+        action_decoder="none", action_temperature=0.1,
     ):
         super().__init__()
         if int(num_points) != 25:
@@ -83,6 +84,12 @@ class SymbolicHyperConceptBridge(nn.Module):
             raise ValueError("pos_weight_max must be finite and >= 1")
         if pos_weight_source not in {"class", "train"}:
             raise ValueError("pos_weight_source must be 'class' or 'train'")
+        if action_decoder not in {"none", "prototype"}:
+            raise ValueError("action_decoder must be 'none' or 'prototype'")
+        self.action_decoder = action_decoder
+        self.action_temperature = float(action_temperature)
+        if not math.isfinite(self.action_temperature) or self.action_temperature <= 0:
+            raise ValueError("symbolic action temperature must be finite and positive")
         self.metadata = metadata
         self.concept_names = [row["concept_name"] for row in metadata]
         # Rebuild CSV-derived buffers, rather than restoring stale mappings from weights.
@@ -132,18 +139,44 @@ class SymbolicHyperConceptBridge(nn.Module):
         sequence_logits = torch.einsum("btqd,qd->btq", tokens, queries)
         sequence_logits = sequence_logits / max(self.temperature, 1e-6)
         sequence_logits = sequence_logits + self.concept_bias.view(1, 1, -1)
-        concept_context = torch.einsum(
-            "qp,bctq->bctp", self.concept_part.to(feature_map), concept_features
-        )
-        joint_context = torch.einsum(
-            "pk,bctp->bctk", self.part_incidence.to(feature_map), concept_context
-        )
-        joint_context = self.context_norm(self.project_back(joint_context))
-        joint_context = joint_context.unsqueeze(3).expand(
-            -1, -1, -1, self.num_people, -1
-        ).contiguous().reshape(batch, channels, timesteps, expected_nodes)
-        fused = feature_map + torch.tanh(self.residual_gate) * joint_context
+        fused = feature_map
+        if self.action_decoder == "none":
+            concept_context = torch.einsum(
+                "qp,bctq->bctp", self.concept_part.to(feature_map), concept_features
+            )
+            joint_context = torch.einsum(
+                "pk,bctp->bctk", self.part_incidence.to(feature_map), concept_context
+            )
+            joint_context = self.context_norm(self.project_back(joint_context))
+            joint_context = joint_context.unsqueeze(3).expand(
+                -1, -1, -1, self.num_people, -1
+            ).contiguous().reshape(batch, channels, timesteps, expected_nodes)
+            fused = feature_map + torch.tanh(self.residual_gate) * joint_context
         return fused, sequence_logits.mean(dim=1)
+
+    def action_logits(self, concept_logits):
+        """Score each action by balanced Bernoulli fit to its fixed concept template."""
+        if self.action_decoder != "prototype":
+            raise RuntimeError("symbolic action decoder is not enabled")
+        if concept_logits.ndim != 2 or concept_logits.shape[1] != self.num_concepts:
+            raise ValueError(
+                f"expected concept logits [N,{self.num_concepts}], got {tuple(concept_logits.shape)}"
+            )
+        support = self.support.to(concept_logits)
+        positive_count = support.sum(dim=1).clamp_min(1.0)
+        negative_count = (1.0 - support).sum(dim=1).clamp_min(1.0)
+        log_positive = F.logsigmoid(concept_logits).unsqueeze(1)
+        log_negative = F.logsigmoid(-concept_logits).unsqueeze(1)
+        positive_fit = (log_positive * support.unsqueeze(0)).sum(dim=2) / positive_count
+        negative_fit = (log_negative * (1.0 - support).unsqueeze(0)).sum(dim=2) / negative_count
+        # Equal positive/negative mass prevents sparse all-zero matches from dominating.
+        return (0.5 * positive_fit + 0.5 * negative_fit) / self.action_temperature
+
+    def trainable_parameters(self):
+        """Parameters that can affect the selected inference path."""
+        if self.action_decoder == "prototype":
+            return (self.concept_queries, self.concept_bias, self.concept_graph_gate)
+        return tuple(self.parameters())
 
     def loss(self, concept_logits, labels):
         if self.balance_loss and not self._positive_weight_ready:
@@ -194,6 +227,8 @@ class SymbolicHyperConceptBridge(nn.Module):
             "pos_weight_source": self.pos_weight_source,
             "pos_weight_max": self.pos_weight_max,
             "pos_weight_ready": self._positive_weight_ready,
+            "action_decoder": self.action_decoder,
+            "action_temperature": self.action_temperature,
             "training_class_counts": self.training_class_counts.detach().cpu().tolist(),
             "body_parts_zero_based_joints": BODY_PART_JOINTS,
             "concepts": [

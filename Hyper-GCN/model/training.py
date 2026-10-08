@@ -10,7 +10,9 @@ def configure_trainable_parameters(model, symbolic_only=False):
         for parameter in model_ref.parameters():
             parameter.requires_grad_(False)
             parameter.grad = None
-        for parameter in bridge.parameters():
+        parameters = (bridge.trainable_parameters()
+                      if hasattr(bridge, "trainable_parameters") else bridge.parameters())
+        for parameter in parameters:
             parameter.requires_grad_(True)
     trainable = sum(p.numel() for p in model_ref.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model_ref.parameters())

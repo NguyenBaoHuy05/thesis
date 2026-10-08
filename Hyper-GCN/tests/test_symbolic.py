@@ -147,6 +147,18 @@ class ConceptGraphLossTests(unittest.TestCase):
         torch.testing.assert_close(model.positive_weight, torch.ones(102))
         self.assertTrue(torch.isfinite(model.loss(torch.zeros(1, 102), torch.tensor([0]))))
 
+    def test_fixed_action_decoder_recovers_templates_and_is_differentiable(self):
+        model = bridge(action_decoder='prototype', action_temperature=.1)
+        exact_logits = (model.support * 2 - 1) * 8
+        action_logits = model.action_logits(exact_logits)
+        torch.testing.assert_close(action_logits.argmax(1), torch.arange(120))
+        sample = exact_logits[[0, 1]].clone().requires_grad_(True)
+        F.cross_entropy(model.action_logits(sample), torch.tensor([0, 1])).backward()
+        self.assertTrue(torch.isfinite(sample.grad).all())
+        self.assertGreater(sample.grad.abs().sum().item(), 0.)
+        with self.assertRaisesRegex(RuntimeError, 'not enabled'):
+            bridge().action_logits(exact_logits[:1])
+
 
 class SymbolicMetricTests(unittest.TestCase):
     def test_perfect_scores_and_no_positive_concept_policy(self):
@@ -226,19 +238,24 @@ class SymbolicConfigTests(unittest.TestCase):
                                   if not k.startswith('symbolic_') and k not in ('concept_csv', 'metadata_csv', 'num_concepts')},
                                  baseline['model_args'])
                 for key in ('model', 'weight_decay', 'lr_decay_rate',
-                            'batch_size', 'test_batch_size', 'nesterov'):
+                            'batch_size', 'test_batch_size'):
                     self.assertEqual(config[key], baseline[key])
                 self.assertTrue(config['pretrained_finetune'])
                 self.assertIsNone(config['weights'])
-                self.assertEqual(config['optimizer'], 'SGD')
                 if config.get('symbolic_only'):
                     self.assertTrue(config['eval_before_train'])
-                    self.assertEqual(config['base_lr'], 1e-3)
+                    self.assertEqual(config['optimizer'], 'Adam')
+                    self.assertEqual(config['base_lr'], 3e-4)
                     self.assertEqual(config['num_epoch'], 20)
                     self.assertEqual(config['step'], [12, 17])
-                    self.assertEqual(config['warm_up_epoch'], 3)
-                    self.assertTrue(config['work_dir'].endswith('joint_symbolic_only'))
+                    self.assertEqual(config['warm_up_epoch'], 1)
+                    self.assertFalse(config['nesterov'])
+                    self.assertTrue(config['work_dir'].endswith('joint_concept_action_adam'))
+                    self.assertEqual(config['model_args']['symbolic_action_mode'], 'prototype')
+                    self.assertEqual(config['model_args']['symbolic_action_temperature'], .1)
                 else:
+                    self.assertEqual(config['optimizer'], 'SGD')
+                    self.assertEqual(config['nesterov'], baseline['nesterov'])
                     self.assertEqual(config['base_lr'], 1e-4)
                     for key in ('step', 'warm_up_epoch', 'num_epoch'):
                         self.assertEqual(config[key], baseline[key])

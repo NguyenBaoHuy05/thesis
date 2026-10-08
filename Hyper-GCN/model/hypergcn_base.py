@@ -311,7 +311,8 @@ class Model(nn.Module):
                  drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
                  metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
                  symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
-                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class"):
+                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
+                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1):
         super(Model, self).__init__()
 
         if graph is None:
@@ -351,6 +352,11 @@ class Model(nn.Module):
         else:
             self.drop_out = lambda x: x
         self.symbolic_graph_weight = float(symbolic_graph_weight)
+        if symbolic_action_mode not in {"blackbox", "prototype"}:
+            raise ValueError("symbolic_action_mode must be 'blackbox' or 'prototype'")
+        if symbolic_action_mode == "prototype" and not symbolic_graph_enabled:
+            raise ValueError("prototype action mode requires symbolic_graph_enabled=True")
+        self.symbolic_action_mode = symbolic_action_mode
         self.symbolic_graph = None
         if symbolic_graph_enabled:
             if concept_csv is None or metadata_csv is None:
@@ -366,6 +372,8 @@ class Model(nn.Module):
                 balance_loss=symbolic_balance_loss,
                 pos_weight_max=symbolic_pos_weight_max,
                 pos_weight_source=symbolic_pos_weight_source,
+                action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
+                action_temperature=symbolic_action_temperature,
             )
 
     def forward(self, x):
@@ -414,13 +422,17 @@ class Model(nn.Module):
             x = feature_map.reshape(N, c_new, t_new, M, V).permute(
                 0, 3, 1, 2, 4
             ).contiguous().reshape(N * M, c_new, t_new, V)
-        # N*M,C,T,V
-        c_new = x.size(1)
-        x = x.view(N, M, c_new, -1)
-        x = x.mean(3).mean(1)
-        x = self.drop_out(x)
-
-        output = self.fc(x)
+        if self.symbolic_action_mode == "prototype":
+            # The pretrained black-box FC remains registered only so official
+            # checkpoints load strictly. It is not executed on this path.
+            output = self.symbolic_graph.action_logits(symbolic_concept_logits)
+        else:
+            # N*M,C,T,V
+            c_new = x.size(1)
+            x = x.view(N, M, c_new, -1)
+            x = x.mean(3).mean(1)
+            x = self.drop_out(x)
+            output = self.fc(x)
         hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
         if self.symbolic_graph is not None:
             return output, hyper_outputs, symbolic_concept_logits

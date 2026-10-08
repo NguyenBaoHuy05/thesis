@@ -139,10 +139,10 @@ pretrained checkpoint. Select the official weights matching **base/large,
 NTU60/NTU120, modality and split**, and the checkpoint's `hyper_joints` setting.
 The configs in `config/symbolic/` use the baseline's SGD, augmentation, batch
 size and schedule, with `base_lr: 0.0001` for full fine-tuning.
-The active `hyper_joint_symbolic.yaml` instead runs a **symbolic-only experiment**:
-20 epochs, SGD LR 0.001, 3-epoch warmup and LR decay at epochs 12 and 17
-(zero-based scheduler indices). It uses a separate `joint_symbolic_only` work
-directory, keeping previous full fine-tuning results intact.
+The active `hyper_joint_symbolic.yaml` instead runs a **one-stage concept-to-action
+symbolic experiment**: 20 epochs, Adam LR 0.0003, a one-epoch warmup and LR decay
+at epochs 12 and 17 (zero-based scheduler indices). It uses a separate
+`joint_concept_action_adam` work directory, keeping previous experiments intact.
 `num_worker: 0` is retained for Windows;
 `save_epoch: 0` keeps every evaluated epoch available for best-model selection.
 Weights initialize the model; optimizer/scheduler state and original training
@@ -153,18 +153,21 @@ python main.py --config config/base/nturgbd120-cross-subject/hyper_joint_symboli
 ```
 
 `symbolic_only: True` freezes every pretrained parameter, including the original
-classifier, and keeps pretrained BatchNorm statistics and dropout in eval mode
-at each training epoch. Only `symbolic_graph` is in train mode and the optimizer.
-The loss is `CE + 0.10 * balanced concept BCE`; divergence loss is not used.
-CE gradients still pass through the fixed classifier to the residual bridge;
-the whole model forward is **not** wrapped in `no_grad`. This tests a symbolic
-adapter on frozen pretrained features, not a new concept-only action classifier.
+classifier, and keeps pretrained BatchNorm statistics and dropout in eval mode.
+With `symbolic_action_mode: prototype`, the original FC is retained only for
+strict checkpoint compatibility and is never executed. The action logits are a
+fixed, balanced Bernoulli log-likelihood match between 102 predicted concepts
+and the 120 validated CSV templates. There is no learned action MLP or residual
+feature path. Only concept query/bias and the concept-graph gate are optimized.
+The loss is `action CE + 0.10 * balanced concept BCE`; divergence is not used.
+This makes every action score decomposable into named concept contributions.
 
 Before training, `eval_before_train: True` (also automatic in symbolic-only mode)
-evaluates the initial model as epoch 0 and saves `initial_evaluation.json` and
-`runs-0-0.pt`. With an official checkpoint and a newly initialized bridge,
-the zero residual gate preserves the original action logits exactly. With an
-already trained symbolic checkpoint, epoch 0 instead measures that loaded model.
+evaluates the initial concept decoder as epoch 0 and saves
+`initial_evaluation.json` and `runs-0-0.pt`. Initialize directly from the same
+official Hyper-GCN checkpoint as the baseline. The symbolic predictor starts
+randomly and Adam jointly optimizes it using action CE and concept BCE; no
+intermediate symbolic checkpoint or second configuration is required.
 Each `epochN_test_action_metrics.json` reports Top-1 and its change in percentage
 points from epoch 0. Improvements are saved independently of periodic saves;
 if every trained epoch is worse, final evaluation restores epoch 0. Inspect
