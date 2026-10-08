@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
+from model.symbolic_hyperconcept import SymbolicHyperConceptBridge
 
 def import_class(name):
     components = name.split('.')
@@ -307,7 +308,9 @@ class TCN_GCN_unit(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3, hyper_joints=0,
-                 drop_out=0):
+                 drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
+                 metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
+                 symbolic_graph_temperature=0.20):
         super(Model, self).__init__()
 
         if graph is None:
@@ -346,6 +349,20 @@ class Model(nn.Module):
             self.drop_out = nn.Dropout(drop_out)
         else:
             self.drop_out = lambda x: x
+        self.symbolic_graph_weight = float(symbolic_graph_weight)
+        self.symbolic_graph = None
+        if symbolic_graph_enabled:
+            if concept_csv is None or metadata_csv is None:
+                raise ValueError(
+                    "concept_csv and metadata_csv are required when symbolic graph is enabled"
+                )
+            self.symbolic_graph = SymbolicHyperConceptBridge(
+                feature_dim=self.embedding_channels * 4,
+                concept_csv=concept_csv, metadata_csv=metadata_csv,
+                num_classes=num_class, num_concepts=num_concepts,
+                num_people=num_person, num_points=num_point,
+                temperature=symbolic_graph_temperature,
+            )
 
     def forward(self, x):
         N, C, T, V, M = x.size()
@@ -375,6 +392,16 @@ class Model(nn.Module):
         x7 = x
         x, h_x8 = self.l8(x)
         x, h_x9 = self.l9(x + x7)
+        symbolic_concept_logits = None
+        if self.symbolic_graph is not None:
+            c_new = x.size(1)
+            feature_map = x.reshape(N, M, c_new, T, V).permute(
+                0, 2, 3, 1, 4
+            ).reshape(N, c_new, T, M * V)
+            feature_map, symbolic_concept_logits = self.symbolic_graph(feature_map)
+            x = feature_map.reshape(N, c_new, T, M, V).permute(
+                0, 3, 1, 2, 4
+            ).contiguous().reshape(N * M, c_new, T, V)
 
         # N*M,C,T,V
         c_new = x.size(1)
@@ -382,7 +409,11 @@ class Model(nn.Module):
         x = x.mean(3).mean(1)
         x = self.drop_out(x)
 
-        return self.fc(x), [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
+        output = self.fc(x)
+        hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
+        if self.symbolic_graph is not None:
+            return output, hyper_outputs, symbolic_concept_logits
+        return output, hyper_outputs
 
 
 if __name__ == '__main__':

@@ -434,6 +434,14 @@ class Processor():
                 ce_loss = self.loss(output[0], label)
                 h_loss = self.h_loss(output[1])
                 loss = ce_loss + h_loss
+                if len(output) > 2 and output[2] is not None:
+                    model_ref = (
+                        self.model.module
+                        if hasattr(self.model, "module")
+                        else self.model
+                    )
+                    symbolic_loss = model_ref.symbolic_graph.loss(output[2], label)
+                    loss = loss + model_ref.symbolic_graph_weight * symbolic_loss
                 output = output[0]
             else:
                 loss = self.loss(output, label)
