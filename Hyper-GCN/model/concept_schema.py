@@ -97,6 +97,19 @@ def concept_parts(name, scope, group):
     raise ValueError(f"no anatomical mapping for spatial concept {name!r} ({group})")
 
 
+def concept_joints(name, scope, group, num_points=25):
+    """Return the sorted physical NTU joints allowed to ground one concept."""
+    if int(num_points) != 25:
+        raise ValueError("concept grounding currently supports the NTU 25-joint layout only")
+    parts = concept_parts(name, scope, group)
+    joints = tuple(sorted({joint for part in parts for joint in BODY_PART_JOINTS[part]}))
+    if not joints:
+        raise ValueError(f"concept {name!r} has an empty physical-joint grounding mask")
+    if joints[0] < 0 or joints[-1] >= int(num_points):
+        raise ValueError(f"concept {name!r} contains an out-of-range joint index")
+    return joints
+
+
 def load_concept_tables(concept_csv, metadata_csv, num_classes, num_concepts):
     """Read and validate all rows, including unused NTU120 rows in an NTU60 run."""
     if num_classes not in (60, 120):
@@ -158,7 +171,7 @@ def load_concept_tables(concept_csv, metadata_csv, num_classes, num_concepts):
             raise ValueError("metadata CSV requires nonempty ID, name, scope and group")
         row["scope"] = row["scope"].lower()
         row["group"] = row["group"].lower()
-        concept_parts(row["concept_name"], row["scope"], row["group"])
+        concept_joints(row["concept_name"], row["scope"], row["group"])
     if names != [row["concept_name"] for row in metadata]:
         raise ValueError("concept CSV and metadata concept order do not match")
     return values[:num_classes], metadata

@@ -19,8 +19,9 @@ import yaml
 
 from model.checkpoint import load_model_weights
 from model.concept_schema import (
-    BODY_PART_JOINTS, concept_parts, load_concept_tables,
+    BODY_PART_JOINTS, concept_joints, concept_parts, load_concept_tables,
 )
+from model.grounded_concept_encoder import GroundedConceptEncoder
 from model.symbolic_hyperconcept import (
     SymbolicHyperConceptBridge, _concept_affinity, _semantic_hypergraph,
 )
@@ -54,6 +55,11 @@ class ConceptSchemaTests(unittest.TestCase):
                          {'left_leg', 'right_leg', 'left_foot', 'right_foot'})
         with self.assertRaisesRegex(ValueError, 'no anatomical mapping'):
             concept_parts('unknown_spatial_concept', 'spatial', 'upper_limb')
+        self.assertEqual(concept_joints('head_nod', 'spatial', 'head'), (3,))
+        self.assertEqual(
+            concept_joints('lower_limb_kick_targeted', 'spatial', 'lower_limb'),
+            (12, 13, 14, 15, 16, 17, 18, 19),
+        )
 
     def test_invalid_tables_fail_before_tensor_construction(self):
         with CONCEPT_CSV.open(newline='', encoding='utf-8') as handle:
@@ -95,6 +101,55 @@ class ConceptSchemaTests(unittest.TestCase):
                         csv.writer(handle).writerows(metadata)
                     with self.assertRaisesRegex(ValueError, message):
                         load_concept_tables(concept, meta, 60, 102)
+
+
+class GroundedConceptEncoderTests(unittest.TestCase):
+    def encoder(self):
+        mask = torch.zeros(3, 25, dtype=torch.bool)
+        mask[0, 3] = True
+        mask[1, 7] = True
+        mask[2, [0, 1, 2, 20]] = True
+        return GroundedConceptEncoder(
+            feature_dim=4, concept_dim=6, concept_joint_mask=mask,
+            interaction_mask=torch.tensor([False, False, True]),
+            num_people=2, num_points=25, temporal_bins=2, dropout=0,
+        ).eval()
+
+    def test_hard_joint_mask_shapes_and_outside_invariance(self):
+        torch.manual_seed(7)
+        encoder = self.encoder()
+        features = torch.randn(2, 2, 4, 5, 25)
+        valid = torch.ones(2, 2, dtype=torch.bool)
+        tokens, auxiliary = encoder(features, valid)
+        self.assertEqual(tokens.shape, (2, 3, 6))
+        self.assertEqual(auxiliary['temporal_weights'].shape, (2, 2, 3, 2))
+        self.assertEqual(auxiliary['person_weights'].shape, (2, 3, 2))
+
+        outside = features.clone()
+        outside[..., 4] += torch.randn_like(outside[..., 4]) * 100
+        outside_tokens, _ = encoder(outside, valid)
+        torch.testing.assert_close(tokens[:, 0], outside_tokens[:, 0], rtol=0, atol=0)
+
+        inside = features.clone()
+        inside[:, :, 0, :, 3] += 5
+        inside_tokens, _ = encoder(inside, valid)
+        self.assertFalse(torch.allclose(tokens[:, 0], inside_tokens[:, 0]))
+
+    def test_padding_person_is_masked_and_interaction_uses_pair(self):
+        torch.manual_seed(11)
+        encoder = self.encoder()
+        features = torch.randn(1, 2, 4, 5, 25)
+        one_person = torch.tensor([[True, False]])
+        base, auxiliary = encoder(features, one_person)
+        noisy = features.clone()
+        noisy[:, 1] += 1000
+        masked, _ = encoder(noisy, one_person)
+        torch.testing.assert_close(base, masked, rtol=0, atol=0)
+        self.assertEqual(auxiliary['person_weights'][0, 0, 1].item(), 0.)
+
+        two_people = torch.tensor([[True, True]])
+        paired, _ = encoder(noisy, two_people)
+        self.assertFalse(torch.allclose(base[:, 2], paired[:, 2]))
 
 
 class ConceptGraphLossTests(unittest.TestCase):
@@ -192,6 +247,62 @@ class ConceptGraphLossTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'not enabled'):
             bridge().action_logits(exact_logits[:1])
 
+    def test_tversky_decoder_is_parameter_free_finite_and_monotonic(self):
+        model = bridge(
+            action_decoder='prototype', action_matching='tversky',
+            action_temperature=.15, action_missing_weight=1.,
+            action_extra_weight=.15, action_idf_weighting=True,
+        )
+        exact_logits = (model.support * 2 - 1) * 8
+        scores = model.action_logits(exact_logits)
+        torch.testing.assert_close(scores.argmax(1), torch.arange(120))
+        self.assertTrue(torch.isfinite(scores).all())
+        self.assertGreaterEqual(model.action_idf.min().item(), .5)
+        self.assertLessEqual(model.action_idf.max().item(), 2.)
+        self.assertNotIn('action_idf', dict(model.named_parameters()))
+
+        action = 0
+        positive = int(model.support[action].nonzero()[0])
+        negative = int((model.support[action] == 0).nonzero()[0])
+        reference = model.action_logits(exact_logits[[action]])[0, action]
+        missing = exact_logits[[action]].clone()
+        missing[0, positive] = -8
+        extra = exact_logits[[action]].clone()
+        extra[0, negative] = 8
+        self.assertLess(model.action_logits(missing)[0, action], reference)
+        self.assertLess(model.action_logits(extra)[0, action], reference)
+
+        samples = torch.stack((torch.full((102,), -100.), torch.full((102,), 100.)))
+        samples.requires_grad_(True)
+        logits = model.action_logits(samples)
+        self.assertEqual(logits.shape, (2, 120))
+        self.assertTrue(torch.isfinite(logits).all())
+        logits.sum().backward()
+        self.assertTrue(torch.isfinite(samples.grad).all())
+
+    def test_grounded_bridge_snapshot_and_gradients(self):
+        model = bridge(
+            action_decoder='prototype', action_matching='tversky',
+            hypergraph_mode='learnable_v1', concept_dim=16,
+            temporal_bins=2, grounding_dropout=0,
+        )
+        model.hypergraph_gate.data.fill_(.2)
+        model.reset_grounding_statistics()
+        features = torch.randn(3, 2, 8, 4, 25)
+        valid = torch.tensor([[True, True], [True, False], [True, True]])
+        _, concepts = model(features, valid_person_mask=valid)
+        actions = model.action_logits(concepts)
+        F.cross_entropy(actions, torch.tensor([0, 1, 2])).backward()
+        self.assertIsNotNone(model.grounded_encoder.channel_projection[0].weight.grad)
+        self.assertIsNotNone(model.concept_queries.grad)
+        self.assertIsNotNone(model.hypergraph_delta.grad)
+        snapshot = model.grounding_snapshot()
+        self.assertEqual(snapshot['num_samples'], 3)
+        self.assertEqual(snapshot['temporal_bins'], 2)
+        self.assertEqual(len(snapshot['concepts']), 102)
+        self.assertTrue(snapshot['concepts'][50]['interaction'])
+        json.dumps(snapshot, allow_nan=False)
+
 
 class SymbolicMetricTests(unittest.TestCase):
     def test_perfect_scores_and_no_positive_concept_policy(self):
@@ -273,22 +384,29 @@ class SymbolicConfigTests(unittest.TestCase):
                 for key in ('model', 'weight_decay', 'lr_decay_rate',
                             'batch_size', 'test_batch_size'):
                     self.assertEqual(config[key], baseline[key])
-                self.assertTrue(config['pretrained_finetune'])
-                self.assertIsNone(config['weights'])
+                self.assertIsNone(config.get('weights'))
                 if config.get('symbolic_only'):
-                    self.assertTrue(config['eval_before_train'])
+                    self.assertNotIn('pretrained_finetune', config)
+                    self.assertNotIn('eval_before_train', config)
                     self.assertEqual(config['optimizer'], 'Adam')
                     self.assertEqual(config['base_lr'], 3e-4)
                     self.assertEqual(config['num_epoch'], 20)
                     self.assertEqual(config['step'], [12, 17])
                     self.assertEqual(config['warm_up_epoch'], 1)
-                    self.assertFalse(config['nesterov'])
-                    self.assertTrue(config['work_dir'].endswith('joint_concept_action_adam'))
+                    self.assertNotIn('nesterov', config)
+                    self.assertTrue(config['work_dir'].endswith('joint_grounded_v2_tversky'))
                     self.assertEqual(config['model_args']['symbolic_action_mode'], 'prototype')
-                    self.assertEqual(config['model_args']['symbolic_action_temperature'], .1)
+                    self.assertEqual(config['model_args']['symbolic_action_decoder'], 'tversky')
+                    self.assertEqual(config['model_args']['symbolic_action_temperature'], .15)
+                    self.assertEqual(config['model_args']['symbolic_action_missing_weight'], 1.)
+                    self.assertEqual(config['model_args']['symbolic_action_extra_weight'], .15)
+                    self.assertTrue(config['model_args']['symbolic_action_idf_weighting'])
+                    self.assertEqual(config['model_args']['symbolic_concept_dim'], 64)
+                    self.assertEqual(config['model_args']['symbolic_temporal_bins'], 4)
                     self.assertEqual(config['model_args']['symbolic_hypergraph_mode'], 'learnable_v1')
                     self.assertEqual(config['model_args']['symbolic_hypergraph_reg_weight'], .01)
                 else:
+                    self.assertTrue(config['pretrained_finetune'])
                     self.assertEqual(config['optimizer'], 'SGD')
                     self.assertEqual(config['nesterov'], baseline['nesterov'])
                     self.assertEqual(config['base_lr'], 1e-4)
@@ -377,6 +495,81 @@ class SymbolicEvaluationTests(unittest.TestCase):
         for tag in ('symbolic/mAP', 'symbolic/macro_f1', 'symbolic/spatial/mAP',
                     'symbolic/residual_gate', 'symbolic/concept_graph_gate'):
             self.assertIn(tag, processor.val_writer.values)
+
+    def test_processor_exports_grounding_for_prototype_mode(self):
+        source = ast.parse((ROOT / 'main.py').read_text())
+        definitions = ast.Module(body=[node for node in source.body
+                                      if isinstance(node, ast.ClassDef) and node.name == 'Processor'],
+                                 type_ignores=[])
+        namespace = {'torch': torch, 'np': np, 'json': json, 'os': os,
+                     'OrderedDict': OrderedDict, 'concept_metrics': concept_metrics,
+                     'tqdm': lambda loader, **kwargs: loader}
+        exec(compile(definitions, str(ROOT / 'main.py'), 'exec'), namespace)
+        processor = namespace['Processor'].__new__(namespace['Processor'])
+        symbolic = bridge(
+            action_decoder='prototype', action_matching='tversky',
+            concept_dim=8, temporal_bins=2, grounding_dropout=0,
+        ).eval()
+        features = torch.randn(2, 2, 8, 4, 25)
+        labels = torch.tensor([0, 1])
+
+        class Outputs(nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.symbolic_graph = symbolic
+                self.symbolic_graph_weight = .1
+
+            def forward(self, indices):
+                _, concepts = symbolic(
+                    features[indices.long()],
+                    valid_person_mask=torch.ones(len(indices), 2, dtype=torch.bool),
+                )
+                return symbolic.action_logits(concepts), [], concepts
+
+        class Dataset:
+            sample_name = ['a', 'b']
+            label = labels.numpy()
+
+            def top_k(self, scores, k):
+                return float(np.mean([
+                    label in row[-k:]
+                    for label, row in zip(self.label, scores.argsort())
+                ]))
+
+        class Loader:
+            dataset = Dataset()
+
+            def __iter__(self):
+                yield torch.arange(2), labels, torch.arange(2)
+
+            def __len__(self):
+                return 1
+
+        processor.model = Outputs()
+        processor.loss = nn.CrossEntropyLoss()
+        processor.data_loader = {'test': Loader()}
+        processor.output_device = 0
+        processor.global_step = 0
+        processor.best_acc = 0
+        processor.best_acc_epoch = 0
+        processor.best_weights_path = None
+        processor.baseline_accuracy = {}
+        processor.print_log = lambda *args, **kwargs: None
+        with tempfile.TemporaryDirectory() as directory:
+            processor.arg = argparse.Namespace(
+                work_dir=directory, phase='test',
+                feeder='feeders.feeder_ntu.Feeder',
+                model_saved_name=os.path.join(directory, 'runs'),
+                show_topk=[1], concept_threshold=.5,
+            )
+            with mock.patch.object(torch.Tensor, 'cuda', lambda tensor, *args, **kwargs: tensor):
+                processor.eval(epoch=0)
+            grounding = json.loads(
+                (Path(directory) / 'epoch1_test_grounding.json').read_text()
+            )
+        self.assertEqual(grounding['num_samples'], 2)
+        self.assertEqual(grounding['temporal_bins'], 2)
+        self.assertEqual(len(grounding['concepts']), 102)
 
 
 if __name__ == '__main__':

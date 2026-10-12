@@ -129,7 +129,7 @@ class HYPERGC(nn.Module):
         h_x = (h_x.T).unsqueeze(1)
         x = torch.cat([x, h_x.repeat(N, 1, T, 1)], dim=-1)
         V += self.virtual_num
-        A = self.PA.cuda(x.get_device())
+        A = self.PA.to(device=x.device, dtype=x.dtype)
         A = self.edge_importance * A
         A = self.a_norm(A)
 
@@ -314,7 +314,15 @@ class Model(nn.Module):
                  symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
                  symbolic_action_mode="blackbox", symbolic_action_temperature=0.1,
                  symbolic_hypergraph_mode="static_graph",
-                 symbolic_hypergraph_reg_weight=0.0):
+                 symbolic_hypergraph_reg_weight=0.0,
+                 symbolic_concept_dim=64, symbolic_temporal_bins=4,
+                 symbolic_grounding_dropout=0.1,
+                 symbolic_action_decoder="bernoulli",
+                 symbolic_action_missing_weight=1.0,
+                 symbolic_action_extra_weight=0.15,
+                 symbolic_action_idf_weighting=True,
+                 symbolic_action_idf_min=0.5,
+                 symbolic_action_idf_max=2.0):
         super(Model, self).__init__()
 
         if graph is None:
@@ -380,10 +388,20 @@ class Model(nn.Module):
                 action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
                 action_temperature=symbolic_action_temperature,
                 hypergraph_mode=symbolic_hypergraph_mode,
+                concept_dim=symbolic_concept_dim,
+                temporal_bins=symbolic_temporal_bins,
+                grounding_dropout=symbolic_grounding_dropout,
+                action_matching=symbolic_action_decoder,
+                action_missing_weight=symbolic_action_missing_weight,
+                action_extra_weight=symbolic_action_extra_weight,
+                action_idf_weighting=symbolic_action_idf_weighting,
+                action_idf_min=symbolic_action_idf_min,
+                action_idf_max=symbolic_action_idf_max,
             )
 
     def forward(self, x):
         N, C, T, V, M = x.size()
+        valid_person_mask = x.detach().abs().sum(dim=(1, 2, 3)) > 0
         x = x.permute(0, 4, 2, 3, 1).contiguous()
         x = self.to_joint_embedding(x)
         x += self.pos_embedding[:, :self.num_point]
@@ -421,13 +439,11 @@ class Model(nn.Module):
                     f'but symbolic bridge expects {expected_channels}. '
                     'Use c_new=x.size(1) and feature_dim=self.embedding_channels * 2.'
                 )
-            feature_map = x.reshape(N, M, c_new, t_new, V).permute(
-                0, 2, 3, 1, 4
-            ).reshape(N, c_new, t_new, M * V)
-            feature_map, symbolic_concept_logits = self.symbolic_graph(feature_map)
-            x = feature_map.reshape(N, c_new, t_new, M, V).permute(
-                0, 3, 1, 2, 4
-            ).contiguous().reshape(N * M, c_new, t_new, V)
+            feature_map = x.reshape(N, M, c_new, t_new, V)
+            feature_map, symbolic_concept_logits = self.symbolic_graph(
+                feature_map, valid_person_mask=valid_person_mask
+            )
+            x = feature_map.reshape(N * M, c_new, t_new, V)
         if self.symbolic_action_mode == "prototype":
             # The pretrained black-box FC remains registered only so official
             # checkpoints load strictly. It is not executed on this path.

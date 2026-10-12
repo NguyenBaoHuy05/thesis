@@ -1,10 +1,7 @@
-work_dir: ./work_dir/ntu120/xsub/joint_concept_action_adam
+work_dir: ./work_dir/ntu120/xsub/joint_grounded_v2_tversky
 
-# Fine-tune a matching official checkpoint; supply its path with --weights.
-pretrained_finetune: True
+# Supply a matching official checkpoint with --weights.
 symbolic_only: True
-eval_before_train: True
-weights: null
 
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
@@ -44,13 +41,22 @@ model_args:
   num_concepts: 102
   symbolic_graph_weight: 0.10
   symbolic_graph_temperature: 0.20
+  symbolic_concept_dim: 64
+  symbolic_temporal_bins: 4
+  symbolic_grounding_dropout: 0.10
   symbolic_balance_loss: True
   symbolic_pos_weight_max: 10.0
   symbolic_pos_weight_source: train
-  # No black-box FC at inference: fixed concept-template likelihood -> action.
+  # No black-box FC: grounded concepts -> fixed matrix -> Tversky action score.
   symbolic_action_mode: prototype
-  symbolic_action_temperature: 0.10
-  # V1: learn a global concept-hyperedge incidence anchored to body/group/scope.
+  symbolic_action_decoder: tversky
+  symbolic_action_temperature: 0.15
+  symbolic_action_missing_weight: 1.0
+  symbolic_action_extra_weight: 0.15
+  symbolic_action_idf_weighting: True
+  symbolic_action_idf_min: 0.5
+  symbolic_action_idf_max: 2.0
+  # Global concept-hyperedge incidence remains anchored to body/group/scope.
   symbolic_hypergraph_mode: learnable_v1
   symbolic_hypergraph_reg_weight: 0.01
 
@@ -68,5 +74,4 @@ batch_size: 64
 test_batch_size: 64
 num_epoch: 20
 save_epoch: 0
-nesterov: False
 

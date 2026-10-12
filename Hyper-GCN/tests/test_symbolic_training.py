@@ -75,6 +75,8 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
             concept_csv=ROOT / 'concepts/ntu_action_concept_v2_4.csv',
             metadata_csv=ROOT / 'concepts/ntu_concept_metadata_v2_4.csv',
             symbolic_action_mode='prototype',
+            symbolic_action_decoder='tversky',
+            symbolic_action_temperature=.15,
             symbolic_hypergraph_mode='learnable_v1',
             symbolic_hypergraph_reg_weight=.01,
         )
@@ -115,11 +117,17 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         self.assertTrue(model.symbolic_graph.hypergraph_delta.requires_grad)
         self.assertTrue(model.symbolic_graph.hyperedge_weight_raw.requires_grad)
         self.assertTrue(model.symbolic_graph.concept_queries.requires_grad)
+        self.assertTrue(
+            model.symbolic_graph.grounded_encoder.channel_projection[0].weight.requires_grad
+        )
         output.sum().backward()
         self.assertIsNone(model.fc.weight.grad)
         self.assertIsNone(model.symbolic_graph.project_back.weight.grad)
         self.assertIsNotNone(model.symbolic_graph.concept_queries.grad)
         self.assertIsNotNone(model.symbolic_graph.hypergraph_delta.grad)
+        self.assertIsNotNone(
+            model.symbolic_graph.grounded_encoder.channel_projection[0].weight.grad
+        )
 
     def test_optimizer_gradients_and_pretrained_state_remain_frozen(self):
         torch.manual_seed(123)
@@ -199,12 +207,15 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         parser.set_defaults(**config)
         arg = parser.parse_args(['--weights', 'official.pt'])
         self.assertTrue(arg.symbolic_only)
-        self.assertTrue(arg.eval_before_train)
+        self.assertFalse(arg.eval_before_train)
         self.assertEqual(arg.optimizer, 'Adam')
         self.assertEqual(arg.base_lr, 3e-4)
         self.assertEqual(arg.warm_up_epoch, 1)
-        self.assertFalse(arg.nesterov)
+        self.assertFalse(arg.nesterov)  # parser default; omitted from Adam YAML
         self.assertEqual(arg.num_epoch, 20)
+        self.assertEqual(arg.model_args['symbolic_action_decoder'], 'tversky')
+        self.assertEqual(arg.model_args['symbolic_concept_dim'], 64)
+        self.assertEqual(arg.model_args['symbolic_temporal_bins'], 4)
         self.assertFalse(parser.parse_args(['--symbolic-only', 'False']).symbolic_only)
 
     def test_start_retains_epoch_zero_when_training_accuracy_worsens(self):

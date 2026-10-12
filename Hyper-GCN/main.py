@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import argparse
+import csv
 import json
 import inspect
 import os
@@ -381,16 +382,42 @@ class Processor():
         audit = bridge.audit()
         with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
             json.dump(audit, handle, indent=2, allow_nan=False)
-        self.print_log('Symbolic: {} concepts, graph={}, balance={}, source={}, cap={}'.format(
-            bridge.num_concepts, bridge.hypergraph_mode, bridge.balance_loss,
-            bridge.pos_weight_source, bridge.pos_weight_max))
+        audit_csv = os.path.join(self.arg.work_dir, 'concept_body_joint_audit.csv')
+        with open(audit_csv, 'w', newline='', encoding='utf-8') as handle:
+            writer = csv.DictWriter(handle, fieldnames=(
+                'concept_id', 'concept_name', 'scope', 'parts', 'joints',
+                'interaction', 'positive_classes', 'positive_training_samples',
+            ))
+            writer.writeheader()
+            for concept_id, concept in enumerate(audit['concepts']):
+                writer.writerow({
+                    'concept_id': concept_id,
+                    'concept_name': concept['name'],
+                    'scope': concept['scope'],
+                    'parts': '|'.join(concept['parts']),
+                    'joints': '|'.join(str(joint) for joint in concept['joints']),
+                    'interaction': concept['interaction'],
+                    'positive_classes': concept['positive_classes'],
+                    'positive_training_samples': concept['positive_training_samples'],
+                })
+        self.print_log(
+            'Symbolic: {} concepts, graph={}, grounding={}, decoder={}, '
+            'balance={}, source={}, cap={}'.format(
+                bridge.num_concepts, bridge.hypergraph_mode,
+                audit['grounding_mode'], bridge.action_matching,
+                bridge.balance_loss, bridge.pos_weight_source,
+                bridge.pos_weight_max,
+            )
+        )
 
     def log_symbolic_gates(self, writer=None):
         model_ref = self.model.module if hasattr(self.model, 'module') else self.model
         bridge = getattr(model_ref, 'symbolic_graph', None)
         if bridge is None:
             return
-        values = {'residual_gate': torch.tanh(bridge.residual_gate).detach().item()}
+        values = {}
+        if bridge.action_decoder == 'none':
+            values['residual_gate'] = torch.tanh(bridge.residual_gate).detach().item()
         if bridge.hypergraph_mode == 'learnable_v1':
             values['hypergraph_gate'] = torch.tanh(bridge.hypergraph_gate).detach().item()
         else:
@@ -585,6 +612,8 @@ class Processor():
         self.print_log('Eval epoch: {}'.format(epoch + 1))
         accuracies = {}
         for ln in loader_name:
+            if bridge is not None and bridge.action_decoder == 'prototype':
+                bridge.reset_grounding_statistics()
             loss_value = []
             score_frag = []
             concept_frag = []
@@ -628,7 +657,8 @@ class Processor():
             accuracy = self.data_loader[ln].dataset.top_k(score, 1)
             accuracies[ln] = accuracy
             initial_candidate = epoch == -1 and getattr(self, 'best_weights_path', None) is None
-            if accuracy > self.best_acc or initial_candidate:
+            is_best = accuracy > self.best_acc or initial_candidate
+            if is_best:
                 self.best_acc = accuracy
                 self.best_acc_epoch = epoch + 1
                 if self.arg.phase == 'train':
@@ -666,6 +696,39 @@ class Processor():
                 labels = np.concatenate(concept_labels)
                 targets = bridge.support.detach().cpu().numpy()[labels]
                 metrics = concept_metrics(logits, targets, bridge.metadata, self.arg.concept_threshold)
+                probabilities = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
+                concept_std = probabilities.std(axis=0)
+                dead_indices = np.flatnonzero(concept_std < 1e-4)
+                activation_frequency = (
+                    probabilities >= self.arg.concept_threshold
+                ).mean(axis=0)
+                centered = probabilities - probabilities.mean(axis=0, keepdims=True)
+                scale = np.sqrt((centered * centered).sum(axis=0))
+                normalized = centered / np.maximum(scale, 1e-12)
+                correlation = normalized.T @ normalized
+                np.fill_diagonal(correlation, 0.)
+                pairs = np.argwhere(np.triu(correlation > .95, k=1))
+                ranked_pairs = sorted(
+                    (
+                        (float(correlation[left, right]), int(left), int(right))
+                        for left, right in pairs
+                    ), reverse=True,
+                )[:20]
+                metrics['activation_summary'] = {
+                    'mean_probability': float(probabilities.mean()),
+                    'mean_activation_frequency': float(activation_frequency.mean()),
+                    'dead_concept_count': int(dead_indices.size),
+                    'dead_concepts': [bridge.concept_names[index] for index in dead_indices],
+                    'high_correlation_pair_count': int(pairs.shape[0]),
+                    'top_correlated_pairs': [
+                        {
+                            'left': bridge.concept_names[left],
+                            'right': bridge.concept_names[right],
+                            'correlation': value,
+                        }
+                        for value, left, right in ranked_pairs
+                    ],
+                }
                 metrics['loss'] = symbolic_loss_sum / concept_sample_count
                 metrics['weighted_loss'] = model_ref.symbolic_graph_weight * metrics['loss']
                 metrics['action_top1'] = accuracy
@@ -679,6 +742,10 @@ class Processor():
                     )
                     with open(hypergraph_path, 'w', encoding='utf-8') as handle:
                         json.dump(hypergraph, handle, indent=2, allow_nan=False)
+                    if is_best:
+                        with open(os.path.join(self.arg.work_dir, 'best_hypergraph.json'),
+                                  'w', encoding='utf-8') as handle:
+                            json.dump(hypergraph, handle, indent=2, allow_nan=False)
                     self.print_log(
                         '\tHypergraph: structure={:.6f}, prior={:.4f}, nonprior={:.4f}, changed={}'.format(
                             hypergraph['structure_loss'], hypergraph['mean_prior_membership'],
@@ -690,6 +757,36 @@ class Processor():
                         for name in ('structure_loss', 'mean_prior_membership',
                                      'mean_nonprior_membership', 'changed_memberships_at_0.5'):
                             self.val_writer.add_scalar('hypergraph/' + name, hypergraph[name], self.global_step)
+                if bridge.action_decoder == 'prototype':
+                    grounding = bridge.grounding_snapshot()
+                    metrics['grounding'] = {
+                        key: value for key, value in grounding.items()
+                        if key != 'concepts'
+                    }
+                    grounding_path = os.path.join(
+                        self.arg.work_dir,
+                        'epoch{}_{}_grounding.json'.format(epoch + 1, ln),
+                    )
+                    with open(grounding_path, 'w', encoding='utf-8') as handle:
+                        json.dump(grounding, handle, indent=2, allow_nan=False)
+                    if is_best:
+                        with open(os.path.join(self.arg.work_dir, 'best_grounding.json'),
+                                  'w', encoding='utf-8') as handle:
+                            json.dump(grounding, handle, indent=2, allow_nan=False)
+                    self.print_log(
+                        '\tGrounding: temporal_entropy={:.4f}, '
+                        'person_entropy={:.4f}, token_norm={:.4f}'.format(
+                            grounding['mean_temporal_entropy'],
+                            grounding['mean_person_entropy'],
+                            grounding['mean_token_norm'],
+                        )
+                    )
+                    if self.arg.phase == 'train':
+                        for name in ('mean_temporal_entropy', 'mean_person_entropy',
+                                     'mean_token_norm'):
+                            self.val_writer.add_scalar(
+                                'grounding/' + name, grounding[name], self.global_step
+                            )
                 metrics_path = os.path.join(self.arg.work_dir, 'epoch{}_{}_concept_metrics.json'.format(epoch + 1, ln))
                 with open(metrics_path, 'w', encoding='utf-8') as handle:
                     json.dump(metrics, handle, indent=2, allow_nan=False)
@@ -705,6 +802,16 @@ class Processor():
                             if summary[name] is not None:
                                 self.val_writer.add_scalar('symbolic/{}/{}'.format(scope, name),
                                                            summary[name], self.global_step)
+                    self.val_writer.add_scalar(
+                        'symbolic/dead_concept_count',
+                        metrics['activation_summary']['dead_concept_count'],
+                        self.global_step,
+                    )
+                    self.val_writer.add_scalar(
+                        'symbolic/high_correlation_pair_count',
+                        metrics['activation_summary']['high_correlation_pair_count'],
+                        self.global_step,
+                    )
                 self.log_symbolic_gates(self.val_writer if self.arg.phase == 'train' else None)
 
             if save_score:

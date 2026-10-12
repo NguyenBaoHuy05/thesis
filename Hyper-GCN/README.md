@@ -142,7 +142,7 @@ size and schedule, with `base_lr: 0.0001` for full fine-tuning.
 The active `hyper_joint_symbolic.yaml` instead runs a **one-stage concept-to-action
 symbolic experiment**: 20 epochs, Adam LR 0.0003, a one-epoch warmup and LR decay
 at epochs 12 and 17 (zero-based scheduler indices). It uses a separate
-`joint_concept_action_adam` work directory, keeping previous experiments intact.
+`joint_grounded_v2_tversky` work directory, keeping previous experiments intact.
 `num_worker: 0` is retained for Windows;
 `save_epoch: 0` keeps every evaluated epoch available for best-model selection.
 Weights initialize the model; optimizer/scheduler state and original training
@@ -155,12 +155,20 @@ python main.py --config config/base/nturgbd120-cross-subject/hyper_joint_symboli
 `symbolic_only: True` freezes every pretrained parameter, including the original
 classifier, and keeps pretrained BatchNorm statistics and dropout in eval mode.
 With `symbolic_action_mode: prototype`, the original FC is retained only for
-strict checkpoint compatibility and is never executed. The action logits are a
-fixed, balanced Bernoulli log-likelihood match between 102 predicted concepts
-and the 120 validated CSV templates. There is no learned action MLP or residual
-feature path. Only concept query/bias and the concept-graph gate are optimized.
-The loss is `action CE + 0.10 * balanced concept BCE`; divergence is not used.
-This makes every action score decomposable into named concept contributions.
+strict checkpoint compatibility and is never executed. V2 preserves person and
+joint axes after `l9`; every concept receives a hard mask over its permitted NTU
+joints, four ordered temporal bins and scope-aware person aggregation. The three
+participant concepts use an explicit two-person pair token. There is no global
+feature residual around this concept bottleneck.
+
+Action logits use an IDF-weighted asymmetric Tversky match between 102 concept
+probabilities and 120 fixed CSV templates. Missing template evidence has weight
+1.0, while extra evidence in an unannotated matrix cell has a softer 0.15
+penalty. The similarity is converted to log-odds and temperature-scaled; no
+learned action MLP/classifier is introduced. Bernoulli and cosine matching remain
+available only as controlled decoder ablations. The loss is
+`action CE + 0.10 * balanced concept BCE + 0.01 * hypergraph regularization`;
+divergence is not used.
 
 The active model uses `symbolic_hypergraph_mode: learnable_v1`. Its 22 named
 hyperedges are initialized from 11 anatomical regions, 8 metadata groups and 3
@@ -171,8 +179,8 @@ prior, discourages dense/non-binary incidence and prevents isolated concepts.
 The 120 action templates are deliberately excluded from hypergraph construction
 to avoid leaking the downstream decoder into the learned topology.
 
-Before training, `eval_before_train: True` (also automatic in symbolic-only mode)
-evaluates the initial concept decoder as epoch 0 and saves
+Before training, symbolic-only mode automatically evaluates the initial concept
+decoder as epoch 0 and saves
 `initial_evaluation.json` and `runs-0-0.pt`. Initialize directly from the same
 official Hyper-GCN checkpoint as the baseline. The symbolic predictor starts
 randomly and Adam jointly optimizes it using action CE and concept BCE; no
@@ -186,7 +194,11 @@ training validation split for model/threshold selection rather than test tuning.
 Each `epochN_test_hypergraph.json` records learned memberships, relative edge
 weights, top concepts per edge and the number of prior memberships changed at a
 0.5 threshold. TensorBoard also logs structure loss, prior/non-prior membership
-means and the learnable hypergraph gate.
+means and the learnable hypergraph gate. Each `epochN_test_grounding.json`
+records temporal/person weights, joint masks and token norms for all concepts;
+the best action checkpoint also updates `best_grounding.json` and
+`best_hypergraph.json`. `concept_body_joint_audit.csv` provides a compact static
+mapping audit.
 
 To retain full fine-tuning, use
 `config/symbolic/nturgbd120-cross-subject/hyper_joint.yaml` instead.
@@ -210,8 +222,9 @@ matching concept order are checked before building tensors. All rows are
 validated, including unused NTU120 rows in NTU60 experiments. Anatomical mapping
 correctly includes the head for hand-to-face/nose concepts and legs/feet for
 `lower_limb_kick_targeted`; unknown spatial concepts require an explicit mapping.
-The concept graph uses cosine similarity of class-support columns, unit
-self-loops and row normalization. A concept with no support has only its self-loop.
+The legacy static concept graph uses cosine similarity of class-support columns,
+unit self-loops and row normalization. Active V2 uses the learnable semantic
+hypergraph described above.
 
 The configs enable controlled BCE balancing:
 
@@ -233,13 +246,14 @@ at 0.5 (`--concept-threshold`); do not optimize it on test data.
 
 Monitoring outputs in each experiment directory:
 
-- TensorBoard: `loss/ce`, `loss/divergence`, `loss/symbolic`,
-  `loss/symbolic_weighted`, and `symbolic/residual_gate`,
-  `symbolic/concept_graph_gate` (after `tanh`).
+- TensorBoard: `loss/ce`, `loss/symbolic`, `loss/symbolic_weighted`,
+  `loss/hypergraph`, `symbolic/hypergraph_gate`, grounding entropy/token norms,
+  and dead/high-correlation concept counts.
 - Evaluation: concept macro/micro F1 and mAP, plus spatial/temporal/context
   summaries in TensorBoard and `epochN_test_concept_metrics.json`.
-- `symbolic_audit.json`: concept mappings, zero-based joint groups, positive
-  class counts, training class frequencies and the actual BCE weights.
+- `symbolic_audit.json` and `concept_body_joint_audit.csv`: concept mappings,
+  zero-based joints, interaction flags, decoder settings, class counts, training
+  frequencies and actual BCE weights.
 
 `macro_f1` and `mAP` exclude concepts without positive evaluation targets;
 `macro_f1_all` includes every concept with zero F1 for undefined cases. Per-concept
