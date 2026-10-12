@@ -1,0 +1,70 @@
+work_dir: ./work_dir/ntu60/xview/joint_symbolic_large
+
+# Fine-tune a matching official checkpoint; supply its path with --weights.
+pretrained_finetune: True
+weights: null
+
+# feeder
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu/NTU60_CV.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  frame_sample: clips
+  window_size: 64
+  random_rot: True
+  align: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: data/ntu/NTU60_CV.npz
+  split: test
+  frame_sample: clips
+  window_size: 64
+  align: True
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model
+model: model.hypergcn_large.Model
+model_args:
+  num_class: 60
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'  symbolic_graph_enabled: True
+  concept_csv: concepts/ntu_action_concept_v2_4.csv
+  metadata_csv: concepts/ntu_concept_metadata_v2_4.csv
+  num_concepts: 102
+  symbolic_graph_weight: 0.10
+  symbolic_graph_temperature: 0.20
+  symbolic_balance_loss: True
+  symbolic_pos_weight_max: 10.0
+  symbolic_pos_weight_source: train
+
+#optim
+weight_decay: 0.0004
+# Same SGD/schedule as baseline; lower LR for pretrained fine-tuning.
+optimizer: SGD
+base_lr: 0.0001
+lr_decay_rate: 0.1
+step: [110, 120]
+warm_up_epoch: 5
+
+# training
+device: [0]
+num_worker: 0
+batch_size: 64
+test_batch_size: 64
+num_epoch: 140
+save_epoch: 0
+nesterov: True

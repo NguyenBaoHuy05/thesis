@@ -101,12 +101,12 @@ def _semantic_hypergraph(concept_part, metadata):
 
 
 class SymbolicHyperConceptBridge(nn.Module):
-    """Parallel symbolic branch with learnable residual fusion."""
+    """Parallel symbolic branch for concept prediction."""
 
     def __init__(
         self, feature_dim, concept_csv, metadata_csv, num_classes,
         num_concepts=102, num_people=2, num_points=25, temperature=0.2,
-        residual_init=0.0, graph_init=0.0,
+        graph_init=0.0,
         balance_loss=False, pos_weight_max=10.0, pos_weight_source="class",
         action_decoder="none", action_temperature=0.1,
         hypergraph_mode="static_graph",
@@ -207,9 +207,6 @@ class SymbolicHyperConceptBridge(nn.Module):
             )
         self.concept_queries = nn.Parameter(torch.empty(self.num_concepts, self.concept_dim))
         self.concept_bias = nn.Parameter(torch.zeros(self.num_concepts))
-        self.project_back = nn.Conv2d(self.feature_dim, self.feature_dim, 1, bias=False)
-        self.context_norm = nn.BatchNorm2d(self.feature_dim)
-        self.residual_gate = nn.Parameter(torch.tensor(float(residual_init)))
         self.concept_graph_gate = nn.Parameter(torch.tensor(float(graph_init)))
         if self.hypergraph_mode == "learnable_v1":
             self.hypergraph_delta = nn.Parameter(torch.zeros_like(hypergraph_prior))
@@ -223,14 +220,10 @@ class SymbolicHyperConceptBridge(nn.Module):
             self.register_parameter("hyperedge_weight_raw", None)
             self.register_parameter("hypergraph_gate", None)
         nn.init.normal_(self.concept_queries, mean=0.0, std=0.02)
-        nn.init.kaiming_normal_(self.project_back.weight, mode="fan_out")
-        nn.init.ones_(self.context_norm.weight)
-        nn.init.zeros_(self.context_norm.bias)
         self._grounding_accumulator = None
 
     def _legacy_blackbox_forward(self, feature_map):
-        """Keep the original residual branch for non-prototype configurations."""
-        expected_nodes = self.num_people * self.num_points
+        """Predict concepts without modifying the backbone feature map."""
         batch, channels, timesteps, _ = feature_map.shape
         nodes = feature_map.reshape(
             batch, channels, timesteps, self.num_people, self.num_points
@@ -249,18 +242,7 @@ class SymbolicHyperConceptBridge(nn.Module):
         sequence_logits = torch.einsum("btqd,qd->btq", tokens, queries)
         sequence_logits = sequence_logits / max(self.temperature, 1e-6)
         sequence_logits = sequence_logits + self.concept_bias.view(1, 1, -1)
-        concept_context = torch.einsum(
-            "qp,bctq->bctp", self.concept_part.to(feature_map), concept_features
-        )
-        joint_context = torch.einsum(
-            "pk,bctp->bctk", self.part_incidence.to(feature_map), concept_context
-        )
-        joint_context = self.context_norm(self.project_back(joint_context))
-        joint_context = joint_context.unsqueeze(3).expand(
-            -1, -1, -1, self.num_people, -1
-        ).contiguous().reshape(batch, channels, timesteps, expected_nodes)
-        fused = feature_map + torch.tanh(self.residual_gate) * joint_context
-        return fused, sequence_logits.mean(dim=1)
+        return feature_map, sequence_logits.mean(dim=1)
 
     def _propagate_concept_tokens(self, concept_tokens):
         if self.hypergraph_mode == "learnable_v1":
@@ -633,4 +615,3 @@ class SymbolicHyperConceptBridge(nn.Module):
         if self.hypergraph_mode == "learnable_v1":
             result["hypergraph"] = self.hypergraph_snapshot()
         return result
-

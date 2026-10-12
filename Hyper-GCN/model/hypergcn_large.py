@@ -311,7 +311,18 @@ class Model(nn.Module):
                  drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
                  metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
                  symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
-                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class"):
+                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
+                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1,
+                 symbolic_hypergraph_mode="static_graph",
+                 symbolic_hypergraph_reg_weight=0.0,
+                 symbolic_concept_dim=64, symbolic_temporal_bins=4,
+                 symbolic_grounding_dropout=0.1,
+                 symbolic_action_decoder="bernoulli",
+                 symbolic_action_missing_weight=1.0,
+                 symbolic_action_extra_weight=0.15,
+                 symbolic_action_idf_weighting=True,
+                 symbolic_action_idf_min=0.5,
+                 symbolic_action_idf_max=2.0):
         super(Model, self).__init__()
 
         if graph is None:
@@ -351,6 +362,14 @@ class Model(nn.Module):
         else:
             self.drop_out = lambda x: x
         self.symbolic_graph_weight = float(symbolic_graph_weight)
+        self.symbolic_hypergraph_reg_weight = float(symbolic_hypergraph_reg_weight)
+        if self.symbolic_hypergraph_reg_weight < 0:
+            raise ValueError("symbolic_hypergraph_reg_weight must be nonnegative")
+        if symbolic_action_mode not in {"blackbox", "prototype"}:
+            raise ValueError("symbolic_action_mode must be 'blackbox' or 'prototype'")
+        if symbolic_action_mode == "prototype" and not symbolic_graph_enabled:
+            raise ValueError("prototype action mode requires symbolic_graph_enabled=True")
+        self.symbolic_action_mode = symbolic_action_mode
         self.symbolic_graph = None
         if symbolic_graph_enabled:
             if concept_csv is None or metadata_csv is None:
@@ -366,10 +385,23 @@ class Model(nn.Module):
                 balance_loss=symbolic_balance_loss,
                 pos_weight_max=symbolic_pos_weight_max,
                 pos_weight_source=symbolic_pos_weight_source,
+                action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
+                action_temperature=symbolic_action_temperature,
+                hypergraph_mode=symbolic_hypergraph_mode,
+                concept_dim=symbolic_concept_dim,
+                temporal_bins=symbolic_temporal_bins,
+                grounding_dropout=symbolic_grounding_dropout,
+                action_matching=symbolic_action_decoder,
+                action_missing_weight=symbolic_action_missing_weight,
+                action_extra_weight=symbolic_action_extra_weight,
+                action_idf_weighting=symbolic_action_idf_weighting,
+                action_idf_min=symbolic_action_idf_min,
+                action_idf_max=symbolic_action_idf_max,
             )
 
     def forward(self, x):
         N, C, T, V, M = x.size()
+        valid_person_mask = x.detach().abs().sum(dim=(1, 2, 3)) > 0
         x = x.permute(0, 4, 2, 3, 1).contiguous()
         x = self.to_joint_embedding(x)
         x += self.pos_embedding[:, :self.num_point]
@@ -399,13 +431,18 @@ class Model(nn.Module):
         symbolic_concept_logits = None
         if self.symbolic_graph is not None:
             c_new = x.size(1)
-            feature_map = x.reshape(N, M, c_new, T, V).permute(
-                0, 2, 3, 1, 4
-            ).reshape(N, c_new, T, M * V)
-            feature_map, symbolic_concept_logits = self.symbolic_graph(feature_map)
-            x = feature_map.reshape(N, c_new, T, M, V).permute(
-                0, 3, 1, 2, 4
-            ).contiguous().reshape(N * M, c_new, T, V)
+            t_new = x.size(2)
+            expected_channels = self.symbolic_graph.feature_dim
+            if c_new != expected_channels:
+                raise RuntimeError(
+                    f'Symbolic channel mismatch: backbone emits {c_new} channels, '
+                    f'but symbolic bridge expects {expected_channels}.'
+                )
+            feature_map = x.reshape(N, M, c_new, t_new, V)
+            feature_map, symbolic_concept_logits = self.symbolic_graph(
+                feature_map, valid_person_mask=valid_person_mask
+            )
+            x = feature_map.reshape(N * M, c_new, t_new, V)
 
         # N*M,C,T,V
         c_new = x.size(1)
@@ -413,7 +450,10 @@ class Model(nn.Module):
         x = x.mean(3).mean(1)
         x = self.drop_out(x)
 
-        output = self.fc(x)
+        if self.symbolic_action_mode == "prototype":
+            output = self.symbolic_graph.action_logits(symbolic_concept_logits)
+        else:
+            output = self.fc(x)
         hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
         if self.symbolic_graph is not None:
             return output, hyper_outputs, symbolic_concept_logits

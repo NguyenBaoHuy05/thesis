@@ -137,6 +137,9 @@ The configs in `config/symbolic/` and
 `config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` require a
 pretrained checkpoint. Select the official weights matching **base/large,
 NTU60/NTU120, modality and split**, and the checkpoint's `hyper_joints` setting.
+The equivalent large-backbone fine-tuning configs are available under
+`config/symbolic_large/`; the one-stage NTU120 cross-subject large experiment is
+`config/large/nturgbd120-cross-subject/hyper_joint_symbolic.yaml`.
 The configs in `config/symbolic/` use the baseline's SGD, augmentation, batch
 size and schedule, with `base_lr: 0.0001` for full fine-tuning.
 The active `hyper_joint_symbolic.yaml` instead runs a **one-stage concept-to-action

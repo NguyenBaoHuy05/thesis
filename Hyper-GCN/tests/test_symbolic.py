@@ -493,7 +493,7 @@ class SymbolicEvaluationTests(unittest.TestCase):
         self.assertAlmostEqual(metrics['loss'], symbolic.loss(concepts, labels).item(), places=6)
         self.assertAlmostEqual(metrics['weighted_loss'], .1 * metrics['loss'])
         for tag in ('symbolic/mAP', 'symbolic/macro_f1', 'symbolic/spatial/mAP',
-                    'symbolic/residual_gate', 'symbolic/concept_graph_gate'):
+                    'symbolic/concept_graph_gate'):
             self.assertIn(tag, processor.val_writer.values)
 
     def test_processor_exports_grounding_for_prototype_mode(self):

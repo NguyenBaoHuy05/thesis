@@ -416,8 +416,6 @@ class Processor():
         if bridge is None:
             return
         values = {}
-        if bridge.action_decoder == 'none':
-            values['residual_gate'] = torch.tanh(bridge.residual_gate).detach().item()
         if bridge.hypergraph_mode == 'learnable_v1':
             values['hypergraph_gate'] = torch.tanh(bridge.hypergraph_gate).detach().item()
         else:

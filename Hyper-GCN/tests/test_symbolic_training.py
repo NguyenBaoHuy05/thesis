@@ -67,7 +67,7 @@ class TinyFeatureModel(nn.Module):
 
 
 class SymbolicOnlyTrainingTests(unittest.TestCase):
-    def test_prototype_mode_bypasses_blackbox_fc_and_residual_path(self):
+    def test_prototype_mode_bypasses_blackbox_fc(self):
         model = HyperGCNBase(
             num_class=120, num_point=25, num_person=2, hyper_joints=3,
             graph='graph.ntu_rgb_d.Graph', graph_args={'labeling_mode': 'virtual_ensemble'},
@@ -111,8 +111,6 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         self.assertEqual(concepts.shape, (2, 102))
         self.assertEqual(fc_calls, [])
         self.assertFalse(model.fc.weight.requires_grad)
-        self.assertFalse(model.symbolic_graph.project_back.weight.requires_grad)
-        self.assertFalse(model.symbolic_graph.residual_gate.requires_grad)
         self.assertFalse(model.symbolic_graph.concept_graph_gate.requires_grad)
         self.assertTrue(model.symbolic_graph.hypergraph_delta.requires_grad)
         self.assertTrue(model.symbolic_graph.hyperedge_weight_raw.requires_grad)
@@ -122,7 +120,6 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         )
         output.sum().backward()
         self.assertIsNone(model.fc.weight.grad)
-        self.assertIsNone(model.symbolic_graph.project_back.weight.grad)
         self.assertIsNotNone(model.symbolic_graph.concept_queries.grad)
         self.assertIsNotNone(model.symbolic_graph.hypergraph_delta.grad)
         self.assertIsNotNone(
@@ -168,7 +165,6 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
         self.assertFalse(model.backbone.training)
         self.assertFalse(model.fc.training)
         self.assertTrue(model.symbolic_graph.training)
-        self.assertEqual(model.symbolic_graph.context_norm.num_batches_tracked.item(), 3)
         for key, before in frozen.items():
             torch.testing.assert_close(model.state_dict()[key], before, rtol=0, atol=0)
         for name, parameter in model.named_parameters():
@@ -176,12 +172,9 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
                 self.assertFalse(parameter.requires_grad)
                 self.assertIsNone(parameter.grad)
         self.assertFalse(torch.equal(model.symbolic_graph.concept_queries, queries))
-        self.assertNotEqual(model.symbolic_graph.residual_gate.item(), 0.)
-        self.assertGreater(model.symbolic_graph.project_back.weight.grad.abs().sum().item(), 0.)
         self.assertEqual(processor.train_writer.values['loss/divergence'], 0.)
         ce = processor.loss(model(features)[0], labels)
         ce.backward()
-        self.assertTrue(torch.isfinite(model.symbolic_graph.residual_gate.grad))
 
     def test_modes_after_eval_and_data_parallel(self):
         model = nn.DataParallel(TinyFeatureModel())
@@ -191,7 +184,7 @@ class SymbolicOnlyTrainingTests(unittest.TestCase):
             set_training_mode(model, symbolic_only=True)
             self.assertFalse(model.module.backbone[1].training)
             self.assertFalse(model.module.backbone[3].training)
-            self.assertTrue(model.module.symbolic_graph.context_norm.training)
+            self.assertTrue(model.module.symbolic_graph.training)
         set_training_mode(model, symbolic_only=False)
         self.assertTrue(model.module.backbone[1].training)
         model.module.fc.weight.requires_grad_(False)
