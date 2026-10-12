@@ -369,6 +369,17 @@ class Processor():
         bridge = getattr(self.model, 'symbolic_graph', None)
         if bridge is None:
             return
+        if getattr(bridge, 'structured_mode', False):
+            audit = bridge.audit()
+            with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
+                json.dump(audit, handle, indent=2, allow_nan=False)
+            self.print_log(
+                'Symbolic structured mode: {} primitives, {} relations, graph={}, grounding={}'.format(
+                    audit['num_primitives'], audit['num_relations'],
+                    bridge.hypergraph_mode, audit['grounding_mode'],
+                )
+            )
+            return
         if self.arg.phase == 'train':
             labels = np.asarray(self.data_loader['train'].dataset.label)
             num_classes = bridge.support.shape[0]
@@ -414,6 +425,9 @@ class Processor():
         model_ref = self.model.module if hasattr(self.model, 'module') else self.model
         bridge = getattr(model_ref, 'symbolic_graph', None)
         if bridge is None:
+            return
+        if getattr(bridge, 'structured_mode', False):
+            self.print_log('\tSymbolic gates: structured event graph')
             return
         values = {}
         if bridge.hypergraph_mode == 'learnable_v1':
@@ -689,7 +703,7 @@ class Processor():
                 self.print_log('\tTop{}: {:.2f}%'.format(
                     k, 100 * self.data_loader[ln].dataset.top_k(score, k)))
 
-            if concept_frag:
+            if concept_frag and not getattr(bridge, 'structured_mode', False):
                 logits = np.concatenate(concept_frag)
                 labels = np.concatenate(concept_labels)
                 targets = bridge.support.detach().cpu().numpy()[labels]

@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
-from model.symbolic_hyperconcept import SymbolicHyperConceptBridge
+from model.large_symbolic_reasoner import LargeSymbolicReasoner
 
 def import_class(name):
     components = name.split('.')
@@ -80,6 +80,7 @@ class HYPERGC(nn.Module):
             self.hyper_joint = nn.Parameter(torch.randn(1, in_channels).repeat(self.virtual_num, 1))
             self.alpha = nn.Parameter(torch.ones(1))
             self.softmax = nn.Softmax(dim=-1)
+            self.last_evidence = None
 
         self.conv_d = nn.Conv2d(in_channels, out_channels, kernel_size=1, groups=num_subset)
         self.PA = nn.Parameter(torch.from_numpy(A.astype(np.float32)), requires_grad=False)
@@ -129,7 +130,8 @@ class HYPERGC(nn.Module):
         h_x = (h_x.T).unsqueeze(1)
         x = torch.cat([x, h_x.repeat(N, 1, T, 1)], dim=-1)
         V += self.virtual_num
-        A = self.PA.cuda(x.get_device())
+        static_adjacency = self.PA.to(device=x.device, dtype=x.dtype)
+        A = static_adjacency
         A = self.edge_importance * A
         A = self.a_norm(A)
 
@@ -153,6 +155,13 @@ class HYPERGC(nn.Module):
             alpha = self.alpha
             alpha = self.relu(alpha)
             A = A + alpha * G
+            dynamic_incidence = H
+            dynamic_hyperedge_weights = W
+            dynamic_adjacency = G
+        else:
+            dynamic_incidence = None
+            dynamic_hyperedge_weights = None
+            dynamic_adjacency = None
 
         d_x = self.conv_d(x)
         d_x = d_x.view(N, self.num_subset, self.mid_out_channels, T, V)
@@ -165,6 +174,21 @@ class HYPERGC(nn.Module):
         y = self.bn(y)
         y += self.down(x)
         y = self.relu(y)
+        self.last_evidence = {
+            "static_adjacency": static_adjacency.detach(),
+            "dynamic_incidence": (
+                dynamic_incidence.detach()
+                if dynamic_incidence is not None else None
+            ),
+            "dynamic_hyperedge_weights": (
+                dynamic_hyperedge_weights.detach()
+                if dynamic_hyperedge_weights is not None else None
+            ),
+            "dynamic_adjacency": (
+                dynamic_adjacency.detach()
+                if dynamic_adjacency is not None else None
+            ),
+        }
         return y, self.hyper_joint
 
 
@@ -312,8 +336,8 @@ class Model(nn.Module):
                  metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
                  symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
                  symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
-                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1,
-                 symbolic_hypergraph_mode="static_graph",
+                 symbolic_action_mode="structured", symbolic_action_temperature=0.1,
+                 symbolic_hypergraph_mode="dynamic_backbone",
                  symbolic_hypergraph_reg_weight=0.0,
                  symbolic_concept_dim=64, symbolic_temporal_bins=4,
                  symbolic_grounding_dropout=0.1,
@@ -322,7 +346,9 @@ class Model(nn.Module):
                  symbolic_action_extra_weight=0.15,
                  symbolic_action_idf_weighting=True,
                  symbolic_action_idf_min=0.5,
-                 symbolic_action_idf_max=2.0):
+                 symbolic_action_idf_max=2.0,
+                 symbolic_primitive_loss_weight=0.2,
+                 symbolic_relation_loss_weight=0.1):
         super(Model, self).__init__()
 
         if graph is None:
@@ -365,38 +391,20 @@ class Model(nn.Module):
         self.symbolic_hypergraph_reg_weight = float(symbolic_hypergraph_reg_weight)
         if self.symbolic_hypergraph_reg_weight < 0:
             raise ValueError("symbolic_hypergraph_reg_weight must be nonnegative")
-        if symbolic_action_mode not in {"blackbox", "prototype"}:
-            raise ValueError("symbolic_action_mode must be 'blackbox' or 'prototype'")
-        if symbolic_action_mode == "prototype" and not symbolic_graph_enabled:
-            raise ValueError("prototype action mode requires symbolic_graph_enabled=True")
+        if symbolic_action_mode != "structured":
+            raise ValueError("large symbolic mode must be 'structured'")
         self.symbolic_action_mode = symbolic_action_mode
         self.symbolic_graph = None
         if symbolic_graph_enabled:
-            if concept_csv is None or metadata_csv is None:
-                raise ValueError(
-                    "concept_csv and metadata_csv are required when symbolic graph is enabled"
-                )
-            self.symbolic_graph = SymbolicHyperConceptBridge(
-                feature_dim=self.embedding_channels * 4,
-                concept_csv=concept_csv, metadata_csv=metadata_csv,
-                num_classes=num_class, num_concepts=num_concepts,
-                num_people=num_person, num_points=num_point,
-                temperature=symbolic_graph_temperature,
-                balance_loss=symbolic_balance_loss,
-                pos_weight_max=symbolic_pos_weight_max,
-                pos_weight_source=symbolic_pos_weight_source,
-                action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
-                action_temperature=symbolic_action_temperature,
-                hypergraph_mode=symbolic_hypergraph_mode,
-                concept_dim=symbolic_concept_dim,
-                temporal_bins=symbolic_temporal_bins,
-                grounding_dropout=symbolic_grounding_dropout,
-                action_matching=symbolic_action_decoder,
-                action_missing_weight=symbolic_action_missing_weight,
-                action_extra_weight=symbolic_action_extra_weight,
-                action_idf_weighting=symbolic_action_idf_weighting,
-                action_idf_min=symbolic_action_idf_min,
-                action_idf_max=symbolic_action_idf_max,
+            self.symbolic_graph = LargeSymbolicReasoner(
+                feature_dims=(
+                    self.embedding_channels,
+                    self.embedding_channels * 2,
+                    self.embedding_channels * 4,
+                ),
+                num_classes=num_class,
+                primitive_loss_weight=symbolic_primitive_loss_weight,
+                relation_loss_weight=symbolic_relation_loss_weight,
             )
 
     def forward(self, x):
@@ -418,41 +426,51 @@ class Model(nn.Module):
         x1 = x
         x, h_x2 = self.l2(x)
         x, h_x3 = self.l3(x + x1)
+        joint_features = x
 
         x, h_x4 = self.l4(x)
         x4 = x
         x, h_x5 = self.l5(x)
         x, h_x6 = self.l6(x + x4)
+        part_features = x
 
         x, h_x7 = self.l7(x)
         x7 = x
         x, h_x8 = self.l8(x)
         x, h_x9 = self.l9(x + x7)
+        action_features = x
         symbolic_concept_logits = None
         if self.symbolic_graph is not None:
-            c_new = x.size(1)
-            t_new = x.size(2)
-            expected_channels = self.symbolic_graph.feature_dim
-            if c_new != expected_channels:
-                raise RuntimeError(
-                    f'Symbolic channel mismatch: backbone emits {c_new} channels, '
-                    f'but symbolic bridge expects {expected_channels}.'
-                )
-            feature_map = x.reshape(N, M, c_new, t_new, V)
-            feature_map, symbolic_concept_logits = self.symbolic_graph(
-                feature_map, valid_person_mask=valid_person_mask
+            feature_maps = (
+                joint_features.reshape(
+                    N, M, joint_features.size(1), joint_features.size(2), V
+                ),
+                part_features.reshape(
+                    N, M, part_features.size(1), part_features.size(2), V
+                ),
+                action_features.reshape(
+                    N, M, action_features.size(1), action_features.size(2), V
+                ),
             )
-            x = feature_map.reshape(N * M, c_new, t_new, V)
-
-        # N*M,C,T,V
-        c_new = x.size(1)
-        x = x.view(N, M, c_new, -1)
-        x = x.mean(3).mean(1)
-        x = self.drop_out(x)
-
-        if self.symbolic_action_mode == "prototype":
-            output = self.symbolic_graph.action_logits(symbolic_concept_logits)
+            backbone_evidence = [
+                layer.gcn1.last_evidence
+                for layer in (
+                    self.l1, self.l2, self.l3, self.l4, self.l5,
+                    self.l6, self.l7, self.l8, self.l9,
+                )
+            ]
+            output, symbolic_concept_logits, _ = self.symbolic_graph(
+                feature_maps, backbone_evidence=backbone_evidence
+            )
         else:
+            output = None
+
+        if output is None:
+            # N*M,C,T,V
+            c_new = x.size(1)
+            x = x.view(N, M, c_new, -1)
+            x = x.mean(3).mean(1)
+            x = self.drop_out(x)
             output = self.fc(x)
         hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
         if self.symbolic_graph is not None:

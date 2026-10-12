@@ -133,10 +133,7 @@ python ensemble.py --datasets ntu120/xsub --model base --joint-dir <the save pat
 
 ## Symbolic branch: fine-tuning and monitoring
 
-The configs in `config/symbolic/` and
-`config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` require a
-pretrained checkpoint. Select the official weights matching **base/large,
-NTU60/NTU120, modality and split**, and the checkpoint's `hyper_joints` setting.
+The active symbolic-only config at `config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` requires a\r?\npretrained checkpoint. The configs in `config/symbolic/` and\r?\n`config/symbolic_large/` train from scratch by default; optional weights can still be supplied.
 The equivalent large-backbone fine-tuning configs are available under
 `config/symbolic_large/`; the one-stage NTU120 cross-subject large experiment is
 `config/large/nturgbd120-cross-subject/hyper_joint_symbolic.yaml`.

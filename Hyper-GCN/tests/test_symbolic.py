@@ -406,7 +406,7 @@ class SymbolicConfigTests(unittest.TestCase):
                     self.assertEqual(config['model_args']['symbolic_hypergraph_mode'], 'learnable_v1')
                     self.assertEqual(config['model_args']['symbolic_hypergraph_reg_weight'], .01)
                 else:
-                    self.assertTrue(config['pretrained_finetune'])
+                    self.assertFalse(config['pretrained_finetune'])
                     self.assertEqual(config['optimizer'], 'SGD')
                     self.assertEqual(config['nesterov'], baseline['nesterov'])
                     self.assertEqual(config['base_lr'], 1e-4)

@@ -1,7 +1,7 @@
 work_dir: ./work_dir/ntu60/xview/joint_motion_symbolic_large
 
-# Fine-tune a matching official checkpoint; supply its path with --weights.
-pretrained_finetune: True
+# Train the symbolic branch from scratch; optional weights may be supplied.
+pretrained_finetune: False
 weights: null
 
 # feeder
