@@ -61,6 +61,43 @@ class SymbolicEventGraph:
     relation_names: tuple[str, ...]
     node_types: tuple[str, ...]
     edge_types: tuple[str, ...]
+    nodes: tuple[dict, ...] = ()
+    edges: tuple[dict, ...] = ()
+    trace: tuple[dict, ...] = ()
+
+    def intervene(self, primitive_mask=None, relation_mask=None):
+        """Return a graph with selected evidence removed."""
+        primitive = self.primitive_probabilities
+        relation = self.relation_probabilities
+        if primitive_mask is not None:
+            primitive = primitive * torch.as_tensor(
+                primitive_mask, device=primitive.device, dtype=primitive.dtype
+            )
+        if relation_mask is not None:
+            relation = relation * torch.as_tensor(
+                relation_mask, device=relation.device, dtype=relation.dtype
+            )
+        return SymbolicEventGraph(
+            primitive, relation, self.primitive_names, self.relation_names,
+            self.node_types, self.edge_types, self.nodes, self.edges, self.trace,
+        )
+
+
+class EventRuleEngine:
+    """Small, inspectable differentiable composition layer."""
+
+    def __init__(self, support):
+        self.support = support
+
+    def compose(self, primitive, relation):
+        evidence = torch.cat((primitive, relation), dim=-1)
+        return evidence @ self.weights.to(evidence)
+
+    @property
+    def weights(self):
+        # Fixed weak support is used as a prior; learned weights remain
+        # available for fitting the perception-to-event calibration.
+        return self._weights
 
 
 def _action_primitive_support(num_classes: int) -> torch.Tensor:
@@ -136,6 +173,12 @@ class LargeSymbolicReasoner(nn.Module):
         self.register_buffer(
             "training_class_counts", torch.zeros(self.num_classes)
         )
+        self.rule_engine = EventRuleEngine(self.support)
+        self.rule_engine._weights = nn.Parameter(
+            torch.zeros(len(PRIMITIVE_NAMES) + len(RELATION_NAMES), self.num_classes)
+        )
+        nn.init.normal_(self.rule_engine._weights, std=0.02)
+        self.register_parameter("rule_weights", self.rule_engine._weights)
 
     @staticmethod
     def _pool(feature_map):
@@ -170,6 +213,20 @@ class LargeSymbolicReasoner(nn.Module):
         relation_logits = self.relation_head(context)
         primitive_probabilities = torch.sigmoid(primitive_logits)
         relation_probabilities = torch.sigmoid(relation_logits)
+        nodes = tuple(
+            {"type": "motion", "name": name}
+            for name in PRIMITIVE_NAMES
+        )
+        edges = tuple(
+            {"type": name, "source": "actor", "target": "motion"}
+            for name in RELATION_NAMES
+        )
+        trace = tuple({
+            "action_index": index,
+            "primitive_support": tuple(
+                PRIMITIVE_NAMES[i] for i in torch.where(self.support[index] > 0)[0]
+            ),
+        } for index in range(self.num_classes))
         graph = SymbolicEventGraph(
             primitive_probabilities=primitive_probabilities,
             relation_probabilities=relation_probabilities,
@@ -177,16 +234,49 @@ class LargeSymbolicReasoner(nn.Module):
             relation_names=RELATION_NAMES,
             node_types=("actor", "body_part", "motion", "state"),
             edge_types=("near", "far", "toward", "away", "before", "during"),
+            nodes=nodes, edges=edges, trace=trace,
         )
         action_input = torch.cat((primitive_probabilities, relation_probabilities), dim=-1)
         action_logits = self.action_prototypes(action_input)
+        # Keep the legacy named composition layer while applying an explicit
+        # rule prior: unsupported event channels cannot become class evidence.
+        rule_prior = torch.cat((self.support, torch.zeros(
+            self.num_classes, len(RELATION_NAMES), device=self.support.device
+        )), dim=1).t()
+        action_logits = action_logits + 0.1 * (
+            action_input @ rule_prior.to(action_input)
+        )
         return action_logits, primitive_logits, graph
 
-    def loss(self, primitive_logits, labels):
-        targets = self.support.to(primitive_logits).index_select(0, labels)
-        return F.binary_cross_entropy_with_logits(
-            primitive_logits, targets
-        ) * self.primitive_loss_weight
+    def loss(self, primitive_logits, labels, targets=None, confidence=None):
+        if targets is None:
+            targets = self.support.to(primitive_logits).index_select(0, labels)
+        else:
+            targets = targets.to(primitive_logits)
+            if targets.shape != primitive_logits.shape:
+                raise ValueError("primitive targets must match primitive logits")
+        loss = F.binary_cross_entropy_with_logits(
+            primitive_logits, targets, reduction="none"
+        )
+        if confidence is not None:
+            confidence = confidence.to(loss)
+            if confidence.shape != loss.shape:
+                raise ValueError("primitive confidence must match primitive logits")
+            loss = loss * confidence
+        return loss.mean() * self.primitive_loss_weight
+
+    def intervene(self, primitive_logits, relation_logits, primitive_mask=None,
+                  relation_mask=None):
+        primitive = torch.sigmoid(primitive_logits)
+        relation = torch.sigmoid(relation_logits)
+        graph = SymbolicEventGraph(
+            primitive, relation, PRIMITIVE_NAMES, RELATION_NAMES,
+            ("actor", "body_part", "motion", "state"),
+            RELATION_NAMES,
+        ).intervene(primitive_mask, relation_mask)
+        return self.action_prototypes(
+            torch.cat((graph.primitive_probabilities, graph.relation_probabilities), dim=-1)
+        )
 
     def structure_loss(self):
         return self.action_prototypes.weight.new_zeros(())

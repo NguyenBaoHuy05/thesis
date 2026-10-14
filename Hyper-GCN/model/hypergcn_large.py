@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
 from model.large_symbolic_reasoner import LargeSymbolicReasoner
+from model.geometry_primitives import geometry_pseudo_labels
 
 def import_class(name):
     components = name.split('.')
@@ -395,6 +396,8 @@ class Model(nn.Module):
             raise ValueError("large symbolic mode must be 'structured'")
         self.symbolic_action_mode = symbolic_action_mode
         self.symbolic_graph = None
+        self.last_symbolic_supervision = None
+        self.last_symbolic_graph = None
         if symbolic_graph_enabled:
             self.symbolic_graph = LargeSymbolicReasoner(
                 feature_dims=(
@@ -409,6 +412,7 @@ class Model(nn.Module):
 
     def forward(self, x):
         N, C, T, V, M = x.size()
+        skeleton_for_symbolic_supervision = x
         valid_person_mask = x.detach().abs().sum(dim=(1, 2, 3)) > 0
         x = x.permute(0, 4, 2, 3, 1).contiguous()
         x = self.to_joint_embedding(x)
@@ -462,8 +466,15 @@ class Model(nn.Module):
             output, symbolic_concept_logits, _ = self.symbolic_graph(
                 feature_maps, backbone_evidence=backbone_evidence
             )
+            self.last_symbolic_graph = _
+            with torch.no_grad():
+                self.last_symbolic_supervision = geometry_pseudo_labels(
+                    skeleton_for_symbolic_supervision
+                )
         else:
             output = None
+            self.last_symbolic_supervision = None
+            self.last_symbolic_graph = None
 
         if output is None:
             # N*M,C,T,V

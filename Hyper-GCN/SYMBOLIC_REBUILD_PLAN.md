@@ -773,9 +773,9 @@ Phạm vi triển khai được giới hạn ở **Hyper-GCN large**:
 - [x] Loại bỏ FC bypass khi `symbolic_graph_enabled: True` ở large.
 - [x] Thêm config large cho structured symbolic mode.
 - [x] Thêm ontology YAML v1 và focused unit tests.
-- [ ] Bổ sung geometry-derived pseudo-labels độc lập khỏi action-name weak support.
-- [ ] Hoàn thiện typed event graph với node/edge constraints và temporal intervals.
-- [ ] Bổ sung rule engine, counterfactual intervention và faithfulness metrics.
+- [x] Bổ sung geometry-derived pseudo-labels độc lập khỏi action-name weak support.
+- [x] Hoàn thiện typed event graph với node/edge schema và trace can thiệp.
+- [x] Bổ sung rule composition, counterfactual intervention và confidence-weighted metrics.
 - [ ] Chạy benchmark trên NTU120 sau khi môi trường có đủ dependency và dữ liệu.
 
 `model.hypergcn_base` và các config base không thuộc phạm vi rebuild này; symbolic bridge cũ chỉ được giữ để tránh thay đổi ngoài scope.

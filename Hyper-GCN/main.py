@@ -547,7 +547,19 @@ class Processor():
                         if hasattr(self.model, "module")
                         else self.model
                     )
-                    symbolic_loss = model_ref.symbolic_graph.loss(output[2], label)
+                    supervision = getattr(model_ref, 'last_symbolic_supervision', None)
+                    symbolic_loss = model_ref.symbolic_graph.loss(
+                        output[2],
+                        label,
+                        targets=(
+                            supervision['primitive_targets']
+                            if supervision is not None else None
+                        ),
+                        confidence=(
+                            supervision['primitive_confidence']
+                            if supervision is not None else None
+                        ),
+                    )
                     symbolic_weighted = model_ref.symbolic_graph_weight * symbolic_loss
                     loss = loss + symbolic_weighted
                     hypergraph_loss = model_ref.symbolic_graph.structure_loss()
