@@ -5,8 +5,10 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
-from model.large_symbolic_reasoner import LargeSymbolicReasoner
-from model.geometry_primitives import geometry_pseudo_labels
+from model.synergies import pair_validity, synergy_bank, validate_bank
+from model.synergy_bottleneck import SemanticHyperedges, SynergyBottleneck, SynergyOutput
+
+SYNERGY_LAYERS = ('l7', 'l8', 'l9')
 
 def import_class(name):
     components = name.split('.')
@@ -81,7 +83,6 @@ class HYPERGC(nn.Module):
             self.hyper_joint = nn.Parameter(torch.randn(1, in_channels).repeat(self.virtual_num, 1))
             self.alpha = nn.Parameter(torch.ones(1))
             self.softmax = nn.Softmax(dim=-1)
-            self.last_evidence = None
 
         self.conv_d = nn.Conv2d(in_channels, out_channels, kernel_size=1, groups=num_subset)
         self.PA = nn.Parameter(torch.from_numpy(A.astype(np.float32)), requires_grad=False)
@@ -131,8 +132,7 @@ class HYPERGC(nn.Module):
         h_x = (h_x.T).unsqueeze(1)
         x = torch.cat([x, h_x.repeat(N, 1, T, 1)], dim=-1)
         V += self.virtual_num
-        static_adjacency = self.PA.to(device=x.device, dtype=x.dtype)
-        A = static_adjacency
+        A = self.PA.to(device=x.device, dtype=x.dtype)
         A = self.edge_importance * A
         A = self.a_norm(A)
 
@@ -156,18 +156,14 @@ class HYPERGC(nn.Module):
             alpha = self.alpha
             alpha = self.relu(alpha)
             A = A + alpha * G
-            dynamic_incidence = H
-            dynamic_hyperedge_weights = W
-            dynamic_adjacency = G
-        else:
-            dynamic_incidence = None
-            dynamic_hyperedge_weights = None
-            dynamic_adjacency = None
 
         d_x = self.conv_d(x)
         d_x = d_x.view(N, self.num_subset, self.mid_out_channels, T, V)
-        y = torch.einsum('nkuv,nkctv->nkctu', A, d_x).contiguous()
-        y = y.view(N, self.out_channels, T, V)
+        y = torch.einsum('nkuv,nkctv->nkctu', A, d_x)
+        semantic = self.semantic_message(x, d_x)
+        if semantic is not None:
+            y = y + semantic
+        y = y.contiguous().view(N, self.out_channels, T, V)
 
         x = x[..., :self.vertex_nums]
         y = y[..., :self.vertex_nums]
@@ -175,22 +171,32 @@ class HYPERGC(nn.Module):
         y = self.bn(y)
         y += self.down(x)
         y = self.relu(y)
-        self.last_evidence = {
-            "static_adjacency": static_adjacency.detach(),
-            "dynamic_incidence": (
-                dynamic_incidence.detach()
-                if dynamic_incidence is not None else None
-            ),
-            "dynamic_hyperedge_weights": (
-                dynamic_hyperedge_weights.detach()
-                if dynamic_hyperedge_weights is not None else None
-            ),
-            "dynamic_adjacency": (
-                dynamic_adjacency.detach()
-                if dynamic_adjacency is not None else None
-            ),
-        }
         return y, self.hyper_joint
+
+    def semantic_message(self, x, d_x):
+        return None
+
+
+class SemanticHYPERGC(HYPERGC):
+    """HYPERGC with named synergy hyperedges: A = A_phys + alpha G_dyn + beta G_sem(s).
+
+    G_sem(s) is shared by all subsets and gated per synergy and segment. The
+    gates of the last forward pass are kept in ``self.gate`` [B,S,E]; setting
+    ``self.gate_mask`` [B,S,E] multiplies them (deletion / insertion tests).
+    """
+
+    def __init__(self, in_channels, out_channels, vertex_nums, virtual_num, A, groups,
+                 segments=4, gate_hidden=64, gate_temperature=1.0, **kwargs):
+        super().__init__(in_channels, out_channels, vertex_nums, virtual_num, A, **kwargs)
+        self.semantic = SemanticHyperedges(
+            in_channels, groups, vertex_nums + virtual_num, segments, gate_hidden, gate_temperature,
+        )
+        self.gate = None
+        self.gate_mask = None
+
+    def semantic_message(self, x, d_x):
+        G, self.gate = self.semantic(x, self.gate_mask)
+        return self.semantic.beta * torch.einsum('ntuv,nkctv->nkctu', G, d_x)
 
 
 class TemporalConv(nn.Module):
@@ -310,9 +316,13 @@ class unit_tcn(nn.Module):
 
 
 class TCN_GCN_unit(nn.Module):
-    def __init__(self, in_channels, out_channels, num_point, hyper_joints, A, stride=1, residual=True, kernel_size=5, dilations=[1, 2], hyper=True):
+    def __init__(self, in_channels, out_channels, num_point, hyper_joints, A, stride=1, residual=True, kernel_size=5, dilations=[1, 2], hyper=True,
+                 semantic=None):
         super(TCN_GCN_unit, self).__init__()
-        self.gcn1 = HYPERGC(in_channels, out_channels, num_point, hyper_joints, A, hyper=hyper)
+        if semantic is None:
+            self.gcn1 = HYPERGC(in_channels, out_channels, num_point, hyper_joints, A, hyper=hyper)
+        else:
+            self.gcn1 = SemanticHYPERGC(in_channels, out_channels, num_point, hyper_joints, A, hyper=hyper, **semantic)
         self.tcn1 = MultiScale_TemporalConv(out_channels, out_channels, kernel_size=kernel_size, stride=stride, dilations=dilations,
                                         residual=False)
         self.relu = nn.ReLU(inplace=True)
@@ -333,23 +343,11 @@ class TCN_GCN_unit(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3, hyper_joints=0,
-                 drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
-                 metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
-                 symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
-                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
-                 symbolic_action_mode="structured", symbolic_action_temperature=0.1,
-                 symbolic_hypergraph_mode="dynamic_backbone",
-                 symbolic_hypergraph_reg_weight=0.0,
-                 symbolic_concept_dim=64, symbolic_temporal_bins=4,
-                 symbolic_grounding_dropout=0.1,
-                 symbolic_action_decoder="bernoulli",
-                 symbolic_action_missing_weight=1.0,
-                 symbolic_action_extra_weight=0.15,
-                 symbolic_action_idf_weighting=True,
-                 symbolic_action_idf_min=0.5,
-                 symbolic_action_idf_max=2.0,
-                 symbolic_primitive_loss_weight=0.2,
-                 symbolic_relation_loss_weight=0.1):
+                 drop_out=0, synergy_enabled=False, synergy_bank_kind="semantic", synergy_seed=0,
+                 synergy_use_pair=True, synergy_segments=4, synergy_layers=SYNERGY_LAYERS,
+                 synergy_readout="embedding", synergy_tied=True, synergy_gate_hidden=64,
+                 synergy_gate_temperature=1.0, synergy_gate_weight=1e-3, synergy_entropy_weight=0.0,
+                 synergy_reference_joint=20):
         super(Model, self).__init__()
 
         if graph is None:
@@ -369,15 +367,36 @@ class Model(nn.Module):
         self.pos_embedding = nn.Parameter(torch.randn(1, self.num_point, self.embedding_channels))
         self.tanh = nn.Tanh()
 
+        # Synergy hypergraph (SEMANTIC_HYPERGRAPH_PLAN.md): named hyperedges in
+        # the last layers and a synergy bottleneck in place of the classifier.
+        self.synergy = None
+        semantic = dict()
+        if synergy_enabled:
+            synergy_layers = tuple(synergy_layers or ())
+            if any(name not in SYNERGY_LAYERS for name in synergy_layers):
+                raise ValueError('synergy_layers must be a subset of {}'.format(SYNERGY_LAYERS))
+            if synergy_tied and 'l9' not in synergy_layers:
+                raise ValueError('a tied synergy bottleneck reads the gates of l9; add l9 to synergy_layers')
+            singles, pairs = synergy_bank(synergy_bank_kind, synergy_seed, synergy_use_pair)
+            validate_bank(singles, pairs)
+            self.synergy_reference_joint = synergy_reference_joint
+            semantic = {name: dict(groups=[s.joints for s in singles], segments=synergy_segments,
+                                   gate_hidden=synergy_gate_hidden, gate_temperature=synergy_gate_temperature)
+                        for name in synergy_layers}
+
         self.l1 = TCN_GCN_unit(self.embedding_channels, self.embedding_channels, num_point, hyper_joints, A)
         self.l2 = TCN_GCN_unit(self.embedding_channels, self.embedding_channels, num_point, hyper_joints, A)
         self.l3 = TCN_GCN_unit(self.embedding_channels, self.embedding_channels, num_point, hyper_joints, A)
         self.l4 = TCN_GCN_unit(self.embedding_channels, self.embedding_channels * 2, num_point, hyper_joints, A, stride=2)
         self.l5 = TCN_GCN_unit(self.embedding_channels * 2, self.embedding_channels * 2, num_point, hyper_joints, A)
         self.l6 = TCN_GCN_unit(self.embedding_channels * 2, self.embedding_channels * 2, num_point, hyper_joints, A)
-        self.l7 = TCN_GCN_unit(self.embedding_channels * 2, self.embedding_channels * 4, num_point, hyper_joints, A, stride=2)
-        self.l8 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A)
-        self.l9 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A)
+        self.l7 = TCN_GCN_unit(self.embedding_channels * 2, self.embedding_channels * 4, num_point, hyper_joints, A, stride=2,
+                               semantic=semantic.get('l7'))
+        self.l8 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A,
+                               semantic=semantic.get('l8'))
+        self.l9 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A,
+                               semantic=semantic.get('l9'))
+        # Kept in synergy mode so official checkpoints load, but not used there.
         self.fc = nn.Linear(self.embedding_channels * 4, self.num_class)
 
         # nn.init.xavier_normal_(self.to_joint_embedding.weight)
@@ -388,32 +407,27 @@ class Model(nn.Module):
             self.drop_out = nn.Dropout(drop_out)
         else:
             self.drop_out = lambda x: x
-        self.symbolic_graph_weight = float(symbolic_graph_weight)
-        self.symbolic_hypergraph_reg_weight = float(symbolic_hypergraph_reg_weight)
-        if self.symbolic_hypergraph_reg_weight < 0:
-            raise ValueError("symbolic_hypergraph_reg_weight must be nonnegative")
-        if symbolic_action_mode != "structured":
-            raise ValueError("large symbolic mode must be 'structured'")
-        self.symbolic_action_mode = symbolic_action_mode
-        self.symbolic_graph = None
-        self.last_symbolic_supervision = None
-        self.last_symbolic_graph = None
-        if symbolic_graph_enabled:
-            self.symbolic_graph = LargeSymbolicReasoner(
-                feature_dims=(
-                    self.embedding_channels,
-                    self.embedding_channels * 2,
-                    self.embedding_channels * 4,
-                ),
-                num_classes=num_class,
-                primitive_loss_weight=symbolic_primitive_loss_weight,
-                relation_loss_weight=symbolic_relation_loss_weight,
+        if synergy_enabled:
+            self.synergy = SynergyBottleneck(
+                self.embedding_channels * 4, singles, pairs, num_class,
+                segments=synergy_segments, readout=synergy_readout, tied=synergy_tied,
+                gate_hidden=synergy_gate_hidden, gate_temperature=synergy_gate_temperature,
+                gate_weight=synergy_gate_weight, entropy_weight=synergy_entropy_weight, dropout=drop_out,
             )
 
-    def forward(self, x):
+    def semantic_layers(self):
+        return [layer.gcn1 for layer in (self.l7, self.l8, self.l9) if isinstance(layer.gcn1, SemanticHYPERGC)]
+
+    def forward(self, x, gate_mask=None):
+        """gate_mask [N,S,E] (synergy mode only) multiplies every synergy gate,
+        in G_sem of the semantic layers and in the bottleneck."""
         N, C, T, V, M = x.size()
-        skeleton_for_symbolic_supervision = x
-        valid_person_mask = x.detach().abs().sum(dim=(1, 2, 3)) > 0
+        skeleton = x
+        if gate_mask is not None and self.synergy is None:
+            raise ValueError('gate_mask needs synergy_enabled=True')
+        for layer in self.semantic_layers():
+            num_single = len(self.synergy.single_names)
+            layer.gate_mask = None if gate_mask is None else gate_mask[..., :num_single].repeat_interleave(M, dim=0)
         x = x.permute(0, 4, 2, 3, 1).contiguous()
         x = self.to_joint_embedding(x)
         x += self.pos_embedding[:, :self.num_point]
@@ -430,62 +444,36 @@ class Model(nn.Module):
         x1 = x
         x, h_x2 = self.l2(x)
         x, h_x3 = self.l3(x + x1)
-        joint_features = x
 
         x, h_x4 = self.l4(x)
         x4 = x
         x, h_x5 = self.l5(x)
         x, h_x6 = self.l6(x + x4)
-        part_features = x
 
         x, h_x7 = self.l7(x)
         x7 = x
         x, h_x8 = self.l8(x)
         x, h_x9 = self.l9(x + x7)
-        action_features = x
-        symbolic_concept_logits = None
-        if self.symbolic_graph is not None:
-            feature_maps = (
-                joint_features.reshape(
-                    N, M, joint_features.size(1), joint_features.size(2), V
-                ),
-                part_features.reshape(
-                    N, M, part_features.size(1), part_features.size(2), V
-                ),
-                action_features.reshape(
-                    N, M, action_features.size(1), action_features.size(2), V
-                ),
-            )
-            backbone_evidence = [
-                layer.gcn1.last_evidence
-                for layer in (
-                    self.l1, self.l2, self.l3, self.l4, self.l5,
-                    self.l6, self.l7, self.l8, self.l9,
-                )
-            ]
-            output, symbolic_concept_logits, _ = self.symbolic_graph(
-                feature_maps, backbone_evidence=backbone_evidence
-            )
-            self.last_symbolic_graph = _
+        hyper_outputs = (h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9)
+        if self.synergy is not None:
             with torch.no_grad():
-                self.last_symbolic_supervision = geometry_pseudo_labels(
-                    skeleton_for_symbolic_supervision
-                )
-        else:
-            output = None
-            self.last_symbolic_supervision = None
-            self.last_symbolic_graph = None
+                actor_valid = skeleton.abs().sum(dim=(1, 2, 3)) > 0
+                pair_valid = (pair_validity(skeleton, self.synergy_reference_joint)
+                              if self.synergy.pair_gate is not None else None)
+            tied_gate = None
+            if self.synergy.tied:
+                gate = self.l9.gcn1.gate
+                tied_gate = gate.view(N, M, *gate.shape[1:])
+            features = x.view(N, M, x.size(1), x.size(2), V)
+            result = self.synergy(features, actor_valid, pair_valid, tied_gate, gate_mask)
+            return SynergyOutput(hyper_outputs=hyper_outputs, **result)
 
-        if output is None:
-            # N*M,C,T,V
-            c_new = x.size(1)
-            x = x.view(N, M, c_new, -1)
-            x = x.mean(3).mean(1)
-            x = self.drop_out(x)
-            output = self.fc(x)
-        hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
-        if self.symbolic_graph is not None:
-            return output, hyper_outputs, symbolic_concept_logits
+        # N*M,C,T,V
+        c_new = x.size(1)
+        x = x.view(N, M, c_new, -1)
+        x = x.mean(3).mean(1)
+        x = self.drop_out(x)
+        output = self.fc(x)
         return output, hyper_outputs
 
 

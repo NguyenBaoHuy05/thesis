@@ -2,7 +2,6 @@
 from __future__ import print_function
 
 import argparse
-import csv
 import json
 import inspect
 import os
@@ -28,8 +27,9 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 from model.checkpoint import load_model_weights
-from model.symbolic_metrics import concept_metrics
-from model.training import configure_trainable_parameters, set_training_mode
+from model.concept_schema import NTU_ACTION_NAMES
+from model.synergy_metrics import SynergyAccumulator, load_annotations
+from model.training import configure_trainable_parameters, is_head_key, set_training_mode
 
 # from torchlight import DictAction
 
@@ -42,6 +42,9 @@ def init_seed(seed):
     random.seed(seed)
     # torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = True
+    # TF32 matmuls on Ampere/Ada GPUs (A100, L4): faster, negligible accuracy change.
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
 
 def import_class(import_str):
     mod_str, _sep, class_str = import_str.rpartition('.')
@@ -191,17 +194,18 @@ def get_parser():
         default=None,
         help='the weights for network initialization')
     parser.add_argument(
-        '--pretrained-finetune', type=str2bool, default=False,
-        help='require --weights and allow newly initialized symbolic parameters during training')
+        '--freeze-until', default=None,
+        help='freeze the backbone up to this layer (stem, l1..l9) with BatchNorm in eval mode; '
+             'requires --weights. New synergy parameters always train.')
     parser.add_argument(
-        '--symbolic-only', type=str2bool, default=False,
-        help='train only symbolic_graph; freeze pretrained parameters and BatchNorm statistics')
+        '--backbone-lr-scale', type=float, default=1.0,
+        help='learning-rate scale of the trainable backbone layers (head: fc, synergy, semantic hyperedges)')
     parser.add_argument(
         '--eval-before-train', type=str2bool, default=False,
-        help='evaluate and retain the initial model before training (automatic for symbolic-only)')
+        help='evaluate and retain the initial model before training')
     parser.add_argument(
-        '--concept-threshold', type=float, default=0.5,
-        help='fixed sigmoid threshold for concept F1; do not tune this on the test set')
+        '--synergy-annotations', default='annotations/class_synergy.json',
+        help='class x synergy relevance labels for plausibility metrics (evaluation only)')
     parser.add_argument(
         '--ignore-weights',
         type=str,
@@ -263,15 +267,16 @@ class Processor():
 
     def __init__(self, arg):
         self.arg = arg
-        if arg.phase == 'train' and (arg.pretrained_finetune or arg.symbolic_only) and not arg.weights:
-            raise ValueError('Pretrained fine-tuning requires --weights with a matching Hyper-GCN checkpoint.')
-        if not 0 < arg.concept_threshold < 1:
-            raise ValueError('concept_threshold must be between 0 and 1')
+        if arg.phase == 'train' and arg.freeze_until not in (None, 'none') and not arg.weights:
+            raise ValueError('freeze_until requires --weights with a matching Hyper-GCN checkpoint.')
         self.save_arg()
         if arg.phase == 'train':
             if not arg.train_feeder_args['debug']:
                 arg.model_saved_name = os.path.join(arg.work_dir, 'runs')
-                if os.path.isdir(arg.model_saved_name):
+                if os.path.isdir(arg.model_saved_name) and not sys.stdin.isatty():
+                    # Non-interactive runs (Kaggle, nohup) keep the old TensorBoard logs.
+                    print('log_dir: ', arg.model_saved_name, 'already exist; keeping it')
+                elif os.path.isdir(arg.model_saved_name):
                     print('log_dir: ', arg.model_saved_name, 'already exist')
                     answer = input('delete it? y/n:')
                     if answer == 'y':
@@ -288,20 +293,15 @@ class Processor():
         # pdb.set_trace()
         self.load_model()
         if self.arg.phase == 'train':
-            counts = configure_trainable_parameters(self.model, self.arg.symbolic_only)
+            counts = configure_trainable_parameters(self.model, self.arg.freeze_until)
             self.print_log('Parameters: {}'.format(counts))
-            if self.arg.symbolic_only:
-                action_mode = getattr(self.model, 'symbolic_action_mode', 'blackbox')
-                self.print_log('Symbolic-only: backbone/classifier frozen, pretrained BN in eval; '
-                               'action_mode={}; loss = CE + symbolic_graph_weight * concept BCE '
-                               '(no divergence).'.format(action_mode))
 
         if self.arg.phase == 'model_size':
             pass
         else:
             self.load_optimizer()
             self.load_data()
-            self.configure_symbolic()
+            self.configure_synergy()
         self.lr = self.arg.base_lr
         self.best_acc = 0
         self.best_acc_epoch = 0
@@ -326,13 +326,17 @@ class Processor():
                 batch_size=self.arg.batch_size,
                 shuffle=True,
                 num_workers=self.arg.num_worker,
-                drop_last=True)
+                drop_last=True,
+                pin_memory=True,
+                persistent_workers=self.arg.num_worker > 0)
         self.data_loader['test'] = torch.utils.data.DataLoader(
             dataset=Feeder(**self.arg.test_feeder_args),
             batch_size=self.arg.test_batch_size,
             shuffle=False,
             num_workers=self.arg.num_worker,
-            drop_last=False)
+            drop_last=False,
+            pin_memory=True,
+            persistent_workers=self.arg.num_worker > 0)
 
     def load_model(self):
         output_device = self.arg.device[0] if type(self.arg.device) is list else self.arg.device
@@ -354,95 +358,49 @@ class Processor():
                 weights = torch.load(self.arg.weights, map_location='cpu')
             report = load_model_weights(
                 self.model, weights,
-                allow_new_symbolic=self.arg.phase == 'train' and (
-                    self.arg.pretrained_finetune or self.arg.symbolic_only),
+                allow_new=self.arg.phase == 'train',
                 ignore_weights=self.arg.ignore_weights,
             )
-            if self.arg.phase == 'train' and self.arg.symbolic_only:
-                missing_frozen = [key for key in report['initialized']
-                                  if not key.startswith('symbolic_graph.')]
-                if missing_frozen:
-                    raise ValueError('symbolic_only cannot freeze uninitialized pretrained keys: {}'.format(missing_frozen))
             self.print_log('Checkpoint load: {}'.format(report))
 
-    def configure_symbolic(self):
-        bridge = getattr(self.model, 'symbolic_graph', None)
-        if bridge is None:
-            return
-        if getattr(bridge, 'structured_mode', False):
-            audit = bridge.audit()
-            with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
-                json.dump(audit, handle, indent=2, allow_nan=False)
-            self.print_log(
-                'Symbolic structured mode: {} primitives, {} relations, graph={}, grounding={}'.format(
-                    audit['num_primitives'], audit['num_relations'],
-                    bridge.hypergraph_mode, audit['grounding_mode'],
-                )
-            )
-            return
-        if self.arg.phase == 'train':
-            labels = np.asarray(self.data_loader['train'].dataset.label)
-            num_classes = bridge.support.shape[0]
-            if (labels.ndim != 1 or not np.issubdtype(labels.dtype, np.integer)
-                    or labels.size == 0 or labels.min() < 0 or labels.max() >= num_classes):
-                raise ValueError('training labels must be integer NTU indices matching num_class')
-            bridge.set_training_class_counts(np.bincount(labels, minlength=num_classes))
-        elif bridge.balance_loss and not bridge._positive_weight_ready:
-            raise ValueError('Balanced test loss needs a symbolic checkpoint with training_class_counts; '
-                             'for legacy weights set symbolic_balance_loss=False explicitly.')
-        audit = bridge.audit()
-        with open(os.path.join(self.arg.work_dir, 'symbolic_audit.json'), 'w', encoding='utf-8') as handle:
-            json.dump(audit, handle, indent=2, allow_nan=False)
-        audit_csv = os.path.join(self.arg.work_dir, 'concept_body_joint_audit.csv')
-        with open(audit_csv, 'w', newline='', encoding='utf-8') as handle:
-            writer = csv.DictWriter(handle, fieldnames=(
-                'concept_id', 'concept_name', 'scope', 'parts', 'joints',
-                'interaction', 'positive_classes', 'positive_training_samples',
-            ))
-            writer.writeheader()
-            for concept_id, concept in enumerate(audit['concepts']):
-                writer.writerow({
-                    'concept_id': concept_id,
-                    'concept_name': concept['name'],
-                    'scope': concept['scope'],
-                    'parts': '|'.join(concept['parts']),
-                    'joints': '|'.join(str(joint) for joint in concept['joints']),
-                    'interaction': concept['interaction'],
-                    'positive_classes': concept['positive_classes'],
-                    'positive_training_samples': concept['positive_training_samples'],
-                })
-        self.print_log(
-            'Symbolic: {} concepts, graph={}, grounding={}, decoder={}, '
-            'balance={}, source={}, cap={}'.format(
-                bridge.num_concepts, bridge.hypergraph_mode,
-                audit['grounding_mode'], bridge.action_matching,
-                bridge.balance_loss, bridge.pos_weight_source,
-                bridge.pos_weight_max,
-            )
-        )
+    def synergy_annotations(self, bottleneck):
+        path = self.arg.synergy_annotations
+        if not path or not os.path.exists(path):
+            return None
+        return load_annotations(path, NTU_ACTION_NAMES[:bottleneck.num_classes], bottleneck.names)
 
-    def log_symbolic_gates(self, writer=None):
-        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-        bridge = getattr(model_ref, 'symbolic_graph', None)
-        if bridge is None:
+    def configure_synergy(self):
+        bottleneck = getattr(self.model, 'synergy', None)
+        if bottleneck is None:
             return
-        if getattr(bridge, 'structured_mode', False):
-            self.print_log('\tSymbolic gates: structured event graph')
-            return
-        values = {}
-        if bridge.hypergraph_mode == 'learnable_v1':
-            values['hypergraph_gate'] = torch.tanh(bridge.hypergraph_gate).detach().item()
-        else:
-            values['concept_graph_gate'] = torch.tanh(bridge.concept_graph_gate).detach().item()
-        self.print_log('\tSymbolic gates: {}'.format(values))
-        if writer is not None:
-            for name, value in values.items():
-                writer.add_scalar('symbolic/' + name, value, self.global_step)
+        audit = bottleneck.audit()
+        audit['semantic_layers'] = [name for name in ('l7', 'l8', 'l9')
+                                    if getattr(self.model, name).gcn1 in self.model.semantic_layers()]
+        audit['freeze_until'] = self.arg.freeze_until
+        audit['annotations'] = self.arg.synergy_annotations if self.synergy_annotations(bottleneck) is not None else None
+        with open(os.path.join(self.arg.work_dir, 'synergy_audit.json'), 'w', encoding='utf-8') as handle:
+            json.dump(audit, handle, indent=2, allow_nan=False)
+        self.print_log('Synergy bottleneck: {} single + {} pair synergies, {} segments, readout={}, tied={}, '
+                       'semantic layers={}'.format(
+                           len(audit['single_synergies']), len(audit['pair_synergies']), audit['segments'],
+                           audit['readout'], audit['tied'], audit['semantic_layers']))
 
     def load_optimizer(self):
-        parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if not parameters:
+        named = [(name, p) for name, p in self.model.named_parameters() if p.requires_grad]
+        if not named:
             raise ValueError('No trainable parameters for optimizer')
+        # The head (fc, synergy bottleneck, semantic hyperedges) learns at the
+        # base rate, fine-tuned backbone layers at backbone_lr_scale. beta must
+        # not be decayed back to its initial value 0.
+        groups = [
+            dict(params=[p for name, p in named if not is_head_key(name)],
+                 lr_scale=self.arg.backbone_lr_scale),
+            dict(params=[p for name, p in named if is_head_key(name) and not name.endswith('.semantic.beta')],
+                 lr_scale=1.0),
+            dict(params=[p for name, p in named if name.endswith('.semantic.beta')],
+                 lr_scale=1.0, weight_decay=0.0),
+        ]
+        parameters = [group for group in groups if group['params']]
         if self.arg.optimizer == 'SGD':
             self.optimizer = optim.SGD(
                 parameters,
@@ -477,7 +435,7 @@ class Processor():
                 lr = self.arg.base_lr * (
                         self.arg.lr_decay_rate ** np.sum(epoch >= np.array(self.arg.step)))
             for param_group in self.optimizer.param_groups:
-                param_group['lr'] = lr
+                param_group['lr'] = lr * param_group.get('lr_scale', 1.0)
             return lr
         else:
             raise ValueError()
@@ -505,17 +463,16 @@ class Processor():
         return split_time
 
     def train(self, epoch, save_model=False):
-        symbolic_only = getattr(self.arg, 'symbolic_only', False)
-        set_training_mode(self.model, symbolic_only)
+        set_training_mode(self.model, self.arg.freeze_until)
         self.print_log('Training epoch: {}'.format(epoch + 1))
         loader = self.data_loader['train']
         self.adjust_learning_rate(epoch)
+        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+        bottleneck = getattr(model_ref, 'synergy', None)
 
         loss_value = []
         acc_value = []
-        component_sums = dict(ce=0.0, divergence=0.0, symbolic=0.0,
-                              symbolic_weighted=0.0, hypergraph=0.0,
-                              hypergraph_weighted=0.0)
+        component_sums = dict(ce=0.0, divergence=0.0, gate=0.0, entropy=0.0)
         sample_count = 0
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
@@ -531,46 +488,21 @@ class Processor():
 
             # forward
             output = self.model(data)
-            h_loss = data.new_zeros(())
-            symbolic_loss = data.new_zeros(())
-            symbolic_weighted = data.new_zeros(())
-            hypergraph_loss = data.new_zeros(())
-            hypergraph_weighted = data.new_zeros(())
-            if isinstance(output, tuple):
+            terms = dict(gate=data.new_zeros(()), entropy=data.new_zeros(()))
+            if hasattr(output, 'action_logits'):
+                ce_loss = self.loss(output.action_logits, label)
+                h_loss = self.h_loss(output.hyper_outputs)
+                loss, terms = bottleneck.total_loss(ce_loss, output, label)
+                loss = loss + h_loss
+                output = output.action_logits
+            elif isinstance(output, tuple):
                 ce_loss = self.loss(output[0], label)
-                if not symbolic_only:
-                    h_loss = self.h_loss(output[1])
+                h_loss = self.h_loss(output[1])
                 loss = ce_loss + h_loss
-                if len(output) > 2 and output[2] is not None:
-                    model_ref = (
-                        self.model.module
-                        if hasattr(self.model, "module")
-                        else self.model
-                    )
-                    supervision = getattr(model_ref, 'last_symbolic_supervision', None)
-                    symbolic_loss = model_ref.symbolic_graph.loss(
-                        output[2],
-                        label,
-                        targets=(
-                            supervision['primitive_targets']
-                            if supervision is not None else None
-                        ),
-                        confidence=(
-                            supervision['primitive_confidence']
-                            if supervision is not None else None
-                        ),
-                    )
-                    symbolic_weighted = model_ref.symbolic_graph_weight * symbolic_loss
-                    loss = loss + symbolic_weighted
-                    hypergraph_loss = model_ref.symbolic_graph.structure_loss()
-                    hypergraph_weighted = (
-                        getattr(model_ref, 'symbolic_hypergraph_reg_weight', 0.0)
-                        * hypergraph_loss
-                    )
-                    loss = loss + hypergraph_weighted
                 output = output[0]
             else:
                 ce_loss = self.loss(output, label)
+                h_loss = data.new_zeros(())
                 loss = ce_loss
 
             # backward
@@ -586,10 +518,7 @@ class Processor():
             acc_value.append(acc.data.item())
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
-            components = dict(ce=ce_loss, divergence=h_loss, symbolic=symbolic_loss,
-                              symbolic_weighted=symbolic_weighted,
-                              hypergraph=hypergraph_loss,
-                              hypergraph_weighted=hypergraph_weighted)
+            components = dict(ce=ce_loss, divergence=h_loss, **terms)
             for name, component in components.items():
                 value = component.detach().item()
                 self.train_writer.add_scalar('loss/' + name, value, self.global_step)
@@ -610,10 +539,13 @@ class Processor():
         self.print_log(
             '\tMean training loss: {:.4f}. Mean training acc: {:.2f}%.'.format(np.mean(loss_value), np.mean(acc_value)*100))
         self.print_log('\tTime consumption: [Data]{dataloader}, [Network]{model}'.format(**proportion))
-        self.print_log('\tMean loss components: {}'.format({
+        mean_components = {
             name: total / max(sample_count, 1) for name, total in component_sums.items()
-        }))
-        self.log_symbolic_gates(self.train_writer)
+        }
+        self.print_log('\tMean loss components: {}'.format(
+            ', '.join('{}={:.4f}'.format(name, value) for name, value in mean_components.items())))
+        self.last_train_summary = dict(loss=float(np.mean(loss_value)), acc=float(np.mean(acc_value)),
+                                       lr=float(self.lr), **mean_components)
 
         if save_model:
             self.save_checkpoint(epoch + 1)
@@ -625,25 +557,71 @@ class Processor():
         torch.save(weights, path)
         return path
 
-    def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None):
+    def summarize_synergy(self, accumulator, bottleneck, ln, epoch):
+        """Readout faithfulness, compactness, gates and plausibility (plan section 3)."""
+        summary = dict(epoch=epoch + 1)
+        summary.update(accumulator.summary(self.synergy_annotations(bottleneck)))
+        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+        summary['beta'] = {name: float(getattr(model_ref, name).gcn1.semantic.beta)
+                           for name in ('l7', 'l8', 'l9')
+                           if getattr(model_ref, name).gcn1 in model_ref.semantic_layers()}
+        prefix = os.path.join(self.arg.work_dir, 'epoch{}_{}_'.format(epoch + 1, ln))
+        with open(prefix + 'synergy_metrics.json', 'w', encoding='utf-8') as handle:
+            json.dump(summary, handle, indent=2, allow_nan=False)
+        with open(prefix + 'explanations.json', 'w', encoding='utf-8') as handle:
+            json.dump(accumulator.explanations, handle, indent=2, allow_nan=False)
+        np.save(prefix + 'synergy_profile.npy', accumulator.profile())
+
+        plausible = summary.get('plausibility') or {}
+
+        def fmt(value):
+            return 'n/a' if value is None else '{:.4f}'.format(value)
+
+        self.print_log('\tSynergy: deletion_auc={} (random {}), insertion_auc={} (random {}), '
+                       'effective={}, gate_mean={}, precision@3={}, beta={}'.format(
+                           fmt(summary['deletion_auc']), fmt(summary['random_deletion_auc']),
+                           fmt(summary['insertion_auc']), fmt(summary['random_insertion_auc']),
+                           fmt(summary['effective_synergies']), fmt(summary['gate_mean']),
+                           fmt(plausible.get('precision_at_k')),
+                           {k: round(v, 4) for k, v in summary['beta'].items()}))
+        if self.arg.phase == 'train':
+            for key in ('deletion_auc', 'random_deletion_auc', 'insertion_auc', 'random_insertion_auc',
+                        'deletion_gap', 'insertion_gap', 'effective_synergies', 'gate_mean'):
+                self.val_writer.add_scalar('synergy/' + key, summary[key], self.global_step)
+            if plausible.get('precision_at_k') is not None:
+                self.val_writer.add_scalar('synergy/precision_at_3', plausible['precision_at_k'], self.global_step)
+        return summary
+
+    def append_history(self, epoch, ln, test_loss, accuracy, selection_score, is_best, synergy_summary):
+        """One JSON line per evaluated epoch: train losses, test metrics, best flag."""
+        record = dict(epoch=epoch + 1, split=ln, test_loss=test_loss, test_top1=accuracy,
+                      selection_score=selection_score, is_best=bool(is_best),
+                      checkpoint=self.best_weights_path if is_best else None)
+        if epoch >= 0 and getattr(self, 'last_train_summary', None) is not None:
+            record['train'] = self.last_train_summary
+        if synergy_summary is not None:
+            record['synergy'] = {key: value for key, value in synergy_summary.items()
+                                 if key not in ('epoch', 'class_top_synergies', 'gate_mean_per_synergy',
+                                                'dominant_synergy_share')}
+        with open(os.path.join(self.arg.work_dir, 'history.jsonl'), 'a', encoding='utf-8') as handle:
+            handle.write(json.dumps(record, allow_nan=False) + '\n')
+
+    def eval(self, epoch, save_score=False, loader_name=['test'], wrong_file=None, result_file=None,
+             record_history=True):
         if wrong_file is not None:
             f_w = open(wrong_file, 'w')
         if result_file is not None:
             f_r = open(result_file, 'w')
         self.model.eval()
         model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-        bridge = getattr(model_ref, 'symbolic_graph', None)
+        bottleneck = getattr(model_ref, 'synergy', None)
         self.print_log('Eval epoch: {}'.format(epoch + 1))
         accuracies = {}
         for ln in loader_name:
-            if bridge is not None and bridge.action_decoder == 'prototype':
-                bridge.reset_grounding_statistics()
             loss_value = []
             score_frag = []
-            concept_frag = []
-            concept_labels = []
-            symbolic_loss_sum = 0.0
-            concept_sample_count = 0
+            accumulator = (SynergyAccumulator(bottleneck, NTU_ACTION_NAMES[:bottleneck.num_classes])
+                           if bottleneck is not None else None)
             step = 0
             process = tqdm(self.data_loader[ln], ncols=40)
             for batch_idx, (data, label, index) in enumerate(process):
@@ -651,13 +629,12 @@ class Processor():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
                     output = self.model(data)
-                    if isinstance(output, tuple):
+                    if hasattr(output, 'action_logits'):
+                        loss = self.loss(output.action_logits, label)
+                        accumulator.update(output, label)
+                        output = output.action_logits
+                    elif isinstance(output, tuple):
                         loss = self.loss(output[0], label)
-                        if len(output) > 2 and output[2] is not None:
-                            symbolic_loss_sum += bridge.loss(output[2], label).item() * label.size(0)
-                            concept_sample_count += label.size(0)
-                            concept_frag.append(output[2].detach().cpu().numpy())
-                            concept_labels.append(label.cpu().numpy())
                         output = output[0]
                     else:
                         loss = self.loss(output, label)
@@ -680,10 +657,14 @@ class Processor():
                 self.data_loader[ln].dataset.sample_name = np.arange(len(score))
             accuracy = self.data_loader[ln].dataset.top_k(score, 1)
             accuracies[ln] = accuracy
+            selection_score = accuracy
+            synergy_summary = None
+            if accumulator is not None:
+                synergy_summary = self.summarize_synergy(accumulator, bottleneck, ln, epoch)
             initial_candidate = epoch == -1 and getattr(self, 'best_weights_path', None) is None
-            is_best = accuracy > self.best_acc or initial_candidate
+            is_best = selection_score > self.best_acc or initial_candidate
             if is_best:
-                self.best_acc = accuracy
+                self.best_acc = selection_score
                 self.best_acc_epoch = epoch + 1
                 if self.arg.phase == 'train':
                     # Also save improvements between periodic saves, and retain
@@ -714,129 +695,9 @@ class Processor():
             for k in self.arg.show_topk:
                 self.print_log('\tTop{}: {:.2f}%'.format(
                     k, 100 * self.data_loader[ln].dataset.top_k(score, k)))
-
-            if concept_frag and not getattr(bridge, 'structured_mode', False):
-                logits = np.concatenate(concept_frag)
-                labels = np.concatenate(concept_labels)
-                targets = bridge.support.detach().cpu().numpy()[labels]
-                metrics = concept_metrics(logits, targets, bridge.metadata, self.arg.concept_threshold)
-                probabilities = 1.0 / (1.0 + np.exp(-np.clip(logits, -30, 30)))
-                concept_std = probabilities.std(axis=0)
-                dead_indices = np.flatnonzero(concept_std < 1e-4)
-                activation_frequency = (
-                    probabilities >= self.arg.concept_threshold
-                ).mean(axis=0)
-                centered = probabilities - probabilities.mean(axis=0, keepdims=True)
-                scale = np.sqrt((centered * centered).sum(axis=0))
-                normalized = centered / np.maximum(scale, 1e-12)
-                correlation = normalized.T @ normalized
-                np.fill_diagonal(correlation, 0.)
-                pairs = np.argwhere(np.triu(correlation > .95, k=1))
-                ranked_pairs = sorted(
-                    (
-                        (float(correlation[left, right]), int(left), int(right))
-                        for left, right in pairs
-                    ), reverse=True,
-                )[:20]
-                metrics['activation_summary'] = {
-                    'mean_probability': float(probabilities.mean()),
-                    'mean_activation_frequency': float(activation_frequency.mean()),
-                    'dead_concept_count': int(dead_indices.size),
-                    'dead_concepts': [bridge.concept_names[index] for index in dead_indices],
-                    'high_correlation_pair_count': int(pairs.shape[0]),
-                    'top_correlated_pairs': [
-                        {
-                            'left': bridge.concept_names[left],
-                            'right': bridge.concept_names[right],
-                            'correlation': value,
-                        }
-                        for value, left, right in ranked_pairs
-                    ],
-                }
-                metrics['loss'] = symbolic_loss_sum / concept_sample_count
-                metrics['weighted_loss'] = model_ref.symbolic_graph_weight * metrics['loss']
-                metrics['action_top1'] = accuracy
-                metrics['delta_from_initial_pp'] = delta_pp
-                if bridge.hypergraph_mode == 'learnable_v1':
-                    hypergraph = bridge.hypergraph_snapshot()
-                    metrics['hypergraph_structure_loss'] = hypergraph['structure_loss']
-                    hypergraph_path = os.path.join(
-                        self.arg.work_dir,
-                        'epoch{}_{}_hypergraph.json'.format(epoch + 1, ln),
-                    )
-                    with open(hypergraph_path, 'w', encoding='utf-8') as handle:
-                        json.dump(hypergraph, handle, indent=2, allow_nan=False)
-                    if is_best:
-                        with open(os.path.join(self.arg.work_dir, 'best_hypergraph.json'),
-                                  'w', encoding='utf-8') as handle:
-                            json.dump(hypergraph, handle, indent=2, allow_nan=False)
-                    self.print_log(
-                        '\tHypergraph: structure={:.6f}, prior={:.4f}, nonprior={:.4f}, changed={}'.format(
-                            hypergraph['structure_loss'], hypergraph['mean_prior_membership'],
-                            hypergraph['mean_nonprior_membership'],
-                            hypergraph['changed_memberships_at_0.5'],
-                        )
-                    )
-                    if self.arg.phase == 'train':
-                        for name in ('structure_loss', 'mean_prior_membership',
-                                     'mean_nonprior_membership', 'changed_memberships_at_0.5'):
-                            self.val_writer.add_scalar('hypergraph/' + name, hypergraph[name], self.global_step)
-                if bridge.action_decoder == 'prototype':
-                    grounding = bridge.grounding_snapshot()
-                    metrics['grounding'] = {
-                        key: value for key, value in grounding.items()
-                        if key != 'concepts'
-                    }
-                    grounding_path = os.path.join(
-                        self.arg.work_dir,
-                        'epoch{}_{}_grounding.json'.format(epoch + 1, ln),
-                    )
-                    with open(grounding_path, 'w', encoding='utf-8') as handle:
-                        json.dump(grounding, handle, indent=2, allow_nan=False)
-                    if is_best:
-                        with open(os.path.join(self.arg.work_dir, 'best_grounding.json'),
-                                  'w', encoding='utf-8') as handle:
-                            json.dump(grounding, handle, indent=2, allow_nan=False)
-                    self.print_log(
-                        '\tGrounding: temporal_entropy={:.4f}, '
-                        'person_entropy={:.4f}, token_norm={:.4f}'.format(
-                            grounding['mean_temporal_entropy'],
-                            grounding['mean_person_entropy'],
-                            grounding['mean_token_norm'],
-                        )
-                    )
-                    if self.arg.phase == 'train':
-                        for name in ('mean_temporal_entropy', 'mean_person_entropy',
-                                     'mean_token_norm'):
-                            self.val_writer.add_scalar(
-                                'grounding/' + name, grounding[name], self.global_step
-                            )
-                metrics_path = os.path.join(self.arg.work_dir, 'epoch{}_{}_concept_metrics.json'.format(epoch + 1, ln))
-                with open(metrics_path, 'w', encoding='utf-8') as handle:
-                    json.dump(metrics, handle, indent=2, allow_nan=False)
-                self.print_log('\tSymbolic: loss={:.4f}, macro-F1={}, mAP={}, active={}/{}'.format(
-                    metrics['loss'], metrics['macro_f1'], metrics['mAP'],
-                    metrics['concepts_with_positives'], metrics['num_concepts']))
-                if self.arg.phase == 'train':
-                    for name in ('macro_f1', 'macro_f1_all', 'micro_f1', 'mAP', 'loss', 'weighted_loss'):
-                        if metrics[name] is not None:
-                            self.val_writer.add_scalar('symbolic/' + name, metrics[name], self.global_step)
-                    for scope, summary in metrics['scopes'].items():
-                        for name in ('macro_f1', 'mAP'):
-                            if summary[name] is not None:
-                                self.val_writer.add_scalar('symbolic/{}/{}'.format(scope, name),
-                                                           summary[name], self.global_step)
-                    self.val_writer.add_scalar(
-                        'symbolic/dead_concept_count',
-                        metrics['activation_summary']['dead_concept_count'],
-                        self.global_step,
-                    )
-                    self.val_writer.add_scalar(
-                        'symbolic/high_correlation_pair_count',
-                        metrics['activation_summary']['high_correlation_pair_count'],
-                        self.global_step,
-                    )
-                self.log_symbolic_gates(self.val_writer if self.arg.phase == 'train' else None)
+            if record_history:
+                self.append_history(epoch, ln, float(loss), accuracy, selection_score,
+                                    is_best, synergy_summary)
 
             if save_score:
                 with open('{}/epoch{}_{}_score.pkl'.format(
@@ -869,7 +730,7 @@ class Processor():
             def count_parameters(model):
                 return sum(p.numel() for p in model.parameters() if p.requires_grad)
             self.print_log(f'# Parameters: {count_parameters(self.model)}')
-            if self.arg.symbolic_only or self.arg.eval_before_train:
+            if self.arg.eval_before_train:
                 self.print_log('Initial evaluation before any optimizer step (epoch 0).')
                 self.baseline_accuracy = self.eval(epoch=-1, save_score=self.arg.save_score)
                 with open(os.path.join(self.arg.work_dir, 'initial_evaluation.json'), 'w', encoding='utf-8') as handle:
@@ -881,8 +742,10 @@ class Processor():
 
                 self.train(epoch, save_model=save_model)
 
-                # if epoch + 1 >= self.arg.eval_epoch:
-                self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
+                # Sparse evaluation early, every epoch from eval_epoch on, always the last epoch.
+                if ((epoch + 1) % self.arg.eval_interval == 0 or epoch + 1 >= self.arg.eval_epoch
+                        or epoch + 1 == self.arg.num_epoch):
+                    self.eval(epoch, save_score=self.arg.save_score, loader_name=['test'])
 
             # test the best model
             weights_path = self.best_weights_path
@@ -897,8 +760,13 @@ class Processor():
             wf = weights_path.replace('.pt', '_wrong.txt')
             rf = weights_path.replace('.pt', '_right.txt')
             self.arg.print_log = False
-            self.eval(epoch=self.best_acc_epoch - 1, save_score=True, loader_name=['test'], wrong_file=wf, result_file=rf)
+            self.eval(epoch=self.best_acc_epoch - 1, save_score=True, loader_name=['test'],
+                      wrong_file=wf, result_file=rf, record_history=False)
             self.arg.print_log = True
+            with open(os.path.join(self.arg.work_dir, 'best_checkpoint.json'), 'w', encoding='utf-8') as handle:
+                json.dump(dict(path=os.path.abspath(weights_path), epoch=self.best_acc_epoch,
+                               score=self.best_acc, selection_metric='top1'),
+                          handle, indent=2, allow_nan=False)
 
 
             num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)

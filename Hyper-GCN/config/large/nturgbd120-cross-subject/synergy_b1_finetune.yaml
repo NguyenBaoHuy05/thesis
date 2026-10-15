@@ -1,0 +1,59 @@
+work_dir: ./work_dir/ntu120/xsub/synergy_b1_finetune
+
+# Baseline B1: the same schedule as the main model (l1-l6 frozen, l7-l9 at
+# backbone_lr_scale) but no synergies; the original fc classifier is kept.
+# Separates the effect of fine-tuning from the effect of the bottleneck.
+# The initial evaluation re-measures B0 (the official checkpoint).
+weights: /content/large/ntu120/xsub/joint/runs-122-120048.pt
+freeze_until: l6
+backbone_lr_scale: 0.1
+eval_before_train: True
+
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: /content/drive/MyDrive/BaoHuy/KLTN_Huy-Nhu/NTU120_CSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  random_rot: True
+  vel: False
+  bone: False
+  p_interval: [0.5, 1]
+
+test_feeder_args:
+  data_path: /content/drive/MyDrive/BaoHuy/KLTN_Huy-Nhu/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+model: model.hypergcn_large.Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'
+
+weight_decay: 0.0001
+optimizer: Adam
+base_lr: 0.001
+lr_decay_rate: 0.1
+step: [20, 26]
+warm_up_epoch: 2
+
+device: [0]
+num_worker: 6
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+save_epoch: 0
+eval_interval: 2
+eval_epoch: 20

@@ -131,135 +131,52 @@ python ensemble.py --datasets ntu120/xsub --model base --joint-dir <the save pat
 
 # Pretrained Models
 
-## Symbolic branch: fine-tuning and monitoring
+## Semantic hypergraph / synergy bottleneck (large only)
 
-The active symbolic-only config at `config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml` requires a\r?\npretrained checkpoint. The configs in `config/symbolic/` and\r?\n`config/symbolic_large/` train from scratch by default; optional weights can still be supplied.
-The equivalent large-backbone fine-tuning configs are available under
-`config/symbolic_large/`; the one-stage NTU120 cross-subject large experiment is
-`config/large/nturgbd120-cross-subject/hyper_joint_symbolic.yaml`.
-The configs in `config/symbolic/` use the baseline's SGD, augmentation, batch
-size and schedule, with `base_lr: 0.0001` for full fine-tuning.
-The active `hyper_joint_symbolic.yaml` instead runs a **one-stage concept-to-action
-symbolic experiment**: 20 epochs, Adam LR 0.0003, a one-epoch warmup and LR decay
-at epochs 12 and 17 (zero-based scheduler indices). It uses a separate
-`joint_grounded_v2_tversky` work directory, keeping previous experiments intact.
-`num_worker: 0` is retained for Windows;
-`save_epoch: 0` keeps every evaluated epoch available for best-model selection.
-Weights initialize the model; optimizer/scheduler state and original training
-epochs are not resumed. No dependency on the checkpoint filename is required.
+`model.hypergcn_large.Model` with `synergy_enabled: True` adds named semantic
+hyperedges (body-part synergies, `model/synergies.py`) to l7-l9 and replaces the
+FC classifier by a synergy bottleneck:
+
+```text
+skeleton -> l1..l6 (frozen) -> l7..l9: A = A_phys + alpha G_dyn + beta G_sem(s)   (beta = 0 at start)
+         -> f[e,s] = mean over synergy e and segment s,  g[e,s] = gate (tied to W_sem of l9)
+         -> logit_c = sum_{e,s} g[e,s] <w_c,e, f[e,s]> + b_c
+```
+
+Logits are exactly the sum of the (synergy, segment) contributions, which are
+the explanation. Design, ablations and evaluation: `SEMANTIC_HYPERGRAPH_PLAN.md`.
+All runs start from an official large joint checkpoint (`weights` in the config):
 
 ```bash
-python main.py --config config/base/nturgbd120-cross-subject/hyper_joint_symbolic.yaml --weights PATH_TO_OFFICIAL_CHECKPOINT.pt
+# P1: frozen backbone, bottleneck only (feasibility)
+python main.py --config config/large/nturgbd120-cross-subject/synergy_p1_frozen.yaml
+# M: main model; B1: same fine-tuning schedule without synergies (also re-measures B0)
+python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml
+python main.py --config config/large/nturgbd120-cross-subject/synergy_b1_finetune.yaml
+# Ablations A1-A5, A7: synergy_a*.yaml. A6 (segments) and seeds from the command line:
+python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml --model-args synergy_segments=8 --work-dir ./work_dir/ntu120/xsub/synergy_s8
+python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml --seed 2 --work-dir ./work_dir/ntu120/xsub/synergy_seed2
 ```
 
-`symbolic_only: True` freezes every pretrained parameter, including the original
-classifier, and keeps pretrained BatchNorm statistics and dropout in eval mode.
-With `symbolic_action_mode: prototype`, the original FC is retained only for
-strict checkpoint compatibility and is never executed. V2 preserves person and
-joint axes after `l9`; every concept receives a hard mask over its permitted NTU
-joints, four ordered temporal bins and scope-aware person aggregation. The three
-participant concepts use an explicit two-person pair token. There is no global
-feature residual around this concept bottleneck.
+`--freeze-until lK` freezes the embedding and l1..lK (BatchNorm in eval mode),
+`--backbone-lr-scale` scales the learning rate of the other backbone layers.
+Pair synergies need joint-mode input (`vel: False`, `bone: False`) to detect
+duplicated second actors. Each evaluation writes `epochN_test_synergy_metrics.json`
+(readout deletion/insertion AUC vs random order, effective synergies, gate
+statistics, class top synergies, precision@3/nDCG against
+`annotations/class_synergy.json`), `epochN_test_explanations.json` and
+`epochN_test_synergy_profile.npy` (mean contribution [class, synergy, segment]).
 
-Action logits use an IDF-weighted asymmetric Tversky match between 102 concept
-probabilities and 120 fixed CSV templates. Missing template evidence has weight
-1.0, while extra evidence in an unannotated matrix cell has a softer 0.15
-penalty. The similarity is converted to log-odds and temperature-scaled; no
-learned action MLP/classifier is introduced. Bernoulli and cosine matching remain
-available only as controlled decoder ablations. The loss is
-`action CE + 0.10 * balanced concept BCE + 0.01 * hypergraph regularization`;
-divergence is not used.
-
-The active model uses `symbolic_hypergraph_mode: learnable_v1`. Its 22 named
-hyperedges are initialized from 11 anatomical regions, 8 metadata groups and 3
-concept scopes. A trainable incidence residual and relative hyperedge weights
-perform normalized concept-to-edge-to-concept message passing. The structure
-regularizer (`symbolic_hypergraph_reg_weight: 0.01`) anchors memberships to this
-prior, discourages dense/non-binary incidence and prevents isolated concepts.
-The 120 action templates are deliberately excluded from hypergraph construction
-to avoid leaking the downstream decoder into the learned topology.
-
-Before training, symbolic-only mode automatically evaluates the initial concept
-decoder as epoch 0 and saves
-`initial_evaluation.json` and `runs-0-0.pt`. Initialize directly from the same
-official Hyper-GCN checkpoint as the baseline. The symbolic predictor starts
-randomly and Adam jointly optimizes it using action CE and concept BCE; no
-intermediate symbolic checkpoint or second configuration is required.
-Each `epochN_test_action_metrics.json` reports Top-1 and its change in percentage
-points from epoch 0. Improvements are saved independently of periodic saves;
-if every trained epoch is worse, final evaluation restores epoch 0. Inspect
-epoch-level concept metrics too: the action-best checkpoint may be the untrained
-symbolic initialization. For final scientific comparisons, use a held-out
-training validation split for model/threshold selection rather than test tuning.
-Each `epochN_test_hypergraph.json` records learned memberships, relative edge
-weights, top concepts per edge and the number of prior memberships changed at a
-0.5 threshold. TensorBoard also logs structure loss, prior/non-prior membership
-means and the learnable hypergraph gate. Each `epochN_test_grounding.json`
-records temporal/person weights, joint masks and token norms for all concepts;
-the best action checkpoint also updates `best_grounding.json` and
-`best_hypergraph.json`. `concept_body_joint_audit.csv` provides a compact static
-mapping audit.
-
-To retain full fine-tuning, use
-`config/symbolic/nturgbd120-cross-subject/hyper_joint.yaml` instead.
-
-Only the new symbolic branch may be missing when `pretrained_finetune: True`
-in train mode. Missing backbone/classifier keys, wrong tensor sizes and unexpected
-keys fail rather than silently leaving pretrained layers uninitialized.
-Test mode requires trained symbolic parameters. Old CSV-derived checkpoint
-buffers are rebuilt from the validated current tables, not restored.
-
-For a fair **full fine-tuning** baseline comparison, fine-tune the same official checkpoint using
-the baseline config and the same fine-tuning LR and runtime options:
+Whole-network deletion/insertion (gates removed in G_sem and in the readout),
+rotation stability, seed comparison and heatmaps:
 
 ```bash
-python main.py --config config/base/nturgbd120-cross-subject/hyper_joint.yaml --weights PATH_TO_OFFICIAL_CHECKPOINT.pt --pretrained-finetune True --base-lr 0.0001 --num-worker 0 --save-epoch 0 --work-dir work_dir/ntu120/xsub/joint_finetune_baseline
+python evaluate_synergy.py --config WORK_DIR/config.yaml --weights BEST.pt --max-batches 40 \
+    --plot-classes drink_water kicking hugging [--compare OTHER_SEED/synergy_eval/synergy_eval.json]
 ```
 
-The concept CSV is validated against the NTU label order expressed by the v2.4
-action names. Column counts, binary values, unique contiguous metadata IDs and
-matching concept order are checked before building tensors. All rows are
-validated, including unused NTU120 rows in NTU60 experiments. Anatomical mapping
-correctly includes the head for hand-to-face/nose concepts and legs/feet for
-`lower_limb_kick_targeted`; unknown spatial concepts require an explicit mapping.
-The legacy static concept graph uses cosine similarity of class-support columns,
-unit self-loops and row normalization. Active V2 uses the learnable semantic
-hypergraph described above.
-
-The configs enable controlled BCE balancing:
-
-```yaml
-model_args:
-  symbolic_balance_loss: True
-  symbolic_pos_weight_source: train
-  symbolic_pos_weight_max: 10.0
-```
-
-`train` computes concept frequencies from training labels and class templates,
-without test labels. `class` instead assumes equal class frequencies. Positive
-weights are `clip(negative_count / positive_count, 1, cap)`; concepts with no
-positives use weight 1. Training class counts are saved with symbolic weights
-and used to rebuild BCE weights in test mode. Set `symbolic_balance_loss: False`
-for the unweighted ablation or evaluation of legacy symbolic checkpoints without
-training counts. Balancing changes calibration: the F1 threshold remains fixed
-at 0.5 (`--concept-threshold`); do not optimize it on test data.
-
-Monitoring outputs in each experiment directory:
-
-- TensorBoard: `loss/ce`, `loss/symbolic`, `loss/symbolic_weighted`,
-  `loss/hypergraph`, `symbolic/hypergraph_gate`, grounding entropy/token norms,
-  and dead/high-correlation concept counts.
-- Evaluation: concept macro/micro F1 and mAP, plus spatial/temporal/context
-  summaries in TensorBoard and `epochN_test_concept_metrics.json`.
-- `symbolic_audit.json` and `concept_body_joint_audit.csv`: concept mappings,
-  zero-based joints, interaction flags, decoder settings, class counts, training
-  frequencies and actual BCE weights.
-
-`macro_f1` and `mAP` exclude concepts without positive evaluation targets;
-`macro_f1_all` includes every concept with zero F1 for undefined cases. Per-concept
-reports show positive target/prediction counts and `AP: null` when no positives
-exist. These are **action-class template targets**, not independent per-video
-concept annotations; concept scores alone do not establish explanation quality.
+`annotations/class_synergy.json` is an LLM draft for evaluation only; check it
+by hand before reporting plausibility. It has no labels for the random bank (A2).
 
 CPU unit checks (no dataset training):
 

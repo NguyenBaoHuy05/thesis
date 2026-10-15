@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
 
-from model.symbolic_hyperconcept import SymbolicHyperConceptBridge
+
 def import_class(name):
     components = name.split('.')
     mod = __import__(components[0])
@@ -308,21 +308,7 @@ class TCN_GCN_unit(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3, hyper_joints=0,
-                 drop_out=0, symbolic_graph_enabled=False, concept_csv=None,
-                 metadata_csv=None, num_concepts=102, symbolic_graph_weight=0.10,
-                 symbolic_graph_temperature=0.20, symbolic_balance_loss=False,
-                 symbolic_pos_weight_max=10.0, symbolic_pos_weight_source="class",
-                 symbolic_action_mode="blackbox", symbolic_action_temperature=0.1,
-                 symbolic_hypergraph_mode="static_graph",
-                 symbolic_hypergraph_reg_weight=0.0,
-                 symbolic_concept_dim=64, symbolic_temporal_bins=4,
-                 symbolic_grounding_dropout=0.1,
-                 symbolic_action_decoder="bernoulli",
-                 symbolic_action_missing_weight=1.0,
-                 symbolic_action_extra_weight=0.15,
-                 symbolic_action_idf_weighting=True,
-                 symbolic_action_idf_min=0.5,
-                 symbolic_action_idf_max=2.0):
+                 drop_out=0):
         super(Model, self).__init__()
 
         if graph is None:
@@ -361,47 +347,9 @@ class Model(nn.Module):
             self.drop_out = nn.Dropout(drop_out)
         else:
             self.drop_out = lambda x: x
-        self.symbolic_graph_weight = float(symbolic_graph_weight)
-        self.symbolic_hypergraph_reg_weight = float(symbolic_hypergraph_reg_weight)
-        if self.symbolic_hypergraph_reg_weight < 0:
-            raise ValueError("symbolic_hypergraph_reg_weight must be nonnegative")
-        if symbolic_action_mode not in {"blackbox", "prototype"}:
-            raise ValueError("symbolic_action_mode must be 'blackbox' or 'prototype'")
-        if symbolic_action_mode == "prototype" and not symbolic_graph_enabled:
-            raise ValueError("prototype action mode requires symbolic_graph_enabled=True")
-        self.symbolic_action_mode = symbolic_action_mode
-        self.symbolic_graph = None
-        if symbolic_graph_enabled:
-            if concept_csv is None or metadata_csv is None:
-                raise ValueError(
-                    "concept_csv and metadata_csv are required when symbolic graph is enabled"
-                )
-            self.symbolic_graph = SymbolicHyperConceptBridge(
-                feature_dim=self.embedding_channels * 2,
-                concept_csv=concept_csv, metadata_csv=metadata_csv,
-                num_classes=num_class, num_concepts=num_concepts,
-                num_people=num_person, num_points=num_point,
-                temperature=symbolic_graph_temperature,
-                balance_loss=symbolic_balance_loss,
-                pos_weight_max=symbolic_pos_weight_max,
-                pos_weight_source=symbolic_pos_weight_source,
-                action_decoder="prototype" if symbolic_action_mode == "prototype" else "none",
-                action_temperature=symbolic_action_temperature,
-                hypergraph_mode=symbolic_hypergraph_mode,
-                concept_dim=symbolic_concept_dim,
-                temporal_bins=symbolic_temporal_bins,
-                grounding_dropout=symbolic_grounding_dropout,
-                action_matching=symbolic_action_decoder,
-                action_missing_weight=symbolic_action_missing_weight,
-                action_extra_weight=symbolic_action_extra_weight,
-                action_idf_weighting=symbolic_action_idf_weighting,
-                action_idf_min=symbolic_action_idf_min,
-                action_idf_max=symbolic_action_idf_max,
-            )
 
     def forward(self, x):
         N, C, T, V, M = x.size()
-        valid_person_mask = x.detach().abs().sum(dim=(1, 2, 3)) > 0
         x = x.permute(0, 4, 2, 3, 1).contiguous()
         x = self.to_joint_embedding(x)
         x += self.pos_embedding[:, :self.num_point]
@@ -428,36 +376,14 @@ class Model(nn.Module):
         x7 = x
         x, h_x8 = self.l8(x)
         x, h_x9 = self.l9(x + x7)
-        symbolic_concept_logits = None
-        if self.symbolic_graph is not None:
-            c_new = x.size(1)
-            t_new = x.size(2)
-            expected_channels = self.symbolic_graph.feature_dim
-            if c_new != expected_channels:
-                raise RuntimeError(
-                    f'Symbolic channel mismatch: backbone emits {c_new} channels, '
-                    f'but symbolic bridge expects {expected_channels}. '
-                    'Use c_new=x.size(1) and feature_dim=self.embedding_channels * 2.'
-                )
-            feature_map = x.reshape(N, M, c_new, t_new, V)
-            feature_map, symbolic_concept_logits = self.symbolic_graph(
-                feature_map, valid_person_mask=valid_person_mask
-            )
-            x = feature_map.reshape(N * M, c_new, t_new, V)
-        if self.symbolic_action_mode == "prototype":
-            # The pretrained black-box FC remains registered only so official
-            # checkpoints load strictly. It is not executed on this path.
-            output = self.symbolic_graph.action_logits(symbolic_concept_logits)
-        else:
-            # N*M,C,T,V
-            c_new = x.size(1)
-            x = x.view(N, M, c_new, -1)
-            x = x.mean(3).mean(1)
-            x = self.drop_out(x)
-            output = self.fc(x)
+
+        # N*M,C,T,V
+        c_new = x.size(1)
+        x = x.view(N, M, c_new, -1)
+        x = x.mean(3).mean(1)
+        x = self.drop_out(x)
+        output = self.fc(x)
         hyper_outputs = [h_x1, h_x2, h_x3, h_x4, h_x5, h_x6, h_x7, h_x8, h_x9]
-        if self.symbolic_graph is not None:
-            return output, hyper_outputs, symbolic_concept_logits
         return output, hyper_outputs
 
 

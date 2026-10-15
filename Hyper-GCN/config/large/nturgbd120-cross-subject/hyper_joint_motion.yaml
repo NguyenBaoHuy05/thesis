@@ -1,9 +1,6 @@
-work_dir: ./work_dir/ntu120/xsub/joint_structured_symbolic_large
+work_dir: ./work_dir/ntu120/xsub/joint_motion
 
-# The large-only symbolic path learns semantic primitives from backbone evidence.
-symbolic_only: True
-weights: null
-
+# feeder
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
   data_path: data/ntu120/NTU120_CSub.npz
@@ -14,19 +11,20 @@ train_feeder_args:
   random_move: False
   window_size: 64
   random_rot: True
-  vel: False
-  bone: False
   p_interval: [0.5, 1]
+  vel: True
+  bone: False
 
 test_feeder_args:
   data_path: data/ntu120/NTU120_CSub.npz
   split: test
   window_size: 64
   p_interval: [0.95]
-  vel: False
+  vel: True
   bone: False
   debug: False
 
+# model
 model: model.hypergcn_large.Model
 model_args:
   num_class: 120
@@ -36,22 +34,18 @@ model_args:
   graph: graph.ntu_rgb_d.Graph
   graph_args:
     labeling_mode: 'virtual_ensemble'
-  symbolic_graph_enabled: True
-  symbolic_action_mode: structured
-  symbolic_hypergraph_mode: dynamic_backbone
-  symbolic_primitive_loss_weight: 0.2
-  symbolic_relation_loss_weight: 0.1
 
+#optim
 weight_decay: 0.0004
-optimizer: Adam
-base_lr: 0.0003
+base_lr: 0.025
 lr_decay_rate: 0.1
-step: [12, 17]
-warm_up_epoch: 1
+step: [110, 120]
+warm_up_epoch: 5
 
+# training
 device: [0]
-num_worker: 0
 batch_size: 64
 test_batch_size: 64
-num_epoch: 20
-save_epoch: 0
+num_epoch: 140
+save_epoch: 110
+nesterov: True
