@@ -4,8 +4,9 @@
   python tools/kg_review.py import [--csv annotations/kg_review/edges.csv]
 
 export: one row per has/lacks edge, plus the edges dropped by excludes, sorted by review
-priority (1 = check first). Fill only the column human_label with one of
-has2, has1, unknown, lacks1, lacks2, or leave it empty to accept the LLM label.
+priority (1 = check first). Fill only the column human_label: "ok" to accept the LLM
+label after checking it, or one of has2, has1, unknown, lacks1, lacks2 to replace it.
+Empty = not reviewed (kept as is, not counted in the acceptance rate).
 import: applies the non-empty human labels, sets source="human" on changed edges and
 reviewed=true on every action with at least one reviewed row, and recomputes the hash.
 Note: tools/kg_build.py build regenerates the KG from the LLM answers and discards these
@@ -33,7 +34,8 @@ def export(kg, out):
         for kind in ("has", "lacks"):
             for attr, edge in a[kind].items():
                 agree = edge.get("agree")
-                priority = 2 if agree is not None and agree < 1 else 3
+                # Single-run S6 edges (agree None) and split votes come right after the drops.
+                priority = 2 if agree is None or agree < 1 else 3
                 rows.append(dict(priority=priority, action=name, attribute=attr,
                                  llm_label=label_of(kind, edge["w"]), agree=agree,
                                  evidence=edge.get("evidence", ""), note=edge.get("source", ""), human_label=""))
@@ -51,14 +53,21 @@ def export(kg, out):
 
 
 def apply(kg, path):
-    changed = 0
-    with open(path, encoding="utf-8") as handle:
+    changed = accepted = 0
+    with open(path, encoding="utf-8-sig") as handle:
         for row in csv.DictReader(handle):
             label = row["human_label"].strip()
             if not label:
                 continue
             a = kg["actions"][row["action"]]
             a["reviewed"] = True
+            if label == "ok":
+                # Reviewed and accepted: the LLM edge (or the drop) stays as it is.
+                for kind in ("has", "lacks"):
+                    if row["attribute"] in a[kind]:
+                        a[kind][row["attribute"]]["reviewed"] = True
+                accepted += 1
+                continue
             a["has"].pop(row["attribute"], None)
             a["lacks"].pop(row["attribute"], None)
             if label in LABELS:
@@ -73,7 +82,9 @@ def apply(kg, path):
     kg["hash"] = "sha256:" + hashlib.sha256(payload).hexdigest()
     with open(KG, "w", encoding="utf-8") as handle:
         json.dump(kg, handle, indent=1, ensure_ascii=False)
-    print(f"{changed} reviewed rows applied; run tools/validate_kg.py")
+    reviewed = changed + accepted
+    print(f"{reviewed} reviewed rows: {accepted} ok, {changed} changed "
+          f"(acceptance {100 * accepted / max(reviewed, 1):.1f}%); run tools/validate_kg.py")
 
 
 if __name__ == "__main__":

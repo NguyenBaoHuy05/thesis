@@ -124,11 +124,14 @@ Backbone đóng băng hoàn toàn ⇒ `z` cố định cho mỗi mẫu → **cac
 
 ## 3. Embedding text offline
 
-`tools/build_kg_embeddings.py --kg annotations/action_kg.json --encoder clip-vit-b32 --out annotations/kg_emb_clip.npz`
+`tools/build_kg_embeddings.py --kg annotations/action_kg.json --encoder mpnet --out annotations/kg_emb_mpnet.npz`
 
 - Chứa `action[120, D]`, `attribute[A, D]` (chuẩn hóa L2), cùng thứ tự khóa của JSON + hash của KG
   để head kiểm tra khớp khi load.
-- Hai encoder: CLIP text ViT-B/32 (D = 512), sentence-transformer `all-mpnet-base-v2` (D = 768).
+- Encoder chính: sentence-transformer `all-mpnet-base-v2` (D = 768) — văn bản là câu mô tả hành động
+  và định nghĩa thuộc tính, cần độ tương đồng ngữ nghĩa giữa các câu; không bị giới hạn 77 token của
+  CLIP nếu sau này muốn nhúng cả trường `motion`.
+  CLIP text ViT-B/32 (D = 512) chạy làm ablation A1-enc, để so được với các bài skeleton zero-shot dùng CLIP.
 - Chạy ở máy local / Colab, commit file `.npz` → Kaggle không cần text encoder.
 - **K1** (chỉ text, không KG) dùng cùng file: head chỉ có `s_c`.
 
