@@ -1,0 +1,110 @@
+{"answers": [
+{"action": "reading", "labels": {
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands held close together in front of chest or lap"},
+ "head_bowed_toward_hands": {"label": "has2", "evidence": "head tilts down toward the hands and stays"},
+ "long_hold": {"label": "has2", "evidence": "pose kept still for most of the action"},
+ "both_arms_symmetric": {"label": "has1", "evidence": "both forearms raised in mirrored position"},
+ "continuous_small_hand_motion": {"label": "lacks2", "evidence": "hands mostly still, unlike phone use or writing"},
+ "many_steady_repeats": {"label": "lacks1", "evidence": "only occasional sweeps, unlike counting_money"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "no repeated hand strokes"},
+ "asymmetric_hand_roles": {"label": "lacks1", "evidence": "neither hand works steadily on the other, unlike writing or counting"}
+}},
+{"action": "writing", "labels": {
+ "asymmetric_hand_roles": {"label": "has1", "evidence": "left hand still nearby while right hand moves"},
+ "single_arm_active": {"label": "has1", "evidence": "only the right hand moves"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "small hand motion with arm nearly fixed"},
+ "hands_low_in_front": {"label": "has2", "evidence": "right hand low in front at table height"},
+ "continuous_small_hand_motion": {"label": "has2", "evidence": "small continuous movements throughout"},
+ "head_bowed_toward_hands": {"label": "has2", "evidence": "head bowed toward the hand"},
+ "torso_bent_forward": {"label": "has1", "evidence": "torso leans slightly forward"},
+ "seated": {"label": "has1", "evidence": "often seated"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one hand moves, unlike two-hand typing"},
+ "hands_together_at_chest": {"label": "lacks2", "evidence": "hands low, not raised at chest as in reading"}
+}},
+{"action": "tear_up_paper", "labels": {
+ "hands_together_at_chest": {"label": "has2", "evidence": "hands together in front of the chest"},
+ "hands_touch_each_other": {"label": "has2", "evidence": "hands meet before each tear"},
+ "hands_move_apart": {"label": "has2", "evidence": "quick pulling apart of the hands"},
+ "hands_come_together": {"label": "has1", "evidence": "hands rejoin between tears"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "quick jerking tear"},
+ "both_arms_symmetric": {"label": "lacks1", "evidence": "one hand forward, other back, not mirrored like folding"},
+ "single_occurrence": {"label": "lacks1", "evidence": "tear repeats a few times"},
+ "long_hold": {"label": "lacks1", "evidence": "hands keep moving"}
+}},
+{"action": "put_on_jacket", "labels": {
+ "one_side_then_other": {"label": "has2", "evidence": "one arm reaches back, then the other"},
+ "hands_behind_torso": {"label": "has2", "evidence": "arms reach behind the body"},
+ "hand_crosses_midline": {"label": "has1", "evidence": "hand held near the opposite shoulder"},
+ "torso_twists": {"label": "has1", "evidence": "shoulders rotate as each arm reaches back"},
+ "single_occurrence": {"label": "has1", "evidence": "done once"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "arms move in sequence, not together as in stretch_oneself"},
+ "hands_above_head": {"label": "lacks1", "evidence": "arms stay below head, unlike stretching"},
+ "long_hold": {"label": "lacks2", "evidence": "no held pose, unlike stretch_oneself"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both arms reach back, unlike put_on_bag"}
+}},
+{"action": "take_off_jacket", "labels": {
+ "one_side_then_other": {"label": "has2", "evidence": "arms pulled out one at a time"},
+ "hands_behind_torso": {"label": "has2", "evidence": "hand holds behind the back"},
+ "hand_crosses_midline": {"label": "has1", "evidence": "hand reaches across to opposite shoulder or sleeve"},
+ "torso_twists": {"label": "has1", "evidence": "shoulders roll and rotate as arms pull out"},
+ "single_occurrence": {"label": "has1", "evidence": "done once"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both arms work, unlike take_off_bag"},
+ "long_hold": {"label": "lacks2", "evidence": "arms keep moving, unlike cross_arms"}
+}},
+{"action": "put_on_a_shoe", "labels": {
+ "hands_down_to_feet": {"label": "has2", "evidence": "both hands reach down to one foot"},
+ "torso_bent_forward": {"label": "has2", "evidence": "torso bends forward"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head lowered toward the foot"},
+ "seated": {"label": "has1", "evidence": "often seated"},
+ "on_one_leg": {"label": "has1", "evidence": "one leg raised when standing"},
+ "long_hold": {"label": "has1", "evidence": "hands stay at the foot for a long time"},
+ "hands_low_in_front": {"label": "has1", "evidence": "working hands low in front of the body"}
+}},
+{"action": "take_off_a_shoe", "labels": {
+ "hands_down_to_feet": {"label": "has2", "evidence": "both hands reach the heel"},
+ "torso_bent_forward": {"label": "has2", "evidence": "torso bends forward"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head lowered toward the foot"},
+ "seated": {"label": "has1", "evidence": "often seated"},
+ "on_one_leg": {"label": "has1", "evidence": "one leg lifted when standing"},
+ "hands_low_in_front": {"label": "has1", "evidence": "working hands low in front"},
+ "hand_retracts_to_body": {"label": "has1", "evidence": "hands pull away and come back up in front"},
+ "legs_cycle_in_place": {"label": "lacks2", "evidence": "no repeated leg lifts, unlike butt_kicks"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "no rhythmic repeats, unlike butt_kicks"},
+ "airborne": {"label": "lacks1", "evidence": "feet do not leave the floor together"}
+}},
+{"action": "put_on_glasses", "labels": {
+ "both_hands_at_face": {"label": "has2", "evidence": "hands close together in front of the eyes"},
+ "both_arms_symmetric": {"label": "has2", "evidence": "both hands move mirrored to the ears"},
+ "hand_beside_head": {"label": "has2", "evidence": "hands end at the sides of the head by the ears"},
+ "hands_move_apart": {"label": "has2", "evidence": "hands separate from eyes toward the ears"},
+ "single_occurrence": {"label": "has2", "evidence": "done once"},
+ "hand_on_head_top": {"label": "lacks2", "evidence": "hands do not pass over the top, unlike put_on_headphone"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hands stay at eye level"},
+ "repeated_short_strokes": {"label": "lacks2", "evidence": "single path, not repeated strokes as in wipe_face"},
+ "many_steady_repeats": {"label": "lacks1", "evidence": "no repetition"},
+ "hands_come_together": {"label": "lacks1", "evidence": "hands separate rather than join, unlike take_off_glasses"}
+}},
+{"action": "take_off_glasses", "labels": {
+ "hand_beside_head": {"label": "has2", "evidence": "hands start at the sides of the head"},
+ "both_hands_at_face": {"label": "has1", "evidence": "hands pass in front of the eyes"},
+ "both_arms_symmetric": {"label": "has2", "evidence": "both hands move mirrored"},
+ "hands_come_together": {"label": "has2", "evidence": "hands come together in front"},
+ "single_occurrence": {"label": "has2", "evidence": "done once"},
+ "hand_on_head_top": {"label": "lacks2", "evidence": "hands do not lift over the top, unlike take_off_headphone"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hands stay at face level"},
+ "long_hold": {"label": "lacks2", "evidence": "hands move away from the head, unlike headache"},
+ "hands_move_apart": {"label": "lacks2", "evidence": "hands converge, unlike put_on_glasses"}
+}},
+{"action": "put_on_a_hat_cap", "labels": {
+ "both_arms_symmetric": {"label": "has2", "evidence": "both arms lift together"},
+ "hands_above_head": {"label": "has2", "evidence": "hands rise above the head"},
+ "hand_on_head_top": {"label": "has2", "evidence": "hands rest on top of the head"},
+ "elbow_raised_high": {"label": "has2", "evidence": "elbows raised with hands above the head"},
+ "single_occurrence": {"label": "has2", "evidence": "done once"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hands rise, press on head briefly, lower"},
+ "hand_beside_head": {"label": "lacks1", "evidence": "hands end on top, not at the ears as in headphones"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both hands used, unlike brush_hair"},
+ "repeated_short_strokes": {"label": "lacks2", "evidence": "no repeated strokes, unlike brush_hair"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "single placement"}
+}}
+]}

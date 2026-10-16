@@ -1,0 +1,4901 @@
+{
+ "actions": {
+  "drink_water": {
+   "id": 0,
+   "name": "drink_water",
+   "text": "a person raises one hand to the mouth and tilts the head back",
+   "paraphrases": [
+    "a person lifts the right hand to the lips and leans the head back",
+    "a person brings one hand up to the mouth while the head tips backward",
+    "a person holds the right hand at the mouth and tilts the head upward briefly"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises from waist level to the mouth. The head tilts backward while the hand stays near the mouth for a moment. The hand then lowers back down to the front of the body and the head returns upright.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises from waist toward mouth",
+    "middle": "hand held at mouth, head tilted back",
+    "end": "hand lowers, head returns upright"
+   },
+   "not_observable": [
+    "cup or bottle",
+    "swallowing",
+    "liquid"
+   ],
+   "confusable_with": [
+    {
+     "name": "eat_meal",
+     "visible_difference": "eating repeats short hand-to-mouth trips without tilting the head back"
+    },
+    {
+     "name": "brush_teeth",
+     "visible_difference": "brushing keeps the hand at the mouth with fast small side-to-side motion"
+    },
+    {
+     "name": "cheers_and_drink",
+     "visible_difference": "cheers involves a second person and an arm extension toward them before drinking"
+    }
+   ],
+   "persons": 1
+  },
+  "eat_meal": {
+   "id": 1,
+   "name": "eat_meal",
+   "text": "a person repeatedly moves one hand from the table area to the mouth",
+   "paraphrases": [
+    "a person brings the right hand up to the mouth again and again",
+    "a person makes several trips with one hand between the lap and the mouth",
+    "a person, usually seated, lifts a hand to the mouth repeatedly while leaning slightly forward"
+   ],
+   "motion": "The person, often seated, keeps the torso slightly forward. The right hand moves from in front of the body near waist height up to the mouth and back down, repeating several times. The head may dip slightly toward the hand each time; the left hand stays low in front of the body.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "hands low in front of body",
+    "middle": "repeated hand-to-mouth trips",
+    "end": "hand rests low in front of body"
+   },
+   "not_observable": [
+    "food",
+    "spoon or fork",
+    "plate",
+    "chewing"
+   ],
+   "confusable_with": [
+    {
+     "name": "drink_water",
+     "visible_difference": "drinking is a single longer hand-to-mouth hold with the head tilting back"
+    },
+    {
+     "name": "brush_teeth",
+     "visible_difference": "brushing keeps the hand at the mouth instead of moving up and down"
+    },
+    {
+     "name": "sneeze_cough",
+     "visible_difference": "sneezing brings the hand to the face once with a sudden forward jerk of the head and torso"
+    }
+   ],
+   "persons": 1
+  },
+  "brush_teeth": {
+   "id": 2,
+   "name": "brush_teeth",
+   "text": "a person holds one hand at the mouth moving it quickly side to side",
+   "paraphrases": [
+    "a person keeps the right hand near the mouth with fast small back-and-forth motion",
+    "a person rubs one hand back and forth in front of the mouth repeatedly",
+    "a person makes rapid short horizontal hand motions held at the level of the mouth"
+   ],
+   "motion": "The right arm bends sharply and the right hand rises to the mouth. The hand stays at the mouth and moves quickly in short side-to-side or up-and-down strokes many times. The elbow stays raised out to the side, and the head stays mostly still; at the end the hand lowers.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises to mouth",
+    "middle": "fast repeated small strokes at the mouth",
+    "end": "hand lowers from face"
+   },
+   "not_observable": [
+    "toothbrush",
+    "teeth",
+    "toothpaste"
+   ],
+   "confusable_with": [
+    {
+     "name": "eat_meal",
+     "visible_difference": "eating moves the hand down and up between mouth and lap"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "wiping covers a larger area of the face with broader strokes, often with both hands"
+    },
+    {
+     "name": "phone_call",
+     "visible_difference": "phone call holds the hand still at the side of the head by the ear"
+    }
+   ],
+   "persons": 1
+  },
+  "brush_hair": {
+   "id": 3,
+   "name": "brush_hair",
+   "text": "a person repeatedly moves one hand over the top and side of the head",
+   "paraphrases": [
+    "a person sweeps the right hand along the head from front to back repeatedly",
+    "a person raises one hand above the head and strokes downward several times",
+    "a person makes repeated combing strokes with one raised hand along the head"
+   ],
+   "motion": "The right arm lifts with the elbow raised high and the hand placed at the top or side of the head. The hand moves from the top of the head down and back toward the neck or shoulder, then returns up, repeating several times. The head may tilt slightly toward the brushing side.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises to top of head",
+    "middle": "repeated downward strokes along the head",
+    "end": "hand lowers to the side"
+   },
+   "not_observable": [
+    "hairbrush or comb",
+    "hair"
+   ],
+   "confusable_with": [
+    {
+     "name": "flick_hair",
+     "visible_difference": "flicking hair is a single quick outward sweep rather than repeated strokes"
+    },
+    {
+     "name": "headache",
+     "visible_difference": "headache holds the hand still against the head instead of stroking"
+    },
+    {
+     "name": "put_on_a_hat_cap",
+     "visible_difference": "putting on a hat uses both hands that lower once onto the top of the head"
+    }
+   ],
+   "persons": 1
+  },
+  "drop": {
+   "id": 4,
+   "name": "drop",
+   "text": "a person opens a held hand in front of the body letting something fall",
+   "paraphrases": [
+    "a person holds one hand out in front and then releases, with little arm motion",
+    "a person extends the right hand forward and lets go, then lowers the arm",
+    "a person releases something from one hand at waist height and looks down after it"
+   ],
+   "motion": "The right hand is held in front of the body at about waist or chest height. The arm stays nearly still while the hand opens, and the head often tilts down to look at the floor. The arm then lowers to the side; the person does not bend down.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "hand held out in front of the body",
+    "middle": "hand opens, head looks down",
+    "end": "arm lowers to the side"
+   },
+   "not_observable": [
+    "the dropped object",
+    "hand opening",
+    "object hitting the floor"
+   ],
+   "confusable_with": [
+    {
+     "name": "pick_up",
+     "visible_difference": "picking up bends the torso and knees to bring the hand down to the floor"
+    },
+    {
+     "name": "throw",
+     "visible_difference": "throwing swings the arm quickly forward from behind the shoulder"
+    },
+    {
+     "name": "toss_a_coin",
+     "visible_difference": "tossing flicks the hand upward and the head follows upward"
+    }
+   ],
+   "persons": 1
+  },
+  "pick_up": {
+   "id": 5,
+   "name": "pick_up",
+   "text": "a person bends down to reach the floor and then straightens up",
+   "paraphrases": [
+    "a person leans forward and lowers one hand to the ground, then stands upright",
+    "a person bends the torso and knees, reaches down, and rises again",
+    "a person stoops to bring a hand near the feet before returning to standing"
+   ],
+   "motion": "From standing, the torso bends forward and the knees bend so the hips lower. The right arm extends down until the hand is near the floor in front of the feet. The person then straightens the knees and torso, bringing the hand back up to the front of the body.",
+   "body_parts": [
+    "torso",
+    "hip",
+    "hand_R",
+    "arm_R",
+    "leg_R",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "standing upright",
+    "middle": "torso bent, hand near the floor",
+    "end": "standing again with hand in front of body"
+   },
+   "not_observable": [
+    "the object being picked up",
+    "grasp"
+   ],
+   "confusable_with": [
+    {
+     "name": "squat_down",
+     "visible_difference": "squatting keeps the torso upright and the hands do not reach the floor"
+    },
+    {
+     "name": "drop",
+     "visible_difference": "dropping does not bend the body and the hand stays at waist height"
+    },
+    {
+     "name": "put_on_a_shoe",
+     "visible_difference": "putting on a shoe keeps both hands at one foot for a long time, often seated or with one foot raised"
+    }
+   ],
+   "persons": 1
+  },
+  "throw": {
+   "id": 6,
+   "name": "throw",
+   "text": "a person swings one arm from behind the shoulder forward and releases quickly",
+   "paraphrases": [
+    "a person draws the right arm back and then whips it forward fast",
+    "a person cocks one hand behind the head and snaps the arm forward",
+    "a person pulls an arm back then extends it rapidly forward while stepping forward"
+   ],
+   "motion": "The right arm draws back so the hand is behind and above the right shoulder, and the torso rotates slightly to the right. The arm then swings quickly forward and extends, while the torso turns forward and weight shifts onto the front foot. The arm follows through downward and returns to the side.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "arm drawn back behind shoulder",
+    "middle": "fast forward swing and arm extension",
+    "end": "follow-through and arm lowers"
+   },
+   "not_observable": [
+    "the thrown object",
+    "release of the object"
+   ],
+   "confusable_with": [
+    {
+     "name": "shoot_at_basket",
+     "visible_difference": "shooting pushes both hands upward from in front of the face"
+    },
+    {
+     "name": "throw_up_cap_hat",
+     "visible_difference": "throwing up a cap moves the hand from the head straight up rather than forward"
+    },
+    {
+     "name": "punch_slap",
+     "visible_difference": "punching has a second person and the hand stops at the partner's body"
+    }
+   ],
+   "persons": 1
+  },
+  "sit_down": {
+   "id": 7,
+   "name": "sit_down",
+   "text": "a person lowers the hips from standing to a seated position",
+   "paraphrases": [
+    "a person bends the knees and hips and settles into a seat",
+    "a person goes from upright standing to sitting with the hips lowered",
+    "a person leans slightly forward and lowers the hips down into a seated position"
+   ],
+   "motion": "From standing, the person bends the knees and hips while the torso leans slightly forward. The hips move backward and down until they stop at seat height. The torso then returns upright with the thighs roughly horizontal and the feet staying on the floor.",
+   "body_parts": [
+    "hip",
+    "leg_R",
+    "leg_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "standing upright",
+    "middle": "knees and hips bend, hips move down and back",
+    "end": "seated with torso upright"
+   },
+   "not_observable": [
+    "chair"
+   ],
+   "confusable_with": [
+    {
+     "name": "stand_up",
+     "visible_difference": "standing up moves the hips upward, the reverse direction"
+    },
+    {
+     "name": "squat_down",
+     "visible_difference": "squatting lowers the hips further with heels near the hips and no support behind"
+    },
+    {
+     "name": "falling_down",
+     "visible_difference": "falling is fast and uncontrolled and ends with the body on the ground"
+    }
+   ],
+   "persons": 1
+  },
+  "stand_up": {
+   "id": 8,
+   "name": "stand_up",
+   "text": "a person rises from a seated position to standing upright",
+   "paraphrases": [
+    "a person leans forward and straightens the legs to get up from sitting",
+    "a person lifts the hips up from a seat until fully standing",
+    "a person goes from sitting with bent knees to standing with straight legs"
+   ],
+   "motion": "The person starts seated with knees bent and hips low. The torso leans forward, the hands may push down near the thighs, and the knees and hips extend to raise the hips. The torso returns upright and the person ends standing with straight legs.",
+   "body_parts": [
+    "hip",
+    "leg_R",
+    "leg_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "seated with knees bent",
+    "middle": "torso leans forward, hips rise",
+    "end": "standing upright"
+   },
+   "not_observable": [
+    "chair"
+   ],
+   "confusable_with": [
+    {
+     "name": "sit_down",
+     "visible_difference": "sitting down moves the hips downward, the reverse direction"
+    },
+    {
+     "name": "jump_up",
+     "visible_difference": "jumping starts from standing and the whole body leaves the floor"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "picking up starts standing and bends down before rising"
+    }
+   ],
+   "persons": 1
+  },
+  "clapping": {
+   "id": 9,
+   "name": "clapping",
+   "text": "a person repeatedly brings both hands together in front of the chest",
+   "paraphrases": [
+    "a person strikes the two palms together several times at chest height",
+    "a person moves both hands apart and together again and again in front",
+    "a person claps by bringing the hands together repeatedly in front of the body"
+   ],
+   "motion": "Both arms bend so the hands are in front of the chest. The hands move apart sideways a short distance and then come together to touch, repeating many times at a steady rhythm. The elbows stay near the torso and the rest of the body stays still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "both hands rise to chest height",
+    "middle": "repeated meeting and separating of the hands",
+    "end": "hands lower to the sides"
+   },
+   "not_observable": [
+    "clapping sound"
+   ],
+   "confusable_with": [
+    {
+     "name": "rub_two_hands",
+     "visible_difference": "rubbing keeps the hands in contact and slides them against each other"
+    },
+    {
+     "name": "put_palms_together",
+     "visible_difference": "palms together is a single joining that is held still"
+    },
+    {
+     "name": "high-five",
+     "visible_difference": "high-five has two people and one raised hand meets the partner's hand"
+    }
+   ],
+   "persons": 1
+  },
+  "reading": {
+   "id": 10,
+   "name": "reading",
+   "text": "a person holds both hands still in front of the chest with head bowed",
+   "paraphrases": [
+    "a person keeps both hands together at chest height while looking down at them",
+    "a person stays mostly still with hands held in front and the head tilted down",
+    "a person holds the hands in front of the body and occasionally moves one sideways"
+   ],
+   "motion": "Both forearms are raised so the hands are held close together in front of the chest or lap. The head tilts down toward the hands and stays there. The body is mostly still; occasionally one hand makes a short sideways sweep and returns.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise to the front of the chest",
+    "middle": "hands held still, head bowed toward them",
+    "end": "occasional short hand sweep or hands lower"
+   },
+   "not_observable": [
+    "book or paper",
+    "page turning by fingers",
+    "eye movement"
+   ],
+   "confusable_with": [
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "phone use has small repeated hand and thumb movements and hands held closer together"
+    },
+    {
+     "name": "writing",
+     "visible_difference": "writing has one hand making continuous small movements while the other stays still"
+    },
+    {
+     "name": "counting_money",
+     "visible_difference": "counting has repeated small movements of one hand passing over the other"
+    }
+   ],
+   "persons": 1
+  },
+  "writing": {
+   "id": 11,
+   "name": "writing",
+   "text": "a person makes small continuous movements with one hand held low in front",
+   "paraphrases": [
+    "a person moves the right hand in small strokes while the left hand stays still",
+    "a person leans over and moves one hand slowly across a surface in front",
+    "a person keeps the head bowed while the right hand makes short repeated movements"
+   ],
+   "motion": "The person, often seated, leans the torso slightly forward with the head bowed. The right hand is held low in front of the body and makes small continuous movements, shifting gradually sideways. The left hand stays still nearby, and the rest of the body barely moves.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "hands placed low in front, head bows",
+    "middle": "right hand makes small continuous strokes",
+    "end": "hand stops and lifts"
+   },
+   "not_observable": [
+    "pen",
+    "paper",
+    "fine finger motion"
+   ],
+   "confusable_with": [
+    {
+     "name": "type_on_a_keyboard",
+     "visible_difference": "typing moves both hands with small up and down taps side by side"
+    },
+    {
+     "name": "reading",
+     "visible_difference": "reading keeps both hands still and raised higher"
+    },
+    {
+     "name": "cutting_paper",
+     "visible_difference": "cutting paper holds both hands raised with one hand opening and closing"
+    }
+   ],
+   "persons": 1
+  },
+  "tear_up_paper": {
+   "id": 12,
+   "name": "tear_up_paper",
+   "text": "a person holds both hands together in front then pulls them sharply apart",
+   "paraphrases": [
+    "a person brings two hands close at chest height and jerks them in opposite directions",
+    "a person repeatedly pulls the hands apart from each other in front of the chest",
+    "a person grips with both hands together then twists them away from each other"
+   ],
+   "motion": "Both hands come together in front of the chest. One hand moves forward or up and the other moves back or down in a quick tearing motion, separating the hands slightly. The hands come together again and the motion repeats a few times, with the elbows bent and close to the body.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "hands meet in front of the chest",
+    "middle": "repeated quick pulling apart of the hands",
+    "end": "hands lower or separate"
+   },
+   "not_observable": [
+    "paper",
+    "tearing",
+    "pieces of paper"
+   ],
+   "confusable_with": [
+    {
+     "name": "fold_paper",
+     "visible_difference": "folding moves the hands slowly together and presses rather than jerking apart"
+    },
+    {
+     "name": "ball_up_paper",
+     "visible_difference": "balling up squeezes the hands toward each other repeatedly"
+    },
+    {
+     "name": "open_bottle",
+     "visible_difference": "opening a bottle twists one hand above the other in a small circular motion"
+    }
+   ],
+   "persons": 1
+  },
+  "put_on_jacket": {
+   "id": 13,
+   "name": "put_on_jacket",
+   "text": "a person reaches one arm then the other backward behind the body",
+   "paraphrases": [
+    "a person swings each arm back and down behind the body, one at a time",
+    "a person reaches back with one arm, then the other, and pulls shoulders forward",
+    "a person extends arms behind the body in turn and shrugs the shoulders up"
+   ],
+   "motion": "One hand holds near the opposite shoulder while the other arm reaches down and backward behind the body, then extends forward. The first hand moves across behind the back and the second arm reaches back in the same way. The shoulders shrug and both hands pull forward at the chest at the end.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "one arm reaches back and down",
+    "middle": "second arm reaches back behind the body",
+    "end": "shoulders shrug, hands pull at the front of the chest"
+   },
+   "not_observable": [
+    "jacket",
+    "sleeves",
+    "zipper or buttons"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_jacket",
+     "visible_difference": "taking off pulls the arms forward out of the back, the reverse order"
+    },
+    {
+     "name": "put_on_bag",
+     "visible_difference": "putting on a bag uses one arm and lifts at the shoulder without the second arm reaching back"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "stretching extends both arms at once and holds them out"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_jacket": {
+   "id": 14,
+   "name": "take_off_jacket",
+   "text": "a person pulls the shoulders back and draws each arm forward from behind",
+   "paraphrases": [
+    "a person pushes the shoulders back then pulls one arm forward, then the other",
+    "a person reaches across to the opposite shoulder and slides each arm out in turn",
+    "a person brings both arms behind the back and frees them one after another"
+   ],
+   "motion": "Both hands go to the front of the chest and then to the shoulders, and the shoulders roll back. One arm straightens down and backward, then pulls forward while the other hand holds behind the back. The second arm then pulls forward and both hands come to the front of the body.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "hands at chest and shoulders",
+    "middle": "arms drawn back and pulled out one at a time",
+    "end": "both hands in front of the body"
+   },
+   "not_observable": [
+    "jacket",
+    "sleeves",
+    "zipper or buttons"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_jacket",
+     "visible_difference": "putting on reaches the arms backward into position, the reverse order"
+    },
+    {
+     "name": "take_off_bag",
+     "visible_difference": "taking off a bag lifts one strap off a single shoulder"
+    },
+    {
+     "name": "cross_arms",
+     "visible_difference": "crossing arms ends with forearms folded and held still at the chest"
+    }
+   ],
+   "persons": 1
+  },
+  "put_on_a_shoe": {
+   "id": 15,
+   "name": "put_on_a_shoe",
+   "text": "a person bends down and works with both hands at one foot",
+   "paraphrases": [
+    "a person leans forward, lifts one foot, and moves both hands around it",
+    "a person brings both hands down to one foot and pushes the foot forward",
+    "a person, often seated, holds one foot with two hands and pulls upward"
+   ],
+   "motion": "The person, often seated, bends the torso forward and raises or bends one leg. Both hands reach down to that foot and hold near it, making pulling motions upward toward the ankle. The foot pushes forward and down, then the person sits back up and lowers the foot.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "torso",
+    "leg_R",
+    "feet"
+   ],
+   "phases": {
+    "start": "torso bends and hands reach to one foot",
+    "middle": "hands pull around the foot while foot pushes forward",
+    "end": "torso rises, foot set down"
+   },
+   "not_observable": [
+    "shoe",
+    "laces"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_a_shoe",
+     "visible_difference": "taking off pulls the hands away from the foot and the foot draws back"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "picking up reaches one hand to the floor briefly and rises without lifting a foot"
+    },
+    {
+     "name": "squat_down",
+     "visible_difference": "squatting lowers the hips with both feet on the floor and no hand activity at a foot"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_a_shoe": {
+   "id": 16,
+   "name": "take_off_a_shoe",
+   "text": "a person bends to one foot and pulls with both hands away from it",
+   "paraphrases": [
+    "a person leans forward, grips near one foot, and draws the hands off it",
+    "a person lifts one foot slightly and pulls downward and away with both hands",
+    "a person, often seated, reaches to one ankle and pulls the hands away"
+   ],
+   "motion": "The person, often seated, bends the torso forward and lifts or bends one leg. Both hands reach down to the heel area of that foot, then pull down and away from the foot while the leg draws back. The person straightens up and the hands come back up in front.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "torso",
+    "leg_R",
+    "feet"
+   ],
+   "phases": {
+    "start": "torso bends and hands reach the foot",
+    "middle": "hands pull away while leg draws back",
+    "end": "torso straightens, hands rise"
+   },
+   "not_observable": [
+    "shoe",
+    "laces"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_a_shoe",
+     "visible_difference": "putting on pulls upward toward the ankle while the foot pushes forward"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "picking up reaches one hand to the floor briefly without working at a foot"
+    },
+    {
+     "name": "butt_kicks",
+     "visible_difference": "butt kicks swing the heels up behind the body repeatedly while standing"
+    }
+   ],
+   "persons": 1
+  },
+  "put_on_glasses": {
+   "id": 17,
+   "name": "put_on_glasses",
+   "text": "a person brings both hands up to the sides of the face",
+   "paraphrases": [
+    "a person raises two hands to the eyes and slides them back to the ears",
+    "a person lifts both hands before the face and moves them toward the temples",
+    "a person brings hands from the chest to the face, holding them near the ears"
+   ],
+   "motion": "Both hands rise from in front of the chest toward the face, close together in front of the eyes. The hands then move apart and backward along the sides of the head toward the ears, and the head may tilt slightly forward. The hands then lower back down.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands rise toward the face",
+    "middle": "hands move from the eyes back to the ears",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "glasses"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_glasses",
+     "visible_difference": "taking off moves the hands from the ears forward and away from the face"
+    },
+    {
+     "name": "put_on_headphone",
+     "visible_difference": "headphones are placed with hands over the top of the head down to the ears"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "wiping makes repeated strokes across the whole face"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_glasses": {
+   "id": 18,
+   "name": "take_off_glasses",
+   "text": "a person raises hands to the sides of the face and pulls forward",
+   "paraphrases": [
+    "a person lifts both hands to the temples and draws them forward and away",
+    "a person brings hands up near the ears then moves them out in front",
+    "a person reaches to the face with two hands and lowers them forward and down"
+   ],
+   "motion": "Both hands rise to the sides of the head near the ears or temples. The hands move forward past the eyes and away from the face, coming together in front. The hands then lower to chest height or below.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise to the sides of the head",
+    "middle": "hands move forward away from the eyes",
+    "end": "hands lower in front of the chest"
+   },
+   "not_observable": [
+    "glasses"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_glasses",
+     "visible_difference": "putting on moves the hands from the eyes backward to the ears"
+    },
+    {
+     "name": "take_off_headphone",
+     "visible_difference": "taking off headphones lifts the hands up over the top of the head"
+    },
+    {
+     "name": "headache",
+     "visible_difference": "headache holds hands on the head without moving them away"
+    }
+   ],
+   "persons": 1
+  },
+  "put_on_a_hat_cap": {
+   "id": 19,
+   "name": "put_on_a_hat_cap",
+   "text": "a person raises both hands above the head and lowers them onto it",
+   "paraphrases": [
+    "a person lifts two hands over the head and presses down on top of it",
+    "a person brings both hands up to the top of the head and adjusts there",
+    "a person reaches above the head with both hands and pulls them down to it"
+   ],
+   "motion": "Both arms lift so the hands are above the head. The hands move down to rest on top of the head, sometimes pulling down at the front and back. The head may tilt forward slightly, and then both hands lower to the sides.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands rise above the head",
+    "middle": "hands lower onto the top of the head and press",
+    "end": "hands lower to the sides"
+   },
+   "not_observable": [
+    "hat or cap"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_a_hat_cap",
+     "visible_difference": "taking off lifts the hands up and away from the top of the head"
+    },
+    {
+     "name": "put_on_headphone",
+     "visible_difference": "headphones end with the hands at the ears on the sides of the head"
+    },
+    {
+     "name": "brush_hair",
+     "visible_difference": "brushing hair uses one hand with repeated strokes along the head"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_a_hat_cap": {
+   "id": 20,
+   "name": "take_off_a_hat_cap",
+   "text": "a person raises a hand to the top of the head and lifts it away",
+   "paraphrases": [
+    "a person reaches up to the top of the head and pulls the hand upward",
+    "a person brings a hand onto the head then raises it and lowers it forward",
+    "a person lifts a hand off the top of the head and lowers it in front"
+   ],
+   "motion": "The right hand, sometimes with the left, rises to the top of the head. The hand then moves up and slightly forward away from the head. The arm then lowers so the hand ends in front of the chest or at the side.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hand rises to the top of the head",
+    "middle": "hand lifts up and away from the head",
+    "end": "hand lowers in front of the body"
+   },
+   "not_observable": [
+    "hat or cap"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_a_hat_cap",
+     "visible_difference": "putting on moves the hands down onto the head and presses"
+    },
+    {
+     "name": "throw_up_cap_hat",
+     "visible_difference": "throwing up a cap continues the hand fast and high above the head"
+    },
+    {
+     "name": "take_off_headphone",
+     "visible_difference": "taking off headphones starts with both hands at the ears"
+    }
+   ],
+   "persons": 1
+  },
+  "cheer_up": {
+   "id": 21,
+   "name": "cheer_up",
+   "text": "a person raises both arms high above the head in celebration",
+   "paraphrases": [
+    "a person throws both arms straight up over the head and holds them",
+    "a person lifts two arms upward above the shoulders, sometimes pumping them",
+    "a person extends both arms overhead and often moves them up and down"
+   ],
+   "motion": "Both arms rise quickly from the sides to above the head with the elbows straightening. The arms stay raised and may pump up and down a few times, and the torso may lean back slightly or bounce. The arms then lower to the sides.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "arms rise quickly from the sides",
+    "middle": "arms held or pumped above the head",
+    "end": "arms lower to the sides"
+   },
+   "not_observable": [
+    "facial expression",
+    "shouting"
+   ],
+   "confusable_with": [
+    {
+     "name": "capitulate",
+     "visible_difference": "capitulating raises the hands only to head height with bent elbows and holds still"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "stretching raises the arms slowly and pushes them back with the torso arching"
+    },
+    {
+     "name": "hand_waving",
+     "visible_difference": "waving raises one hand and swings it side to side"
+    }
+   ],
+   "persons": 1
+  },
+  "hand_waving": {
+   "id": 22,
+   "name": "hand_waving",
+   "text": "a person raises one hand and swings it side to side repeatedly",
+   "paraphrases": [
+    "a person lifts the right hand to head height and moves it left and right",
+    "a person holds one forearm up and sways the hand back and forth",
+    "a person waves by moving a raised hand from side to side several times"
+   ],
+   "motion": "The right arm lifts with the elbow bent so the hand is at or above head height, out to the side. The forearm and hand swing left and right repeatedly while the upper arm stays mostly still. The arm then lowers to the side.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises to head height",
+    "middle": "hand swings side to side repeatedly",
+    "end": "arm lowers"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "salute",
+     "visible_difference": "saluting brings the hand to the forehead and holds it still"
+    },
+    {
+     "name": "point_to_something",
+     "visible_difference": "pointing extends the arm straight forward and holds it"
+    },
+    {
+     "name": "fan_self",
+     "visible_difference": "fanning moves the hand back and forth close in front of the face"
+    }
+   ],
+   "persons": 1
+  },
+  "kicking_something": {
+   "id": 23,
+   "name": "kicking_something",
+   "text": "a person swings one leg forward from the hip with force",
+   "paraphrases": [
+    "a person draws the right leg back and then kicks it forward quickly",
+    "a person shifts weight onto one foot and swings the other leg forward",
+    "a person kicks forward with one foot, then sets it back on the ground"
+   ],
+   "motion": "Weight shifts onto the left leg and the right leg draws back with the knee bent. The right leg then swings quickly forward and the knee straightens, the foot rising in front of the body. The arms move out for balance and the foot returns to the ground.",
+   "body_parts": [
+    "leg_R",
+    "feet",
+    "hip"
+   ],
+   "phases": {
+    "start": "weight on left leg, right leg draws back",
+    "middle": "right leg swings quickly forward",
+    "end": "foot returns to the ground"
+   },
+   "not_observable": [
+    "the kicked object"
+   ],
+   "confusable_with": [
+    {
+     "name": "kicking",
+     "visible_difference": "kicking another person has a second person whose body is hit by the foot"
+    },
+    {
+     "name": "side_kick",
+     "visible_difference": "a side kick raises the leg out to the side rather than forward"
+    },
+    {
+     "name": "step_on_foot",
+     "visible_difference": "stepping on a foot lifts the foot and brings it down rather than swinging it forward"
+    }
+   ],
+   "persons": 1
+  },
+  "reach_into_pocket": {
+   "id": 24,
+   "name": "reach_into_pocket",
+   "text": "a person moves one hand down to the hip and pushes it in",
+   "paraphrases": [
+    "a person brings the right hand to the side of the hip and holds it there",
+    "a person lowers one hand to the thigh and moves it slightly in and out",
+    "a person slides a hand against the hip briefly then lifts it to the front"
+   ],
+   "motion": "The right hand moves from in front of the body down to the side of the right hip or upper thigh. The hand stays there briefly with small movements while the head may tilt down. The hand then comes out and rises to the front of the body.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand moves down to the hip",
+    "middle": "hand held at the hip with small movements",
+    "end": "hand rises to the front"
+   },
+   "not_observable": [
+    "pocket",
+    "object taken from the pocket"
+   ],
+   "confusable_with": [
+    {
+     "name": "touch_pocket",
+     "visible_difference": "touch pocket involves a second person reaching to the partner's hip"
+    },
+    {
+     "name": "back_pain",
+     "visible_difference": "back pain places the hand behind the lower back and the torso bends"
+    },
+    {
+     "name": "check_time_(from_watch)",
+     "visible_difference": "checking time raises the left wrist in front of the chest"
+    }
+   ],
+   "persons": 1
+  },
+  "hopping": {
+   "id": 25,
+   "name": "hopping",
+   "text": "a person jumps repeatedly on one foot with the other leg raised",
+   "paraphrases": [
+    "a person bounces up and down on a single leg several times",
+    "a person lifts one foot off the floor and hops on the other",
+    "a person makes repeated small jumps while standing on one leg only"
+   ],
+   "motion": "One knee bends to lift that foot off the floor and hold it up. The standing leg bends and straightens repeatedly so the whole body moves up and down in small jumps. The arms move out or swing for balance, and at the end the raised foot comes down.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "hip",
+    "torso"
+   ],
+   "phases": {
+    "start": "one foot lifts off the floor",
+    "middle": "repeated small jumps on one leg",
+    "end": "raised foot lowers to the floor"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "jump_up",
+     "visible_difference": "jumping up uses both legs and is usually a single higher jump"
+    },
+    {
+     "name": "run_on_the_spot",
+     "visible_difference": "running on the spot alternates feet with each step"
+    },
+    {
+     "name": "butt_kicks",
+     "visible_difference": "butt kicks alternate legs with heels swinging up behind"
+    }
+   ],
+   "persons": 1
+  },
+  "jump_up": {
+   "id": 26,
+   "name": "jump_up",
+   "text": "a person bends both knees and jumps straight up off the floor",
+   "paraphrases": [
+    "a person crouches slightly and springs upward with both feet leaving the ground",
+    "a person swings the arms up while jumping vertically on both legs",
+    "a person lowers the hips then pushes off with both feet into the air"
+   ],
+   "motion": "The person bends both knees and hips and the arms swing back. The legs straighten quickly and the arms swing up so the whole body rises and both feet leave the floor. The person lands on both feet with knees bending, then stands upright.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "hip",
+    "arm_R",
+    "arm_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "knees bend and arms swing back",
+    "middle": "body rises with both feet off the floor",
+    "end": "landing on both feet with knees bent"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "hopping",
+     "visible_difference": "hopping stays on one leg with repeated small jumps"
+    },
+    {
+     "name": "cheer_up",
+     "visible_difference": "cheering raises the arms but the feet stay on the floor"
+    },
+    {
+     "name": "squat_down",
+     "visible_difference": "squatting lowers the hips and stays down without leaving the floor"
+    }
+   ],
+   "persons": 1
+  },
+  "phone_call": {
+   "id": 27,
+   "name": "phone_call",
+   "text": "a person holds one hand still against the side of the head",
+   "paraphrases": [
+    "a person raises the right hand to the ear and keeps it there",
+    "a person bends the arm so the hand stays beside the ear for a while",
+    "a person lifts one hand to the side of the face and holds it"
+   ],
+   "motion": "The right arm bends and the right hand rises to the right side of the head next to the ear. The hand stays still there for most of the time, with the elbow pointing down and forward. The head may tilt slightly toward the hand, and the body may shift or walk a little.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises to the ear",
+    "middle": "hand held still beside the ear",
+    "end": "hand lowers"
+   },
+   "not_observable": [
+    "phone",
+    "speaking"
+   ],
+   "confusable_with": [
+    {
+     "name": "headache",
+     "visible_difference": "headache presses the hand on the forehead or temple, often with the head bent down"
+    },
+    {
+     "name": "neck_pain",
+     "visible_difference": "neck pain places the hand on the back of the neck"
+    },
+    {
+     "name": "salute",
+     "visible_difference": "saluting holds the hand at the forehead with the elbow raised out to the side"
+    }
+   ],
+   "persons": 1
+  },
+  "play_with_phone_tablet": {
+   "id": 28,
+   "name": "play_with_phone_tablet",
+   "text": "a person holds both hands together in front of the chest making small movements",
+   "paraphrases": [
+    "a person looks down at hands held close at chest height with small repeated motions",
+    "a person keeps the hands together in front with occasional small taps and swipes",
+    "a person bows the head toward both hands held in front and moves them slightly"
+   ],
+   "motion": "Both forearms are raised so the hands are close together in front of the chest. The head tilts down toward the hands. The hands stay mostly in place with small repeated movements of one hand, and the body otherwise stays still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise together in front of the chest",
+    "middle": "hands held with small repeated movements, head bowed",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "phone or tablet",
+    "finger taps on the screen",
+    "screen content"
+   ],
+   "confusable_with": [
+    {
+     "name": "reading",
+     "visible_difference": "reading keeps the hands stiller and slightly further apart"
+    },
+    {
+     "name": "type_on_a_keyboard",
+     "visible_difference": "typing holds the hands lower and apart with tapping by both hands"
+    },
+    {
+     "name": "taking_a_selfie",
+     "visible_difference": "selfie holds one arm extended up and out in front of the face"
+    }
+   ],
+   "persons": 1
+  },
+  "type_on_a_keyboard": {
+   "id": 29,
+   "name": "type_on_a_keyboard",
+   "text": "a person holds both hands low in front and taps them repeatedly",
+   "paraphrases": [
+    "a person makes small up and down movements with both hands side by side",
+    "a person rests two hands low in front and moves them in short taps",
+    "a person, often seated, keeps both hands forward at waist level with small movements"
+   ],
+   "motion": "The person, often seated, holds both forearms forward with the hands side by side at about waist height. Both hands make small, fast up and down movements and occasionally shift sideways. The head is tilted slightly down or forward, and the rest of the body stays still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "both hands placed low in front",
+    "middle": "repeated small taps by both hands",
+    "end": "hands stop and lift"
+   },
+   "not_observable": [
+    "keyboard",
+    "finger presses",
+    "table"
+   ],
+   "confusable_with": [
+    {
+     "name": "writing",
+     "visible_difference": "writing moves only one hand while the other stays still"
+    },
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "phone use holds the hands higher and closer together"
+    },
+    {
+     "name": "counting_money",
+     "visible_difference": "counting has one hand passing repeatedly over the other"
+    }
+   ],
+   "persons": 1
+  },
+  "point_to_something": {
+   "id": 30,
+   "name": "point_to_something",
+   "text": "a person raises one straight arm and holds it pointing forward or sideways",
+   "paraphrases": [
+    "a person lifts the right arm straight out and holds it extended",
+    "a person extends the right arm away from the body and keeps it still",
+    "a person stretches one arm out level and briefly holds the pointing pose"
+   ],
+   "motion": "The right arm rises from the side of the body and straightens at the elbow until the hand is far in front of or to the side of the shoulder, roughly at shoulder height. The arm is held still in that extended position for a moment while the torso and legs stay mostly still. The arm then lowers back to the side. The motion happens once and does not repeat.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "arms at sides",
+    "middle": "right arm straight and held out at shoulder height",
+    "end": "arm lowers back to side"
+   },
+   "not_observable": [
+    "the extended index finger",
+    "the target being pointed at"
+   ],
+   "confusable_with": [
+    {
+     "name": "point_finger",
+     "visible_difference": "point_finger has a second person standing where the arm points"
+    },
+    {
+     "name": "taking_a_selfie",
+     "visible_difference": "selfie arm is raised with the hand turned back toward the face and slightly bent"
+    },
+    {
+     "name": "shoot_with_gun",
+     "visible_difference": "shoot_with_gun often uses both hands together and has a partner reacting"
+    }
+   ],
+   "persons": 1
+  },
+  "taking_a_selfie": {
+   "id": 31,
+   "name": "taking_a_selfie",
+   "text": "a person holds one hand up and out in front, facing the face",
+   "paraphrases": [
+    "a person raises the right arm forward and up, hand aimed back at the head",
+    "a person lifts one hand above eye level in front and holds it there",
+    "a person extends the right arm up in front of the face and pauses"
+   ],
+   "motion": "The right arm lifts forward and upward until the hand is in front of and slightly above the head, with the elbow partly bent. The hand stays still in that raised position for a while, sometimes with small adjustments, and the head may tilt slightly toward it. The torso stays upright with little leg motion. The arm then lowers back down.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right arm lifts forward and up",
+    "middle": "hand held still in front of and above the face",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "the phone or camera",
+    "the screen",
+    "facial expression for the photo"
+   ],
+   "confusable_with": [
+    {
+     "name": "point_to_something",
+     "visible_difference": "pointing arm is fully straight and usually at shoulder height, not raised toward the face"
+    },
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "phone use keeps both hands low in front of the chest"
+    },
+    {
+     "name": "take_a_photo",
+     "visible_difference": "take_a_photo has two hands at the face and a second person in front"
+    }
+   ],
+   "persons": 1
+  },
+  "check_time_(from_watch)": {
+   "id": 32,
+   "name": "check_time_(from_watch)",
+   "text": "a person lifts the left wrist in front of the chest and looks down",
+   "paraphrases": [
+    "a person raises the left forearm horizontally in front of the body briefly",
+    "a person brings the left wrist up toward the face and holds it",
+    "a person bends the left elbow, lifts the wrist, and tilts the head down"
+   ],
+   "motion": "The left forearm rises and turns so the wrist is held horizontally in front of the chest, with the elbow bent. The head tilts down slightly toward the raised wrist. The pose is held briefly, sometimes with the right hand touching the left wrist, then the left arm lowers back to the side. The action happens once.",
+   "body_parts": [
+    "arm_L",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "left forearm lifts",
+    "middle": "wrist held level in front of chest, head tilted toward it",
+    "end": "arm drops back"
+   },
+   "not_observable": [
+    "the watch",
+    "eye gaze at the watch face"
+   ],
+   "confusable_with": [
+    {
+     "name": "reading",
+     "visible_difference": "reading keeps both hands together in front of the chest for longer"
+    },
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "phone use holds both hands low with small repeated finger-area motion"
+    },
+    {
+     "name": "cross_hands_in_front",
+     "visible_difference": "crossing hands moves both forearms into an X in front of the chest"
+    }
+   ],
+   "persons": 1
+  },
+  "rub_two_hands": {
+   "id": 33,
+   "name": "rub_two_hands",
+   "text": "a person rubs both hands together back and forth in front of chest",
+   "paraphrases": [
+    "a person holds both palms together and slides them repeatedly against each other",
+    "a person keeps both hands touching in front of the body and moves them",
+    "a person brings the hands together at chest level and rubs them repeatedly"
+   ],
+   "motion": "Both hands come together in front of the chest or stomach with the elbows bent. The hands stay in contact and slide back and forth against each other in short repeated strokes. The arms move only at the forearms while the torso and legs stay still. At the end the hands separate and lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "hands meet in front of chest",
+    "middle": "repeated small back-and-forth rubbing of the hands",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "palm contact surface",
+    "lotion or cold as a reason"
+   ],
+   "confusable_with": [
+    {
+     "name": "clapping",
+     "visible_difference": "clapping repeatedly moves the hands apart and back together"
+    },
+    {
+     "name": "apply_cream_on_hand",
+     "visible_difference": "cream application has one hand stroking over the back of the other with larger strokes"
+    },
+    {
+     "name": "put_palms_together",
+     "visible_difference": "palms together is held still with no rubbing motion"
+    }
+   ],
+   "persons": 1
+  },
+  "nod_head_bow": {
+   "id": 34,
+   "name": "nod_head_bow",
+   "text": "a person bends the head and upper body forward then straightens up",
+   "paraphrases": [
+    "a person tips the head down and leans the torso forward briefly",
+    "a person bows by bending forward at the waist and returning upright",
+    "a person lowers the head toward the chest and then lifts it back"
+   ],
+   "motion": "The head moves forward and down toward the chest, and in a bow the torso also leans forward from the hips. The arms stay mostly at the sides or hang down. After a short pause at the lowest point, the head and torso return to an upright posture. This may happen once or repeat a few times.",
+   "body_parts": [
+    "head",
+    "torso"
+   ],
+   "phases": {
+    "start": "standing upright",
+    "middle": "head and torso tilted forward and down",
+    "end": "back upright"
+   },
+   "not_observable": [
+    "facial expression",
+    "intent of greeting or agreement"
+   ],
+   "confusable_with": [
+    {
+     "name": "shake_head",
+     "visible_difference": "shake_head turns the head side to side instead of down and up"
+    },
+    {
+     "name": "nausea_vomiting",
+     "visible_difference": "vomiting bends forward with a hand at the mouth or stomach and holds longer"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "pick_up bends lower and one arm reaches toward the floor"
+    }
+   ],
+   "persons": 1
+  },
+  "shake_head": {
+   "id": 35,
+   "name": "shake_head",
+   "text": "a person turns the head left and right repeatedly while the body stays still",
+   "paraphrases": [
+    "a person rotates the head side to side several times with a still torso",
+    "a person moves the head repeatedly from left to right and back",
+    "a person swings the head from one side to the other a few times"
+   ],
+   "motion": "The head rotates left and right around the neck several times in a row, while the shoulders and torso stay mostly still. The arms remain at the sides. The rotation is small and fast compared to whole-body turning. The head stops facing forward at the end.",
+   "body_parts": [
+    "head"
+   ],
+   "phases": {
+    "start": "head facing forward",
+    "middle": "repeated left-right head rotation",
+    "end": "head stops facing forward"
+   },
+   "not_observable": [
+    "facial expression",
+    "the meaning of disagreement"
+   ],
+   "confusable_with": [
+    {
+     "name": "nod_head_bow",
+     "visible_difference": "nodding moves the head down and up rather than side to side"
+    },
+    {
+     "name": "neck_pain",
+     "visible_difference": "neck_pain has a hand held on the back of the neck"
+    },
+    {
+     "name": "staggering",
+     "visible_difference": "staggering sways the whole body and steps the feet"
+    }
+   ],
+   "persons": 1
+  },
+  "wipe_face": {
+   "id": 36,
+   "name": "wipe_face",
+   "text": "a person moves one or both hands over the face in wiping strokes",
+   "paraphrases": [
+    "a person raises the hands to the face and strokes them across it",
+    "a person brings the hands up to the head and rubs down the face",
+    "a person lifts both hands to the face and moves them over it repeatedly"
+   ],
+   "motion": "One or both hands rise from the sides to the face, with the elbows bent and raised in front of the chest. The hands stay at the face and move in up-down or side-to-side strokes, often more than once. The head may tilt slightly forward toward the hands. The hands then lower back down.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise to the face",
+    "middle": "hands stroke across the face repeatedly",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "towel or tissue",
+    "sweat or water on the face"
+   ],
+   "confusable_with": [
+    {
+     "name": "apply_cream_on_face",
+     "visible_difference": "cream application uses fingertip strokes after first bringing the hands together"
+    },
+    {
+     "name": "headache",
+     "visible_difference": "headache holds a hand still on the forehead or temple"
+    },
+    {
+     "name": "blow_nose",
+     "visible_difference": "blow_nose keeps both hands fixed at the nose center"
+    }
+   ],
+   "persons": 1
+  },
+  "salute": {
+   "id": 37,
+   "name": "salute",
+   "text": "a person raises the right hand to the forehead with the elbow out",
+   "paraphrases": [
+    "a person lifts the right hand to the brow and holds it briefly",
+    "a person bends the right arm so the hand touches near the forehead",
+    "a person brings the right hand up beside the head with the elbow sideways"
+   ],
+   "motion": "The right arm lifts so that the elbow points out to the side at about shoulder height and the hand comes to rest near the right side of the forehead. The posture is held still for a moment with the body upright and the left arm at the side. The right arm then drops quickly back to the side.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "standing upright, arms at sides",
+    "middle": "right hand held at forehead, elbow out to side",
+    "end": "arm drops"
+   },
+   "not_observable": [
+    "flat hand shape",
+    "uniform or cap"
+   ],
+   "confusable_with": [
+    {
+     "name": "headache",
+     "visible_difference": "headache presses the hand on the head with the head tilted and the elbow lower"
+    },
+    {
+     "name": "put_on_a_hat_cap",
+     "visible_difference": "putting on a cap lifts the hand above the top of the head, often with both hands"
+    },
+    {
+     "name": "flick_hair",
+     "visible_difference": "flick_hair sweeps the hand back over the side of the head"
+    }
+   ],
+   "persons": 1
+  },
+  "put_palms_together": {
+   "id": 38,
+   "name": "put_palms_together",
+   "text": "a person presses both palms together in front of the chest and holds",
+   "paraphrases": [
+    "a person brings both hands together at the chest and keeps them still",
+    "a person joins the hands in front of the body and pauses",
+    "a person raises both hands to meet at chest level and holds the pose"
+   ],
+   "motion": "Both hands rise from the sides and meet in front of the center of the chest, with the elbows bent and pointing outward or down. The hands stay pressed together without moving for a while. The head may bow slightly forward. Then the hands separate and lower to the sides.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "hands rise toward the chest",
+    "middle": "hands joined and held still at chest center",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "flat palm contact",
+    "prayer or greeting meaning"
+   ],
+   "confusable_with": [
+    {
+     "name": "rub_two_hands",
+     "visible_difference": "rubbing moves the joined hands back and forth repeatedly"
+    },
+    {
+     "name": "clapping",
+     "visible_difference": "clapping separates and rejoins the hands rhythmically"
+    },
+    {
+     "name": "cross_hands_in_front",
+     "visible_difference": "crossed hands overlap at the wrists in an X instead of meeting palm to palm"
+    }
+   ],
+   "persons": 1
+  },
+  "cross_hands_in_front": {
+   "id": 39,
+   "name": "cross_hands_in_front",
+   "text": "a person crosses both forearms in an X shape in front of the chest",
+   "paraphrases": [
+    "a person brings both arms across each other in front of the body",
+    "a person raises the forearms and overlaps them at the wrists in front",
+    "a person makes an X with both arms crossed in front of the torso"
+   ],
+   "motion": "Both arms lift from the sides and the forearms cross each other in front of the chest or face, with each hand ending on the opposite side of the body. The crossed position is held still for a moment. The arms then uncross and lower back to the sides.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "arms lift toward the center",
+    "middle": "forearms crossed in an X and held",
+    "end": "arms uncross and lower"
+   },
+   "not_observable": [
+    "gesture meaning such as refusal"
+   ],
+   "confusable_with": [
+    {
+     "name": "cross_arms",
+     "visible_difference": "cross_arms folds the arms tight against the chest with hands tucked near the elbows"
+    },
+    {
+     "name": "put_palms_together",
+     "visible_difference": "palms together keeps both hands meeting at the center without crossing"
+    },
+    {
+     "name": "check_time_(from_watch)",
+     "visible_difference": "checking time lifts only the left forearm"
+    }
+   ],
+   "persons": 1
+  },
+  "sneeze_cough": {
+   "id": 40,
+   "name": "sneeze_cough",
+   "text": "a person brings a hand to the mouth while the head jerks forward",
+   "paraphrases": [
+    "a person covers the mouth with one hand and bends the head down sharply",
+    "a person lifts a hand to the face as the upper body jolts forward",
+    "a person jerks the head and shoulders forward with a hand at the mouth"
+   ],
+   "motion": "The right hand or both hands rise quickly to the front of the mouth, with the elbow bent in front of the chest. The head and upper torso jerk forward and down in one or several short sudden movements. The hand stays near the mouth during the jerks, then the body straightens and the hand lowers.",
+   "body_parts": [
+    "head",
+    "torso",
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "hand rises to the mouth",
+    "middle": "sudden forward jerk of head and torso, may repeat",
+    "end": "body straightens, hand lowers"
+   },
+   "not_observable": [
+    "sound of sneezing or coughing",
+    "mouth opening",
+    "tissue"
+   ],
+   "confusable_with": [
+    {
+     "name": "yawn",
+     "visible_difference": "yawn moves the hand to the mouth slowly with the head tilting back, not jerking forward"
+    },
+    {
+     "name": "blow_nose",
+     "visible_difference": "blow_nose holds both hands steady at the nose without a body jerk"
+    },
+    {
+     "name": "nausea_vomiting",
+     "visible_difference": "vomiting bends the torso much further forward and holds there"
+    }
+   ],
+   "persons": 1
+  },
+  "staggering": {
+   "id": 41,
+   "name": "staggering",
+   "text": "a person walks unsteadily with the body swaying from side to side",
+   "paraphrases": [
+    "a person takes uneven steps while the torso tilts left and right",
+    "a person moves forward with irregular steps and an unbalanced swaying body",
+    "a person stumbles along with arms out and the upper body wobbling"
+   ],
+   "motion": "The person takes several uneven steps, with the feet landing at irregular spacing and sometimes crossing. The torso and head sway from side to side and forward and back, and the hip shifts with each step. The arms may move out from the body to keep balance. The whole body travels a short distance in a wavering path.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "torso",
+    "hip",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "body begins to sway",
+    "middle": "irregular steps with side-to-side torso lean",
+    "end": "body slows and regains balance or stops"
+   },
+   "not_observable": [
+    "dizziness or intoxication as the cause"
+   ],
+   "confusable_with": [
+    {
+     "name": "falling_down",
+     "visible_difference": "falling_down ends with the body low on the floor"
+    },
+    {
+     "name": "walking_towards",
+     "visible_difference": "walking_towards has steady straight steps and a second person"
+    },
+    {
+     "name": "hopping",
+     "visible_difference": "hopping lifts the body off the ground on one leg repeatedly"
+    }
+   ],
+   "persons": 1
+  },
+  "falling_down": {
+   "id": 42,
+   "name": "falling_down",
+   "text": "a person drops from standing to the floor, ending low on the ground",
+   "paraphrases": [
+    "a person collapses downward with the hips and torso sinking to the floor",
+    "a person loses balance and goes down until the body is near the ground",
+    "a person sinks from an upright posture to sitting or lying on the floor"
+   ],
+   "motion": "From standing, the knees bend and the hip moves rapidly downward, often with the torso tilting forward or sideways. The hands may reach toward the floor to break the fall. The body ends with the hip and torso very low, on the knees, sitting, or lying, and stays down. The movement happens once and is faster than sitting down.",
+   "body_parts": [
+    "hip",
+    "torso",
+    "leg_R",
+    "leg_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "standing, balance lost",
+    "middle": "rapid downward drop of hip and torso",
+    "end": "body low on the floor"
+   },
+   "not_observable": [
+    "the floor or mat",
+    "cause of the fall"
+   ],
+   "confusable_with": [
+    {
+     "name": "sit_down",
+     "visible_difference": "sit_down lowers the hip slowly and ends at chair height"
+    },
+    {
+     "name": "squat_down",
+     "visible_difference": "squatting keeps the torso upright and the feet planted"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "pick_up bends briefly and returns to standing"
+    }
+   ],
+   "persons": 1
+  },
+  "headache": {
+   "id": 43,
+   "name": "headache",
+   "text": "a person holds one or both hands against the head with head tilted",
+   "paraphrases": [
+    "a person presses a hand on the forehead and lowers the head slightly",
+    "a person raises the hands to the sides of the head and holds them",
+    "a person keeps a hand on the head while the head bends forward"
+   ],
+   "motion": "One or both hands rise to the forehead or temples, with the elbows bent and raised. The hands stay on the head for a long time, sometimes with small rubbing movements. The head tilts forward or to the side and the shoulders may hunch. The hands then lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise to the head",
+    "middle": "hands held on forehead or temples, head tilted",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "pain",
+    "facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "neck_pain",
+     "visible_difference": "neck_pain places the hand on the back of the neck, lower than the head"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "wipe_face strokes the hands across the face rather than holding"
+    },
+    {
+     "name": "salute",
+     "visible_difference": "salute holds the elbow out sideways with the head upright"
+    }
+   ],
+   "persons": 1
+  },
+  "chest_pain": {
+   "id": 44,
+   "name": "chest_pain",
+   "text": "a person presses a hand on the chest and leans forward slightly",
+   "paraphrases": [
+    "a person holds one hand flat against the chest with the shoulders hunched",
+    "a person clutches the chest with a hand and bends the upper body",
+    "a person places both hands on the chest and curls the torso forward"
+   ],
+   "motion": "The right hand, sometimes both hands, moves to the center or left of the chest and stays pressed there. The torso bends forward a little and the shoulders round inward, and the head may drop. The posture is held for a while, sometimes with a slight stagger. The hands then lower and the body straightens.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "torso",
+    "head"
+   ],
+   "phases": {
+    "start": "hand moves to chest",
+    "middle": "hand held on chest, torso bent forward",
+    "end": "hand lowers, body straightens"
+   },
+   "not_observable": [
+    "pain",
+    "facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "nausea_vomiting",
+     "visible_difference": "vomiting places the hand on the stomach or mouth and bends further"
+    },
+    {
+     "name": "cross_arms",
+     "visible_difference": "cross_arms folds both arms across the chest with an upright torso"
+    },
+    {
+     "name": "back_pain",
+     "visible_difference": "back_pain puts the hand behind the body on the lower back"
+    }
+   ],
+   "persons": 1
+  },
+  "back_pain": {
+   "id": 45,
+   "name": "back_pain",
+   "text": "a person places a hand on the lower back and arches backward",
+   "paraphrases": [
+    "a person reaches one hand behind to the lower back and holds it",
+    "a person puts both hands on the back of the waist and leans",
+    "a person holds the lower back with a hand behind the body"
+   ],
+   "motion": "The right hand, often both, moves behind the body to rest on the lower back near the hips, with the elbows pointing backward and out. The torso leans back or bends slightly forward and may twist. The hands stay on the back for a while. Then the hands come forward and lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "torso",
+    "hip"
+   ],
+   "phases": {
+    "start": "hands move behind the body",
+    "middle": "hands held on lower back, torso arched or bent",
+    "end": "hands return to the sides"
+   },
+   "not_observable": [
+    "pain",
+    "facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "reach_into_pocket",
+     "visible_difference": "pocket reach goes to the side or back of the hip briefly and returns"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "stretching raises the arms high overhead"
+    },
+    {
+     "name": "chest_pain",
+     "visible_difference": "chest_pain puts the hand on the front of the chest"
+    }
+   ],
+   "persons": 1
+  },
+  "neck_pain": {
+   "id": 46,
+   "name": "neck_pain",
+   "text": "a person holds a hand on the back of the neck, tilting head",
+   "paraphrases": [
+    "a person raises one hand behind the neck and keeps it there",
+    "a person rubs the back of the neck with one hand and bends the head",
+    "a person lifts a hand to the neck and rolls the head slightly"
+   ],
+   "motion": "The right hand rises and reaches behind the head to the back of the neck, with the elbow bent and pointing forward or up. The hand stays there, sometimes making small rubbing motions. The head tilts forward, back, or to the side, and may rotate slowly. The hand then lowers.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "hand rises behind the head",
+    "middle": "hand on back of neck, head tilting",
+    "end": "hand lowers"
+   },
+   "not_observable": [
+    "pain",
+    "facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "headache",
+     "visible_difference": "headache puts the hand on the forehead or temples in front"
+    },
+    {
+     "name": "brush_hair",
+     "visible_difference": "brush_hair moves the hand in repeated long strokes over the head"
+    },
+    {
+     "name": "flick_hair",
+     "visible_difference": "flick_hair is a quick single sweep past the side of the head"
+    }
+   ],
+   "persons": 1
+  },
+  "nausea_vomiting": {
+   "id": 47,
+   "name": "nausea_vomiting",
+   "text": "a person bends forward at the waist with a hand at mouth or stomach",
+   "paraphrases": [
+    "a person leans the torso far forward and holds a hand at the mouth",
+    "a person doubles over with a hand on the belly and head lowered",
+    "a person hunches forward and down with the head dropped toward the floor"
+   ],
+   "motion": "The torso bends forward from the hips and the head drops down and forward. One hand moves to the mouth or the stomach, and the other may rest on the knee or hang down. The upper body may jerk forward a few times while bent. The bent posture is held for a while before the person straightens.",
+   "body_parts": [
+    "torso",
+    "head",
+    "hand_R",
+    "arm_R",
+    "hip"
+   ],
+   "phases": {
+    "start": "hand moves to mouth or stomach",
+    "middle": "torso bent far forward, head low, possible jerks",
+    "end": "body slowly straightens"
+   },
+   "not_observable": [
+    "vomit",
+    "feeling of nausea",
+    "mouth opening"
+   ],
+   "confusable_with": [
+    {
+     "name": "sneeze_cough",
+     "visible_difference": "sneeze_cough has a shorter, shallower forward jerk and quick return"
+    },
+    {
+     "name": "nod_head_bow",
+     "visible_difference": "a bow bends forward with arms at sides and returns quickly"
+    },
+    {
+     "name": "chest_pain",
+     "visible_difference": "chest_pain keeps the hand on the chest with only a slight lean"
+    }
+   ],
+   "persons": 1
+  },
+  "fan_self": {
+   "id": 48,
+   "name": "fan_self",
+   "text": "a person waves one hand back and forth in front of the face",
+   "paraphrases": [
+    "a person moves the right hand repeatedly near the face in short swings",
+    "a person flaps one hand toward the face several times in a row",
+    "a person holds a hand in front of the face and swings it quickly"
+   ],
+   "motion": "The right hand rises to in front of the face or neck, with the elbow bent in front of the chest. The hand and forearm swing quickly back and forth toward and away from the face, many times, with the motion mostly at the wrist and elbow. The torso and head stay still. The hand then lowers.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "hand rises in front of face",
+    "middle": "rapid repeated small swings toward the face",
+    "end": "hand lowers"
+   },
+   "not_observable": [
+    "fan or paper",
+    "air flow",
+    "feeling of heat"
+   ],
+   "confusable_with": [
+    {
+     "name": "hand_waving",
+     "visible_difference": "hand_waving raises the hand higher, away from the face, and swings side to side"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "wipe_face makes contact and strokes over the face"
+    },
+    {
+     "name": "brush_teeth",
+     "visible_difference": "brush_teeth keeps the hand at the mouth with small side-to-side motion"
+    }
+   ],
+   "persons": 1
+  },
+  "punch_slap": {
+   "id": 49,
+   "name": "punch_slap",
+   "text": "a person swings an arm to strike another person's head or upper body",
+   "paraphrases": [
+    "a person thrusts a fist toward another person's face, who flinches back",
+    "a person hits another person with a fast swing of the right arm",
+    "two people stand close as one swings a hand quickly at the other's head"
+   ],
+   "motion": "The actor stands facing the partner and draws the right arm back, then swings or thrusts it quickly forward so the hand reaches the partner's head or chest. The actor's torso may rotate and lean into the strike. The partner's head and upper body jerk back or turn away at the moment of contact, and the partner may raise an arm to protect. The actor's arm then pulls back.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso",
+    "head"
+   ],
+   "phases": {
+    "start": "two people face each other, actor draws arm back",
+    "middle": "fast arm swing reaches partner's head, partner recoils",
+    "end": "actor withdraws arm, partner steadies"
+   },
+   "not_observable": [
+    "closed fist versus open hand",
+    "force of impact",
+    "sound"
+   ],
+   "confusable_with": [
+    {
+     "name": "pushing",
+     "visible_difference": "pushing uses both hands on the chest and moves the partner backward"
+    },
+    {
+     "name": "hit_with_object",
+     "visible_difference": "hit_with_object uses a larger overhead swing"
+    },
+    {
+     "name": "pat_on_back",
+     "visible_difference": "pat_on_back has slow repeated gentle contact on the partner's back"
+    }
+   ],
+   "persons": 2
+  },
+  "kicking": {
+   "id": 50,
+   "name": "kicking",
+   "text": "a person swings one leg forward to kick another person standing in front",
+   "paraphrases": [
+    "a person lifts the right foot quickly toward another person's body",
+    "two people face each other as one kicks the other with a leg",
+    "a person kicks forward at another person, who steps or bends back"
+   ],
+   "motion": "The actor stands facing the partner, shifts weight onto the left leg, and swings the right leg forward and up so the foot reaches the partner's legs or torso. The actor's arms may move out for balance and the torso leans back slightly. The partner's body jerks back or bends at the point of contact and may step backward. The actor's leg then returns to the floor.",
+   "body_parts": [
+    "leg_R",
+    "feet",
+    "hip",
+    "torso"
+   ],
+   "phases": {
+    "start": "two people face each other, actor shifts weight",
+    "middle": "actor's leg swings forward into partner, partner recoils",
+    "end": "actor's foot returns to the floor"
+   },
+   "not_observable": [
+    "force of the kick",
+    "intent to harm"
+   ],
+   "confusable_with": [
+    {
+     "name": "kicking_something",
+     "visible_difference": "kicking_something has no second person reacting"
+    },
+    {
+     "name": "step_on_foot",
+     "visible_difference": "step_on_foot lifts the foot only a little and brings it down onto the partner's foot"
+    },
+    {
+     "name": "side_kick",
+     "visible_difference": "side_kick extends the leg sideways and has no partner"
+    }
+   ],
+   "persons": 2
+  },
+  "pushing": {
+   "id": 51,
+   "name": "pushing",
+   "text": "a person pushes another person's chest with both hands, moving them backward",
+   "paraphrases": [
+    "a person thrusts both arms forward into another person, who steps back",
+    "two people face each other and one shoves the other away with hands",
+    "a person extends both arms against another person's upper body and pushes"
+   ],
+   "motion": "The actor faces the partner, bends both elbows, then extends both arms forward quickly so the hands contact the partner's chest or shoulders. The actor's torso leans forward behind the push. The partner's torso tilts back and the partner takes one or more steps backward, increasing the distance between them. The actor's arms then lower.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "two people close together facing each other",
+    "middle": "actor's arms extend into partner's chest",
+    "end": "partner steps backward, distance increases"
+   },
+   "not_observable": [
+    "force applied"
+   ],
+   "confusable_with": [
+    {
+     "name": "punch_slap",
+     "visible_difference": "punch_slap uses one fast arm toward the head without moving the partner's feet"
+    },
+    {
+     "name": "knock_over",
+     "visible_difference": "knock_over ends with the partner falling to the floor"
+    },
+    {
+     "name": "hugging",
+     "visible_difference": "hugging wraps the arms around the partner and brings bodies closer"
+    }
+   ],
+   "persons": 2
+  },
+  "pat_on_back": {
+   "id": 52,
+   "name": "pat_on_back",
+   "text": "a person taps another person's back or shoulder repeatedly with one hand",
+   "paraphrases": [
+    "a person reaches an arm around another person and pats their back",
+    "two people stand side by side while one taps the other's shoulder",
+    "a person lightly hits another person's upper back several times with a hand"
+   ],
+   "motion": "The actor stands beside or slightly behind the partner and raises the right arm so the hand reaches the partner's upper back or shoulder. The hand moves up and down in small repeated taps while the actor's arm stays bent. The partner stands mostly still with little body movement. The actor's arm then lowers.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "actor beside or behind partner, arm lifts",
+    "middle": "repeated small taps on partner's back or shoulder",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "gentleness of the touch",
+    "friendly intent"
+   ],
+   "confusable_with": [
+    {
+     "name": "hugging",
+     "visible_difference": "hugging has both people's arms around each other with chests together"
+    },
+    {
+     "name": "touch_pocket",
+     "visible_difference": "touch_pocket reaches to the partner's hip area instead of the back"
+    },
+    {
+     "name": "punch_slap",
+     "visible_difference": "punch_slap is a single fast strike from the front with the partner recoiling"
+    }
+   ],
+   "persons": 2
+  },
+  "point_finger": {
+   "id": 53,
+   "name": "point_finger",
+   "text": "a person points a straight arm at another person standing in front",
+   "paraphrases": [
+    "a person extends the right arm toward another person's face and holds",
+    "two people face each other as one aims a straight arm at the other",
+    "a person raises one arm and holds it extended toward another person"
+   ],
+   "motion": "The actor faces the partner and lifts the right arm forward until it is straight, with the hand aimed at the partner's face or chest. The arm is held extended and may jab forward a few times. The partner stands mostly still or leans back slightly. The actor's arm then lowers.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "two people facing each other",
+    "middle": "actor's straight arm held toward partner",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "extended index finger",
+    "accusing intent"
+   ],
+   "confusable_with": [
+    {
+     "name": "point_to_something",
+     "visible_difference": "point_to_something has no second person in the pointing direction"
+    },
+    {
+     "name": "shoot_with_gun",
+     "visible_difference": "shoot_with_gun often uses both hands joined and the partner raises arms or falls"
+    },
+    {
+     "name": "punch_slap",
+     "visible_difference": "punch_slap moves the arm fast into contact with the partner"
+    }
+   ],
+   "persons": 2
+  },
+  "hugging": {
+   "id": 54,
+   "name": "hugging",
+   "text": "two people step together and wrap their arms around each other's bodies",
+   "paraphrases": [
+    "two people embrace with arms around each other's backs and chests close",
+    "a person and another person hold each other closely with both arms",
+    "two people move in close and put their arms around one another"
+   ],
+   "motion": "Both people move toward each other until their torsos are very close or touching. Each raises both arms and wraps them around the other's back or shoulders, so their hands end behind the other person's body. They hold the embrace for a while with little movement, possibly swaying slightly. They then release and step apart.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "two people approach each other",
+    "middle": "arms wrapped around each other, torsos together",
+    "end": "release and step apart"
+   },
+   "not_observable": [
+    "emotion of the hug"
+   ],
+   "confusable_with": [
+    {
+     "name": "pat_on_back",
+     "visible_difference": "pat_on_back uses only one person's single arm with repeated taps"
+    },
+    {
+     "name": "support_somebody",
+     "visible_difference": "support_somebody has one arm around the partner while both walk side by side"
+    },
+    {
+     "name": "pushing",
+     "visible_difference": "pushing extends the arms and moves the partner away"
+    }
+   ],
+   "persons": 2
+  },
+  "giving_object": {
+   "id": 55,
+   "name": "giving_object",
+   "text": "a person extends a hand to another person, who reaches out to take it",
+   "paraphrases": [
+    "a person holds out the right hand and another person's hand meets it",
+    "two people reach toward each other until their hands meet, then withdraw",
+    "a person passes something forward as another person reaches and receives it"
+   ],
+   "motion": "The actor extends the right arm forward toward the partner at about waist or chest height. The partner raises a hand and reaches forward so both hands meet between them briefly. Then both arms pull back, with the partner's hand returning toward their own body. The action happens once.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "two people facing each other, actor's arm extends",
+    "middle": "both hands meet between them",
+    "end": "both arms withdraw"
+   },
+   "not_observable": [
+    "the object being given"
+   ],
+   "confusable_with": [
+    {
+     "name": "exchange_things",
+     "visible_difference": "exchange_things has both people giving, with two hand meetings or both arms extended"
+    },
+    {
+     "name": "shaking_hands",
+     "visible_difference": "shaking_hands keeps the hands joined and moving up and down"
+    },
+    {
+     "name": "grab_stuff",
+     "visible_difference": "grab_stuff has one person snatching quickly while the other pulls back"
+    }
+   ],
+   "persons": 2
+  },
+  "touch_pocket": {
+   "id": 56,
+   "name": "touch_pocket",
+   "text": "a person reaches a hand toward another person's hip or pocket area",
+   "paraphrases": [
+    "a person moves the right hand to the side of another person's waist",
+    "two people stand close as one reaches toward the other's pocket",
+    "a person sneaks a hand toward another person's hip from beside them"
+   ],
+   "motion": "The actor stands beside or behind the partner and moves the right hand down and toward the partner's hip, where it stays briefly. The actor's torso may lean slightly toward the partner. The partner mostly stands still, or turns and looks back and moves a hand toward the hip. The actor's hand then withdraws.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso"
+   ],
+   "phases": {
+    "start": "actor beside or behind partner",
+    "middle": "actor's hand at partner's hip",
+    "end": "hand withdraws, partner may turn"
+   },
+   "not_observable": [
+    "the pocket",
+    "items in the pocket",
+    "stealing intent"
+   ],
+   "confusable_with": [
+    {
+     "name": "reach_into_pocket",
+     "visible_difference": "reach_into_pocket uses the person's own hip with no partner"
+    },
+    {
+     "name": "pat_on_back",
+     "visible_difference": "pat_on_back reaches higher to the back or shoulder and taps"
+    },
+    {
+     "name": "grab_stuff",
+     "visible_difference": "grab_stuff reaches toward the partner's hands from the front"
+    }
+   ],
+   "persons": 2
+  },
+  "shaking_hands": {
+   "id": 57,
+   "name": "shaking_hands",
+   "text": "two people join right hands between them and move them up and down",
+   "paraphrases": [
+    "two people face each other and clasp right hands, shaking them briefly",
+    "a person takes another person's right hand and moves it up and down",
+    "two people reach out right hands, join them, and pump a few times"
+   ],
+   "motion": "Both people face each other and extend their right arms forward so their right hands meet in the space between them at about waist height. The joined hands move up and down a few times together. Their torsos stay upright and close. Then the hands release and both arms return to their sides.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "two people facing, right arms extend",
+    "middle": "joined right hands move up and down",
+    "end": "hands release and lower"
+   },
+   "not_observable": [
+    "grip of the hands"
+   ],
+   "confusable_with": [
+    {
+     "name": "giving_object",
+     "visible_difference": "giving_object has the hands meet only briefly without up-down shaking"
+    },
+    {
+     "name": "high-five",
+     "visible_difference": "high-five meets the hands quickly above head height"
+    },
+    {
+     "name": "rock-paper-scissors",
+     "visible_difference": "rock-paper-scissors keeps hands apart and bobs them separately"
+    }
+   ],
+   "persons": 2
+  },
+  "walking_towards": {
+   "id": 58,
+   "name": "walking_towards",
+   "text": "two people walk toward each other from a distance until they are close",
+   "paraphrases": [
+    "two people approach each other with walking steps and stop near each other",
+    "a person and another person walk forward and meet in the middle",
+    "two people start apart and step closer together until face to face"
+   ],
+   "motion": "The two people start apart and both walk forward with alternating leg steps and arm swings, facing each other. The distance between their bodies shrinks steadily. They stop when they are close and facing each other. The torsos stay upright throughout.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "hip",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "two people apart, facing each other",
+    "middle": "both walking forward, distance shrinking",
+    "end": "both stop close together"
+   },
+   "not_observable": [
+    "intent to meet"
+   ],
+   "confusable_with": [
+    {
+     "name": "walking_apart",
+     "visible_difference": "walking_apart has the distance increasing as they walk away"
+    },
+    {
+     "name": "follow",
+     "visible_difference": "follow has both people walking in the same direction one behind the other"
+    },
+    {
+     "name": "staggering",
+     "visible_difference": "staggering is one person with uneven swaying steps"
+    }
+   ],
+   "persons": 2
+  },
+  "walking_apart": {
+   "id": 59,
+   "name": "walking_apart",
+   "text": "two people start close together and walk away from each other",
+   "paraphrases": [
+    "two people turn and walk in opposite directions, getting farther apart",
+    "a person and another person separate by walking away from one another",
+    "two people step away from each other until there is a large gap"
+   ],
+   "motion": "The two people start close together, then turn away from each other and walk with alternating leg steps and arm swings. Each moves in roughly the opposite direction, so the distance between their bodies grows steadily. They stop or leave the view far apart. The torsos stay upright throughout.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "hip",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "two people close together",
+    "middle": "both walking away, distance growing",
+    "end": "far apart"
+   },
+   "not_observable": [
+    "reason for parting"
+   ],
+   "confusable_with": [
+    {
+     "name": "walking_towards",
+     "visible_difference": "walking_towards has the distance shrinking as they approach"
+    },
+    {
+     "name": "follow",
+     "visible_difference": "follow keeps a similar distance while both walk the same way"
+    },
+    {
+     "name": "pushing",
+     "visible_difference": "pushing separates them by a hand thrust, with only the partner stepping back"
+    }
+   ],
+   "persons": 2
+  },
+  "put_on_headphone": {
+   "id": 60,
+   "name": "put_on_headphone",
+   "text": "a person lifts both hands over the head then brings them down to the ears",
+   "paraphrases": [
+    "a person raises both hands above the head and lowers them onto the ears",
+    "a person brings both hands up over the head and settles them at the ears",
+    "a person lifts both arms, then lowers both hands to the sides of the head"
+   ],
+   "motion": "Both hands rise together from in front of the chest to the top of the head, with the elbows bending out to the sides. The hands then move down symmetrically to the sides of the head near the ears and stay there briefly with small adjusting movements. Finally both arms lower back to the sides of the body while the head and torso stay mostly still and upright.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands rise in front of the chest",
+    "middle": "hands pass over the head and come down to the ears",
+    "end": "hands leave the ears and the arms lower"
+   },
+   "not_observable": [
+    "headphones",
+    "fitting the ear cups over the ears"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_headphone",
+     "visible_difference": "hands start at the ears and move up and away instead of arriving at the ears"
+    },
+    {
+     "name": "put_on_a_hat_cap",
+     "visible_difference": "hands stop on top of the head rather than at the sides near the ears"
+    },
+    {
+     "name": "put_on_glasses",
+     "visible_difference": "hands arrive at the front of the face, lower and closer together"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_headphone": {
+   "id": 61,
+   "name": "take_off_headphone",
+   "text": "a person lifts both hands to the ears and raises them away over the head",
+   "paraphrases": [
+    "a person raises both hands from the ears up and off the head",
+    "a person holds the sides of the head and lifts both hands upward and away",
+    "a person moves both hands from the ears over the head and then down"
+   ],
+   "motion": "Both arms rise so that the hands reach the sides of the head near the ears. The hands then move upward together over the top of the head, with the elbows spreading outward. The hands come down in front of the body close to each other at chest or waist height, and the arms lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands rise to the ears",
+    "middle": "hands lift up over the head",
+    "end": "hands come down together in front of the body"
+   },
+   "not_observable": [
+    "headphones"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_headphone",
+     "visible_difference": "hands end at the ears instead of starting there and leaving upward"
+    },
+    {
+     "name": "take_off_a_hat_cap",
+     "visible_difference": "hands grip the top of the head rather than the sides at the ears"
+    },
+    {
+     "name": "take_off_glasses",
+     "visible_difference": "hands are at the front of the face and move forward, not up over the head"
+    }
+   ],
+   "persons": 1
+  },
+  "shoot_at_basket": {
+   "id": 62,
+   "name": "shoot_at_basket",
+   "text": "a person raises both hands above the head and pushes them upward and forward",
+   "paraphrases": [
+    "a person bends the knees, then extends both arms upward and forward from the chest",
+    "a person brings both hands up past the face and extends the arms high forward",
+    "a person dips slightly then straightens the legs while both arms push up forward"
+   ],
+   "motion": "The person starts with both hands together in front of the chest and bends the knees slightly. The legs straighten while both hands rise past the face to above the head, and the arms extend upward and forward with the right arm leading. The wrists bend forward at the end, the arms stay raised briefly, and then they lower; the heels may lift during the push.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "leg_R",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "hands together at the chest, knees bent",
+    "middle": "legs straighten as both arms push up and forward",
+    "end": "arms held high, then lowered"
+   },
+   "not_observable": [
+    "basketball",
+    "basket hoop",
+    "release of the ball"
+   ],
+   "confusable_with": [
+    {
+     "name": "throw",
+     "visible_difference": "one arm swings forward from behind the shoulder instead of both arms pushing up from the chest"
+    },
+    {
+     "name": "jump_up",
+     "visible_difference": "the whole body leaves the ground and the arms do not extend forward above the head"
+    },
+    {
+     "name": "cheer_up",
+     "visible_difference": "arms rise straight up and often shake, without the knee bend and forward push"
+    }
+   ],
+   "persons": 1
+  },
+  "bounce_ball": {
+   "id": 63,
+   "name": "bounce_ball",
+   "text": "a person repeatedly pushes one hand down and up beside the hip",
+   "paraphrases": [
+    "a person moves the right hand up and down repeatedly at waist height",
+    "a person pats downward at waist level again and again with one hand",
+    "a person leans slightly forward and pumps one hand down and up repeatedly"
+   ],
+   "motion": "The person stands with the torso tilted slightly forward and the right hand held in front of or beside the right hip. The right hand and forearm push down and come back up in a steady repeated rhythm, with the wrist and elbow bending each time. The left arm stays mostly still, and the knees may bend slightly throughout.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "torso"
+   ],
+   "phases": {
+    "start": "slight forward lean with the right hand at the waist",
+    "middle": "right hand pushes down and rises repeatedly",
+    "end": "hand stops and the torso straightens"
+   },
+   "not_observable": [
+    "ball",
+    "ball hitting the floor"
+   ],
+   "confusable_with": [
+    {
+     "name": "hand_waving",
+     "visible_difference": "hand moves side to side above the shoulder, not down and up at the waist"
+    },
+    {
+     "name": "juggle_table_tennis_ball",
+     "visible_difference": "hand makes smaller upward taps at chest height with the forearm held forward"
+    },
+    {
+     "name": "shake_fist",
+     "visible_difference": "hand is raised to chest or head height and shakes in short strokes, not at hip level"
+    }
+   ],
+   "persons": 1
+  },
+  "tennis_bat_swing": {
+   "id": 64,
+   "name": "tennis_bat_swing",
+   "text": "a person swings the right arm across the body from back to front",
+   "paraphrases": [
+    "a person rotates the torso and sweeps one arm forward in a wide arc",
+    "a person draws the right arm back then swings it forward across the body",
+    "a person turns the shoulders and swings an extended arm sideways in front"
+   ],
+   "motion": "The person turns the torso to the right and pulls the right arm back behind the body. The torso then rotates to the left while the extended right arm sweeps forward in a wide, roughly horizontal arc across the front of the body. The arm finishes on the left side near the left shoulder, and the weight shifts from the back leg to the front leg.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "torso",
+    "hip",
+    "leg_R",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "torso turned right, right arm drawn back",
+    "middle": "arm sweeps forward across the body as the torso rotates",
+    "end": "arm finishes near the left shoulder"
+   },
+   "not_observable": [
+    "tennis racket",
+    "ball"
+   ],
+   "confusable_with": [
+    {
+     "name": "throw",
+     "visible_difference": "arm moves over the shoulder from above rather than in a horizontal arc"
+    },
+    {
+     "name": "arm_swings",
+     "visible_difference": "both arms swing repeatedly without a torso wind-up"
+    },
+    {
+     "name": "hit_with_object",
+     "visible_difference": "a second person stands in front and the arm usually swings downward toward them"
+    }
+   ],
+   "persons": 1
+  },
+  "juggle_table_tennis_ball": {
+   "id": 65,
+   "name": "juggle_table_tennis_ball",
+   "text": "a person holds one forearm forward and makes small repeated up and down hand movements",
+   "paraphrases": [
+    "a person repeatedly lifts and drops the right hand slightly in front of the chest",
+    "a person keeps the right forearm forward and taps upward with small repeated motions",
+    "a person makes small quick vertical hand movements with the forearm held in front"
+   ],
+   "motion": "The right forearm is held forward at waist to chest height with the elbow bent close to the body. The right hand moves up and down in small, quick, repeated motions, mainly from the wrist and elbow. The head may tilt slightly down and the rest of the body stays mostly still, though the person may take small steps.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right forearm raised forward",
+    "middle": "small repeated up and down hand motions",
+    "end": "hand stops and lowers"
+   },
+   "not_observable": [
+    "table tennis paddle",
+    "ball",
+    "ball contact"
+   ],
+   "confusable_with": [
+    {
+     "name": "bounce_ball",
+     "visible_difference": "hand pushes downward at hip level with larger strokes"
+    },
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "hands are held still together in front with little vertical movement"
+    },
+    {
+     "name": "toss_a_coin",
+     "visible_difference": "a single upward flick of the hand rather than a continuous repeated rhythm"
+    }
+   ],
+   "persons": 1
+  },
+  "hush": {
+   "id": 66,
+   "name": "hush",
+   "text": "a person raises one hand to the front of the mouth and holds it",
+   "paraphrases": [
+    "a person lifts the right hand to the lips and keeps it there briefly",
+    "a person brings a raised hand up to the center of the face and pauses",
+    "a person moves the right hand up in front of the mouth then lowers it"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises from the side to the front of the mouth, close to the center of the face. The hand stays there briefly with little movement, sometimes while the head tilts slightly forward. The hand then lowers back to the side of the body.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises from the side",
+    "middle": "hand held still in front of the mouth",
+    "end": "hand lowers to the side"
+   },
+   "not_observable": [
+    "index finger extended over the lips",
+    "shushing sound"
+   ],
+   "confusable_with": [
+    {
+     "name": "sneeze_cough",
+     "visible_difference": "hand covers the mouth while the head and torso jerk forward"
+    },
+    {
+     "name": "yawn",
+     "visible_difference": "head tilts back and the other arm may stretch while the hand is at the mouth"
+    },
+    {
+     "name": "blow_nose",
+     "visible_difference": "hands stay at the nose longer with small repeated head movements"
+    }
+   ],
+   "persons": 1
+  },
+  "flick_hair": {
+   "id": 67,
+   "name": "flick_hair",
+   "text": "a person raises one hand to the side of the head and sweeps it backward",
+   "paraphrases": [
+    "a person brushes the right hand from the forehead back over the head",
+    "a person lifts a hand to the head and pushes it back quickly once",
+    "a person moves one hand to the temple and flicks it back past the ear"
+   ],
+   "motion": "The right hand rises to the forehead or the side of the head. It moves quickly backward along the side of the head past the ear, often with a small tilt or turn of the head to the opposite side. The hand then drops back down; the motion is short and happens once or twice.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises to the forehead",
+    "middle": "hand sweeps quickly back past the ear with a head tilt",
+    "end": "hand drops to the side"
+   },
+   "not_observable": [
+    "hair"
+   ],
+   "confusable_with": [
+    {
+     "name": "brush_hair",
+     "visible_difference": "hand strokes along the head repeatedly in a slower rhythm"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "hand moves down over the front of the face rather than back along the side"
+    },
+    {
+     "name": "salute",
+     "visible_difference": "hand stops at the forehead and holds instead of sweeping back"
+    }
+   ],
+   "persons": 1
+  },
+  "thumb_up": {
+   "id": 68,
+   "name": "thumb_up",
+   "text": "a person raises one closed hand forward at chest height and holds it still",
+   "paraphrases": [
+    "a person lifts the right hand in front of the chest and keeps it there",
+    "a person extends the right forearm forward with a closed hand and pauses",
+    "a person brings one hand up in front of the body and holds it briefly"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises to chest or shoulder height in front of the body, often pushed slightly forward. The hand is held still for a moment with the thumb tip above the hand. The arm then lowers back to the side.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises in front of the body",
+    "middle": "hand held still at chest height with the thumb up",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "fingers curled into the palm",
+    "facial expression of approval"
+   ],
+   "confusable_with": [
+    {
+     "name": "thumb_down",
+     "visible_difference": "thumb tip points below the hand, and the wrist is turned over"
+    },
+    {
+     "name": "make_OK_sign",
+     "visible_difference": "same raised and held hand; differs only in finger shape, which is barely visible"
+    },
+    {
+     "name": "make_victory_sign",
+     "visible_difference": "hand is often raised higher, near the face, with fingers rather than the thumb pointing up"
+    }
+   ],
+   "persons": 1
+  },
+  "thumb_down": {
+   "id": 69,
+   "name": "thumb_down",
+   "text": "a person raises one closed hand in front of the chest, wrist turned down",
+   "paraphrases": [
+    "a person lifts the right hand forward and holds it with the thumb pointing down",
+    "a person extends the right forearm forward, turns the wrist over, and pauses",
+    "a person brings one hand up in front and holds it upside down"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises to chest height in front of the body, sometimes pushed forward. The wrist turns so the thumb tip points below the hand, and the hand is held still for a moment. The arm then lowers back to the side.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises in front of the body",
+    "middle": "wrist turned over, hand held with the thumb down",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "fingers curled into the palm",
+    "facial expression of disapproval"
+   ],
+   "confusable_with": [
+    {
+     "name": "thumb_up",
+     "visible_difference": "thumb tip is above the hand and the wrist is not turned over"
+    },
+    {
+     "name": "point_to_something",
+     "visible_difference": "arm extends farther forward and is usually straighter"
+    },
+    {
+     "name": "make_OK_sign",
+     "visible_difference": "hand is held upright, often nearer the face, without the turned wrist"
+    }
+   ],
+   "persons": 1
+  },
+  "make_OK_sign": {
+   "id": 70,
+   "name": "make_OK_sign",
+   "text": "a person raises the right hand to shoulder height in front and holds it still",
+   "paraphrases": [
+    "a person lifts one hand beside the face and keeps it raised briefly",
+    "a person brings the right hand up to shoulder level and pauses with it",
+    "a person holds the right hand up near the face, then lowers it"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises to shoulder or face height, in front of or slightly to the side of the body. The hand is held still for a moment, upright with the palm facing forward. The arm then lowers back to the side while the rest of the body stays still.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises from the side",
+    "middle": "hand held still at shoulder height",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "thumb and index finger forming a ring",
+    "other fingers extended"
+   ],
+   "confusable_with": [
+    {
+     "name": "make_victory_sign",
+     "visible_difference": "same raised and held hand; differs only in finger shape, which is barely visible"
+    },
+    {
+     "name": "thumb_up",
+     "visible_difference": "hand is a closed fist pushed forward at chest height with the thumb tip above it"
+    },
+    {
+     "name": "hand_waving",
+     "visible_difference": "hand moves side to side repeatedly instead of being held still"
+    }
+   ],
+   "persons": 1
+  },
+  "make_victory_sign": {
+   "id": 71,
+   "name": "make_victory_sign",
+   "text": "a person raises the right hand near the face and holds it upright",
+   "paraphrases": [
+    "a person lifts one hand to head height with fingers up and pauses",
+    "a person brings the right hand up beside the face and keeps it still",
+    "a person holds an upright hand raised near the shoulder, then lowers it"
+   ],
+   "motion": "The right arm bends at the elbow and the right hand rises to shoulder or head height, beside or in front of the face. The hand is held upright and still for a moment, with the hand tip above the wrist. The arm then lowers back to the side; the head may tilt slightly toward the hand.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises from the side",
+    "middle": "upright hand held still near the face",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "index and middle fingers spread in a V shape",
+    "other fingers folded"
+   ],
+   "confusable_with": [
+    {
+     "name": "make_OK_sign",
+     "visible_difference": "same raised and held hand; differs only in finger shape, which is barely visible"
+    },
+    {
+     "name": "taking_a_selfie",
+     "visible_difference": "hand is stretched forward and up away from the face, often for longer"
+    },
+    {
+     "name": "salute",
+     "visible_difference": "hand touches the side of the forehead with the elbow raised out to the side"
+    }
+   ],
+   "persons": 1
+  },
+  "staple_book": {
+   "id": 72,
+   "name": "staple_book",
+   "text": "a person presses the right hand down repeatedly on top of the left hand",
+   "paraphrases": [
+    "a person brings both hands together in front and pushes down with the right hand",
+    "a person holds the hands together at waist level and presses down with one palm",
+    "a person pushes the right hand downward on the left hand once or twice"
+   ],
+   "motion": "Both hands come together in front of the body at waist or table height, with the left hand below and the right hand on top. The right hand and arm push sharply downward, sometimes with the shoulders and torso leaning over the hands, and the press may repeat a few times. Between presses the hands shift slightly, then both hands lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "both hands meet in front at waist height",
+    "middle": "right hand presses sharply down on the left",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "stapler",
+    "book or paper",
+    "staple going in"
+   ],
+   "confusable_with": [
+    {
+     "name": "counting_money",
+     "visible_difference": "the right hand makes small sliding motions rather than sharp downward presses"
+    },
+    {
+     "name": "cutting_paper",
+     "visible_difference": "the right hand makes small repeated motions while moving forward, not pressing down"
+    },
+    {
+     "name": "clapping",
+     "visible_difference": "hands meet side to side repeatedly at chest height rather than one pressing on the other"
+    }
+   ],
+   "persons": 1
+  },
+  "counting_money": {
+   "id": 73,
+   "name": "counting_money",
+   "text": "a person holds both hands together in front and moves one hand repeatedly",
+   "paraphrases": [
+    "a person keeps both hands close at chest height and makes small repeated hand motions",
+    "a person holds the left hand still and repeatedly moves the right hand across it",
+    "a person makes small repeated sliding motions of one hand over the other hand"
+   ],
+   "motion": "Both hands are held close together in front of the chest or waist, with the left hand mostly still. The right hand makes small repeated movements across or away from the left hand, mainly at the wrist, in a steady rhythm. The head tilts slightly down and the arms and torso stay mostly still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands brought together in front",
+    "middle": "right hand makes small repeated motions over the left",
+    "end": "hands separate or lower"
+   },
+   "not_observable": [
+    "money",
+    "thumb sliding notes",
+    "finger movements"
+   ],
+   "confusable_with": [
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "hands hold still together with even smaller motions and the head bent lower"
+    },
+    {
+     "name": "play_magic_cube",
+     "visible_difference": "both hands twist and turn together instead of one hand sliding over the other"
+    },
+    {
+     "name": "reading",
+     "visible_difference": "hands hold still in front with only occasional page-turning movements"
+    }
+   ],
+   "persons": 1
+  },
+  "cutting_nails": {
+   "id": 74,
+   "name": "cutting_nails",
+   "text": "a person holds one hand still while the other hand works closely on its fingers",
+   "paraphrases": [
+    "a person brings both hands together near the chest and moves one in small pinches",
+    "a person keeps the hands close at chest height, one making small squeezing motions",
+    "a person bends the head down over both hands held close and moving slightly"
+   ],
+   "motion": "Both hands are held close together in front of the chest or waist, and the head bends down toward them. The right hand makes small repeated squeezing motions near the fingertips of the left hand, and the left hand may turn or shift slightly between cuts. The arms stay bent and the body stays still; the hands may switch roles partway.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands come together in front, head bends down",
+    "middle": "right hand makes small repeated squeezes at the left fingertips",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "nail clipper",
+    "nails",
+    "finger squeezing"
+   ],
+   "confusable_with": [
+    {
+     "name": "counting_money",
+     "visible_difference": "the right hand slides across the left in a steady rhythm rather than pausing between squeezes"
+    },
+    {
+     "name": "cutting_paper",
+     "visible_difference": "hands are farther apart and the right hand moves forward along a path"
+    },
+    {
+     "name": "apply_cream_on_hand",
+     "visible_difference": "one hand rubs over the back and palm of the other with larger circular motions"
+    }
+   ],
+   "persons": 1
+  },
+  "cutting_paper": {
+   "id": 75,
+   "name": "cutting_paper",
+   "text": "a person holds both hands apart in front while one hand makes repeated snipping motions",
+   "paraphrases": [
+    "a person holds the left hand forward and moves the right hand along it repeatedly",
+    "a person keeps both hands in front of the chest and makes small cutting motions",
+    "a person advances the right hand slowly forward with small repeated squeezing motions"
+   ],
+   "motion": "Both hands are raised in front of the chest a short distance apart, with the left hand mostly holding still. The right hand makes small repeated wrist and forearm motions while slowly moving forward or around near the left hand, and the left hand may turn. The head tilts down toward the hands and the body stays still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands raised in front of the chest",
+    "middle": "right hand makes small repeated motions while advancing",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "scissors",
+    "paper",
+    "fingers opening and closing"
+   ],
+   "confusable_with": [
+    {
+     "name": "cutting_nails",
+     "visible_difference": "hands are closer together and the right hand stays at the left fingertips"
+    },
+    {
+     "name": "fold_paper",
+     "visible_difference": "both hands move together toward and away from each other and press flat"
+    },
+    {
+     "name": "staple_book",
+     "visible_difference": "the right hand presses sharply down on the left instead of advancing with small motions"
+    }
+   ],
+   "persons": 1
+  },
+  "snap_fingers": {
+   "id": 76,
+   "name": "snap_fingers",
+   "text": "a person raises one hand in front and makes a quick small flick with it",
+   "paraphrases": [
+    "a person lifts the right hand to chest height and gives a sharp flick",
+    "a person brings one hand up and makes a short quick wrist motion",
+    "a person holds the right hand raised and gives a sudden small downward flick"
+   ],
+   "motion": "The right arm bends and the right hand rises to chest or shoulder height in front of or beside the body. The hand makes one or a few short, quick movements, mostly at the wrist, with little arm movement. The rest of the body stays still and the arm then lowers.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right hand rises in front",
+    "middle": "one or a few quick wrist flicks",
+    "end": "arm lowers"
+   },
+   "not_observable": [
+    "thumb and middle finger snapping",
+    "snapping sound"
+   ],
+   "confusable_with": [
+    {
+     "name": "thumb_up",
+     "visible_difference": "hand is held still without a quick flick"
+    },
+    {
+     "name": "hand_waving",
+     "visible_difference": "hand moves side to side repeatedly with larger arm motion"
+    },
+    {
+     "name": "make_OK_sign",
+     "visible_difference": "hand is held still near the face rather than flicked"
+    }
+   ],
+   "persons": 1
+  },
+  "open_bottle": {
+   "id": 77,
+   "name": "open_bottle",
+   "text": "a person holds both hands together in front and twists one hand repeatedly",
+   "paraphrases": [
+    "a person holds the left hand still and turns the right hand above it",
+    "a person brings both hands together at chest height and rotates the upper hand",
+    "a person twists the right wrist back and forth above the left hand in front"
+   ],
+   "motion": "Both hands come together in front of the chest or waist, one above the other, with the left hand lower and still. The right hand twists back and forth with repeated wrist rotations, and the right elbow may lift slightly to the side. Finally the right hand moves up and away from the left hand.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "hands meet one above the other in front",
+    "middle": "right wrist twists back and forth repeatedly",
+    "end": "right hand lifts away from the left"
+   },
+   "not_observable": [
+    "bottle",
+    "bottle cap"
+   ],
+   "confusable_with": [
+    {
+     "name": "rub_two_hands",
+     "visible_difference": "palms slide against each other side by side instead of one hand twisting above the other"
+    },
+    {
+     "name": "play_magic_cube",
+     "visible_difference": "both hands turn together with the hands side by side"
+    },
+    {
+     "name": "open_a_box",
+     "visible_difference": "both hands pull apart or lift outward rather than one wrist twisting"
+    }
+   ],
+   "persons": 1
+  },
+  "sniff_smell": {
+   "id": 78,
+   "name": "sniff_smell",
+   "text": "a person brings one hand up close to the nose and holds it there",
+   "paraphrases": [
+    "a person raises the right hand to the face and leans the head toward it",
+    "a person lifts a hand under the nose and pauses with the head bent slightly",
+    "a person moves one hand to the front of the nose, then lowers it"
+   ],
+   "motion": "The right hand rises to just below or in front of the nose, and the head bends slightly forward or down toward it. The hand and head stay close together for a moment, with possible small head movements. The hand then lowers back to the side; sometimes both hands rise together to the face.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand rises toward the face",
+    "middle": "hand held at the nose with the head bent toward it",
+    "end": "hand lowers"
+   },
+   "not_observable": [
+    "object being smelled",
+    "inhaling"
+   ],
+   "confusable_with": [
+    {
+     "name": "drink_water",
+     "visible_difference": "hand reaches the mouth and the head tilts back"
+    },
+    {
+     "name": "hush",
+     "visible_difference": "hand stops at the mouth and the head does not bend toward it"
+    },
+    {
+     "name": "blow_nose",
+     "visible_difference": "both hands cover the nose with small repeated head jerks"
+    }
+   ],
+   "persons": 1
+  },
+  "squat_down": {
+   "id": 79,
+   "name": "squat_down",
+   "text": "a person bends both knees deeply and lowers the hips toward the floor",
+   "paraphrases": [
+    "a person lowers the body into a crouch by bending the legs fully",
+    "a person squats, bringing the hips down near the heels with the torso upright",
+    "a person crouches low with knees bent and arms often reaching forward"
+   ],
+   "motion": "Starting from standing, both knees and hips bend and the hips move straight down toward the heels while the feet stay in place. The torso leans slightly forward and the arms often reach forward or rest on the knees for balance. The person holds the low crouch and may then stand back up.",
+   "body_parts": [
+    "hip",
+    "leg_R",
+    "leg_L",
+    "torso",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "standing upright",
+    "middle": "knees and hips bend, hips drop toward the heels",
+    "end": "held low crouch, possibly rising again"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "sit_down",
+     "visible_difference": "hips move back onto a seat and stop higher, with the torso leaning back"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "torso bends forward, one hand reaches the floor, and the person stands quickly"
+    },
+    {
+     "name": "put_on_a_shoe",
+     "visible_difference": "hands work at one foot for a while, often with one leg raised"
+    }
+   ],
+   "persons": 1
+  },
+  "toss_a_coin": {
+   "id": 80,
+   "name": "toss_a_coin",
+   "text": "a person flicks the right hand upward from chest height and catches with both hands",
+   "paraphrases": [
+    "a person makes a quick upward flick of one hand then brings hands together",
+    "a person jerks the right hand up in front, then cups both hands together",
+    "a person gives a short upward hand flick, then the hands meet below it"
+   ],
+   "motion": "The right hand is held in front of the chest or waist with the elbow bent. It makes one short, quick upward flick, mainly at the wrist and forearm, and the head may tilt up slightly. The hand then moves to catch, often with the left hand coming under or over the right hand in front of the body.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "head"
+   ],
+   "phases": {
+    "start": "right hand held in front with the elbow bent",
+    "middle": "quick upward flick of the right hand",
+    "end": "hands come together in front to catch"
+   },
+   "not_observable": [
+    "coin",
+    "coin flipping in the air"
+   ],
+   "confusable_with": [
+    {
+     "name": "juggle_table_tennis_ball",
+     "visible_difference": "the hand repeats small upward taps continuously instead of one flick and catch"
+    },
+    {
+     "name": "snap_fingers",
+     "visible_difference": "the flick is not followed by the hands meeting to catch"
+    },
+    {
+     "name": "throw",
+     "visible_difference": "the arm swings forward from behind the shoulder with a much larger motion"
+    }
+   ],
+   "persons": 1
+  },
+  "fold_paper": {
+   "id": 81,
+   "name": "fold_paper",
+   "text": "a person brings both hands together in front, then presses one along the other",
+   "paraphrases": [
+    "a person moves both hands toward each other at waist height and presses down",
+    "a person brings the hands together, then slides one hand flat across the other",
+    "a person bends over hands held low in front and repeatedly brings them together"
+   ],
+   "motion": "Both hands are held in front of the body at waist or table height, a short distance apart. One hand moves over toward the other, the hands meet, and then one hand slides or presses flat along a line with a slight downward push. This may repeat two or three times, with the head bent down toward the hands.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands apart in front at waist height",
+    "middle": "one hand moves onto the other and presses along a line",
+    "end": "hands rest together or lower"
+   },
+   "not_observable": [
+    "paper",
+    "fold crease"
+   ],
+   "confusable_with": [
+    {
+     "name": "ball_up_paper",
+     "visible_difference": "hands squeeze and turn around each other in a compact cluster instead of pressing flat"
+    },
+    {
+     "name": "cutting_paper",
+     "visible_difference": "one hand makes small repeated motions while advancing, hands staying apart"
+    },
+    {
+     "name": "staple_book",
+     "visible_difference": "the right hand presses sharply straight down rather than sliding along"
+    }
+   ],
+   "persons": 1
+  },
+  "ball_up_paper": {
+   "id": 82,
+   "name": "ball_up_paper",
+   "text": "a person squeezes both hands together repeatedly, turning them around each other in front",
+   "paraphrases": [
+    "a person presses both hands together and rotates them around each other repeatedly",
+    "a person brings both hands together at chest height and kneads them in small turns",
+    "a person squeezes the hands toward each other again and again in front"
+   ],
+   "motion": "Both hands start apart in front of the chest and move toward each other until they nearly touch. The hands then press together repeatedly and turn around each other, with the space between them shrinking. At the end the hands hold a compact position close together and then lower, or one hand moves away.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "hands apart in front of the chest",
+    "middle": "hands press together and turn around each other repeatedly",
+    "end": "hands held compact together, then lowered"
+   },
+   "not_observable": [
+    "paper",
+    "ball of paper"
+   ],
+   "confusable_with": [
+    {
+     "name": "fold_paper",
+     "visible_difference": "one hand presses flat along the other at waist height without turning"
+    },
+    {
+     "name": "rub_two_hands",
+     "visible_difference": "palms slide flat back and forth against each other without the hands closing in"
+    },
+    {
+     "name": "tear_up_paper",
+     "visible_difference": "hands pull apart in opposite directions instead of squeezing together"
+    }
+   ],
+   "persons": 1
+  },
+  "play_magic_cube": {
+   "id": 83,
+   "name": "play_magic_cube",
+   "text": "a person holds both hands together in front and twists them repeatedly in turns",
+   "paraphrases": [
+    "a person keeps both hands close at chest height and rotates the wrists repeatedly",
+    "a person repeatedly turns one hand and then the other while holding them together",
+    "a person makes small alternating twisting motions with both hands held in front"
+   ],
+   "motion": "Both hands are held close together in front of the chest with the elbows bent and the head tilted down toward them. The wrists rotate in short repeated turns, sometimes one hand and sometimes both, while the hands stay at about the same distance apart. The arms and torso stay mostly still for the whole action.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands brought together in front of the chest",
+    "middle": "repeated short wrist turns of one or both hands",
+    "end": "hands stop and lower"
+   },
+   "not_observable": [
+    "magic cube",
+    "finger movements"
+   ],
+   "confusable_with": [
+    {
+     "name": "play_with_phone_tablet",
+     "visible_difference": "hands stay still with no wrist turning"
+    },
+    {
+     "name": "counting_money",
+     "visible_difference": "one hand slides over a still other hand instead of both wrists turning"
+    },
+    {
+     "name": "open_bottle",
+     "visible_difference": "one hand twists above the other, which stays still, and then lifts away"
+    }
+   ],
+   "persons": 1
+  },
+  "apply_cream_on_face": {
+   "id": 84,
+   "name": "apply_cream_on_face",
+   "text": "a person rubs both hands in small circles on the cheeks and face",
+   "paraphrases": [
+    "a person moves the fingertips repeatedly over the face in small rubbing motions",
+    "a person raises both hands to the face and rubs them around the cheeks",
+    "a person touches the face with one or both hands and rubs it repeatedly"
+   ],
+   "motion": "One or both hands rise to the face, often after the hands meet briefly in front of the chest. The hands rub in small repeated circular motions on the cheeks, forehead, and chin, moving between different parts of the face. The head stays mostly still or tilts slightly, and the hands then lower.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands meet in front of the chest, then rise",
+    "middle": "small repeated circles on different parts of the face",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "cream",
+    "cream container"
+   ],
+   "confusable_with": [
+    {
+     "name": "wipe_face",
+     "visible_difference": "hands make one or two larger downward strokes instead of repeated small circles"
+    },
+    {
+     "name": "headache",
+     "visible_difference": "hands hold the forehead or temples still rather than rubbing around the face"
+    },
+    {
+     "name": "apply_cream_on_hand",
+     "visible_difference": "hands rub each other in front of the chest and never reach the face"
+    }
+   ],
+   "persons": 1
+  },
+  "apply_cream_on_hand": {
+   "id": 85,
+   "name": "apply_cream_on_hand",
+   "text": "a person rubs one hand over the back and palm of the other hand",
+   "paraphrases": [
+    "a person moves the right hand around the left hand in repeated rubbing motions",
+    "a person holds the hands together in front and rubs them over each other",
+    "a person smooths one hand repeatedly over the other hand at chest height"
+   ],
+   "motion": "Both hands come together in front of the chest or waist. The right hand rubs over the back and palm of the left hand in repeated sliding and circular motions, and then the hands may switch roles. The head tilts slightly down and the arms and torso stay mostly still.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "hands come together in front",
+    "middle": "one hand rubs over the other repeatedly, possibly switching",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "cream",
+    "cream container"
+   ],
+   "confusable_with": [
+    {
+     "name": "rub_two_hands",
+     "visible_difference": "palms slide flat in quick back and forth strokes without one hand moving around the other"
+    },
+    {
+     "name": "apply_cream_on_face",
+     "visible_difference": "hands rise to the face and rub there"
+    },
+    {
+     "name": "cutting_nails",
+     "visible_difference": "one hand makes small squeezing motions at the other's fingertips instead of rubbing over it"
+    }
+   ],
+   "persons": 1
+  },
+  "put_on_bag": {
+   "id": 86,
+   "name": "put_on_bag",
+   "text": "a person reaches each arm back behind the shoulders in turn, then pulls forward",
+   "paraphrases": [
+    "a person passes one arm and then the other back behind the shoulders",
+    "a person lifts the hands to the shoulders, bends the arms back, and straightens up",
+    "a person moves each arm back behind the body in turn, then adjusts the shoulders"
+   ],
+   "motion": "The person first reaches down or forward with both hands and lifts them to chest height. The right arm bends and moves back behind the right shoulder, then the left arm reaches back behind the left shoulder while the torso twists slightly. Finally the hands rise to the front of the shoulders and pull down, and the shoulders shrug or the torso bounces once.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "hands lift from low in front to the chest",
+    "middle": "one arm then the other moves back behind the shoulders",
+    "end": "hands pull down at the front of the shoulders"
+   },
+   "not_observable": [
+    "bag or backpack",
+    "shoulder straps"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_bag",
+     "visible_difference": "arms come out from behind the shoulders and the hands end low in front"
+    },
+    {
+     "name": "put_on_jacket",
+     "visible_difference": "arms swing wider into sleeves and the hands then work down the front of the chest"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "both arms extend up or back together without the one-then-other sequence"
+    }
+   ],
+   "persons": 1
+  },
+  "take_off_bag": {
+   "id": 87,
+   "name": "take_off_bag",
+   "text": "a person slides the arms back out behind the shoulders and lowers the hands forward",
+   "paraphrases": [
+    "a person pulls one arm then the other out from behind the back",
+    "a person reaches to the shoulders, slips the arms backward, and brings the hands down",
+    "a person moves each arm back behind the shoulder in turn, then lowers both hands"
+   ],
+   "motion": "The hands rise to the front of the shoulders, then the right shoulder drops and the right arm moves back and down out from behind the body. The torso twists slightly as the left hand reaches toward the right side or the left arm slides out behind. The hands come together in front or at one side and lower toward the floor.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "hands rise to the front of the shoulders",
+    "middle": "one arm then the other slides back and out with a torso twist",
+    "end": "hands come together low in front or to the side"
+   },
+   "not_observable": [
+    "bag or backpack",
+    "shoulder straps"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_on_bag",
+     "visible_difference": "hands start low and the arms end behind the shoulders"
+    },
+    {
+     "name": "take_off_jacket",
+     "visible_difference": "arms pull out of sleeves with larger backward swings and the hands work at the chest first"
+    },
+    {
+     "name": "put_object_into_bag",
+     "visible_difference": "the arms stay in front of the body and never go behind the shoulders"
+    }
+   ],
+   "persons": 1
+  },
+  "put_object_into_bag": {
+   "id": 88,
+   "name": "put_object_into_bag",
+   "text": "a person lowers the right hand beside the left hand and pushes it downward",
+   "paraphrases": [
+    "a person brings the right hand from the chest down next to the left hand",
+    "a person holds one hand steady low and moves the other hand down into it",
+    "a person bends slightly and pushes one hand downward near the other, then withdraws it"
+   ],
+   "motion": "The left hand holds still at waist height or lower, in front of or to the side of the body, sometimes with the torso bending slightly forward. The right hand starts higher in front of the chest and moves down to the left hand, pushing in and down. The right hand then comes back up a little and both hands lower.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "right hand held at chest height, left hand low",
+    "middle": "right hand moves down and pushes in beside the left hand",
+    "end": "right hand withdraws and both hands lower"
+   },
+   "not_observable": [
+    "bag",
+    "object being put in",
+    "bag opening"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_object_out_of_bag",
+     "visible_difference": "right hand starts low and rises to the chest at the end"
+    },
+    {
+     "name": "reach_into_pocket",
+     "visible_difference": "hand goes to the hip or thigh of the body itself, without the other hand holding low"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "torso bends deeply and the hand reaches the floor"
+    }
+   ],
+   "persons": 1
+  },
+  "take_object_out_of_bag": {
+   "id": 89,
+   "name": "take_object_out_of_bag",
+   "text": "a person reaches one hand down beside the other hand and lifts it up",
+   "paraphrases": [
+    "a person pushes the right hand down near the left hand, then raises it",
+    "a person holds one hand low and draws the other hand up out of it",
+    "a person bends slightly, reaches down beside the other hand, and lifts the hand up"
+   ],
+   "motion": "The left hand holds still at waist height or lower, sometimes with the torso bending slightly forward. The right hand moves down to the left hand, stays there briefly with small searching movements, then lifts up to chest height in front of the body. The right hand may stay raised in front of the chest at the end.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "left hand held low, right hand moves down to it",
+    "middle": "right hand stays low with small searching movements",
+    "end": "right hand lifts to chest height"
+   },
+   "not_observable": [
+    "bag",
+    "object taken out"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_object_into_bag",
+     "visible_difference": "right hand starts high and ends low instead of rising at the end"
+    },
+    {
+     "name": "reach_into_pocket",
+     "visible_difference": "hand goes to the hip or thigh of the body itself, without the other hand holding low"
+    },
+    {
+     "name": "pick_up",
+     "visible_difference": "torso bends deeply and the hand reaches the floor before rising"
+    }
+   ],
+   "persons": 1
+  },
+  "open_a_box": {
+   "id": 90,
+   "name": "open_a_box",
+   "text": "a person holds both hands low in front and pulls them apart outward",
+   "paraphrases": [
+    "a person moves both hands apart at waist height in front of the body",
+    "a person bends forward slightly and spreads both hands outward over a low point",
+    "a person uses both hands in front of the hips to pull something open"
+   ],
+   "motion": "Both hands come together in front of the waist or lower, with the torso leaning slightly forward and the head tilted down. The hands then move apart sideways and slightly upward, sometimes repeated for each side. The legs stay mostly still and the torso returns to upright at the end.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "torso",
+    "head"
+   ],
+   "phases": {
+    "start": "both hands reach to a point in front of the waist",
+    "middle": "hands pull apart sideways and upward",
+    "end": "hands lower and torso straightens"
+   },
+   "not_observable": [
+    "the box",
+    "box flaps or lid",
+    "tape or fasteners"
+   ],
+   "confusable_with": [
+    {
+     "name": "put_object_into_bag",
+     "visible_difference": "one hand moves down into a single spot instead of both hands spreading apart"
+    },
+    {
+     "name": "take_object_out_of_bag",
+     "visible_difference": "one hand lifts up out of a low spot rather than both hands moving apart"
+    },
+    {
+     "name": "tear_up_paper",
+     "visible_difference": "hands pull apart at chest height in repeated short motions"
+    }
+   ],
+   "persons": 1
+  },
+  "move_heavy_objects": {
+   "id": 91,
+   "name": "move_heavy_objects",
+   "text": "a person bends down and drags or pushes something low with both hands",
+   "paraphrases": [
+    "a person crouches, holds a low point with both hands, and leans to shift it",
+    "a person squats with both arms down and pulls backward with body weight",
+    "a person bends at the hips and moves both hands low while stepping"
+   ],
+   "motion": "The person bends at the hips and knees so both hands reach near the floor in front. Both arms stay low and close together while the torso leans to push or pull, often with small steps of the feet sideways or backward. The body stays low through the middle and rises toward upright at the end.",
+   "body_parts": [
+    "torso",
+    "hip",
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "leg_R",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "bends down and places both hands low",
+    "middle": "leans and shifts body weight with small steps",
+    "end": "releases and stands back up"
+   },
+   "not_observable": [
+    "the heavy object",
+    "its weight",
+    "contact with the floor"
+   ],
+   "confusable_with": [
+    {
+     "name": "pick_up",
+     "visible_difference": "hands rise with the body to standing instead of staying low while stepping"
+    },
+    {
+     "name": "squat_down",
+     "visible_difference": "hands do not reach forward to the floor and the body does not lean to push or pull"
+    },
+    {
+     "name": "pushing",
+     "visible_difference": "arms push forward at chest height against a second person"
+    }
+   ],
+   "persons": 1
+  },
+  "shake_fist": {
+   "id": 92,
+   "name": "shake_fist",
+   "text": "a person raises the right hand and shakes it in short strokes",
+   "paraphrases": [
+    "a person lifts the right fist near the head and jerks it repeatedly",
+    "a person holds the right arm bent up and moves the fist back and forth",
+    "a person shakes a raised right fist in short repeated motions toward the front"
+   ],
+   "motion": "The right arm bends and lifts so the hand is at shoulder or head height in front of the body. The right hand then moves in short, quick back-and-forth or up-and-down strokes, repeated several times, while the elbow stays bent. The rest of the body stays mostly still and the arm lowers at the end.",
+   "body_parts": [
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "right arm lifts with elbow bent",
+    "middle": "hand moves in short repeated strokes",
+    "end": "arm lowers to the side"
+   },
+   "not_observable": [
+    "clenched fingers forming a fist",
+    "angry facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "hand_waving",
+     "visible_difference": "hand sweeps side to side in a wider arc"
+    },
+    {
+     "name": "cheer_up",
+     "visible_difference": "both arms rise high above the head"
+    },
+    {
+     "name": "punch_slap",
+     "visible_difference": "a single forward strike that reaches a second person"
+    }
+   ],
+   "persons": 1
+  },
+  "throw_up_cap_hat": {
+   "id": 93,
+   "name": "throw_up_cap_hat",
+   "text": "a person takes something from the head and tosses it upward with one hand",
+   "paraphrases": [
+    "a person lifts the right hand from the head and flings it upward",
+    "a person grabs at the top of the head then throws the arm upward",
+    "a person tosses something high into the air after removing it from the head"
+   ],
+   "motion": "The right hand rises to the top of the head, then the arm swings forward and upward quickly until it is extended above the head. The head and torso may tilt back slightly to follow the upward throw. The arm then lowers, sometimes with both hands rising again as if to catch.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head",
+    "torso"
+   ],
+   "phases": {
+    "start": "right hand reaches to the top of the head",
+    "middle": "arm swings fast upward above the head",
+    "end": "arm lowers or both hands rise to catch"
+   },
+   "not_observable": [
+    "the cap or hat",
+    "the object leaving the hand"
+   ],
+   "confusable_with": [
+    {
+     "name": "take_off_a_hat_cap",
+     "visible_difference": "hand goes to the head and comes down without a fast upward swing"
+    },
+    {
+     "name": "throw",
+     "visible_difference": "arm swings forward from the shoulder without first touching the head"
+    },
+    {
+     "name": "cheer_up",
+     "visible_difference": "both arms rise overhead together without a hand going to the head first"
+    }
+   ],
+   "persons": 1
+  },
+  "capitulate": {
+   "id": 94,
+   "name": "capitulate",
+   "text": "a person raises both hands up beside the head as in surrender",
+   "paraphrases": [
+    "a person lifts both arms with bent elbows so hands are at head height",
+    "a person puts both hands up near the head and holds them still",
+    "a person surrenders by raising both hands to the sides of the head"
+   ],
+   "motion": "Both arms lift together from the sides, elbows bent, until the hands are beside or slightly above the head. The hands are held still in this position for a while. The torso and legs stay upright and still, and the arms may lower at the end.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "both arms rise from the sides",
+    "middle": "hands held still beside the head",
+    "end": "arms lower or stay raised"
+   },
+   "not_observable": [
+    "open palms facing forward",
+    "fearful facial expression"
+   ],
+   "confusable_with": [
+    {
+     "name": "cheer_up",
+     "visible_difference": "arms extend fully overhead and often move or shake"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "arms push fully up with the torso extending or leaning"
+    },
+    {
+     "name": "put_on_headphone",
+     "visible_difference": "hands move to the sides of the head and touch the ears"
+    }
+   ],
+   "persons": 1
+  },
+  "cross_arms": {
+   "id": 95,
+   "name": "cross_arms",
+   "text": "a person folds both arms across the chest and holds them there",
+   "paraphrases": [
+    "a person crosses the forearms in front of the chest and stays still",
+    "a person brings each hand to the opposite upper arm across the chest",
+    "a person stands with arms folded over the chest in a held pose"
+   ],
+   "motion": "Both arms bend and move toward the center of the chest, with each hand going toward the opposite elbow or upper arm. The forearms overlap horizontally against the chest and stay there with little motion. The rest of the body stays upright and still.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "arms bend toward the chest",
+    "middle": "forearms cross and rest over the chest",
+    "end": "held still in the folded pose"
+   },
+   "not_observable": [
+    "hands gripping the upper arms"
+   ],
+   "confusable_with": [
+    {
+     "name": "cross_hands_in_front",
+     "visible_difference": "arms cross further out from the body in an X shape"
+    },
+    {
+     "name": "chest_pain",
+     "visible_difference": "hands press on the chest and the torso bends forward"
+    },
+    {
+     "name": "hugging",
+     "visible_difference": "arms wrap around a second person"
+    }
+   ],
+   "persons": 1
+  },
+  "arm_circles": {
+   "id": 96,
+   "name": "arm_circles",
+   "text": "a person stretches both arms out to the sides and rotates them in circles",
+   "paraphrases": [
+    "a person holds arms straight sideways and moves them around in repeated loops",
+    "a person swings both outstretched arms in round circles from the shoulders",
+    "a person circles both straight arms repeatedly while standing still"
+   ],
+   "motion": "Both arms lift out to the sides to about shoulder height and stay straight. The hands trace repeated circles around the shoulders, forward or backward, with both arms moving together. The torso and legs stay still while the circling continues several times before the arms drop.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "arms lift straight out to the sides",
+    "middle": "hands trace repeated circles around the shoulders",
+    "end": "arms lower to the sides"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "arm_swings",
+     "visible_difference": "arms swing back and forth or across the body instead of tracing circles"
+    },
+    {
+     "name": "fan_self",
+     "visible_difference": "only one hand waves near the face"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "arms extend once and hold rather than circling repeatedly"
+    }
+   ],
+   "persons": 1
+  },
+  "arm_swings": {
+   "id": 97,
+   "name": "arm_swings",
+   "text": "a person swings both straight arms back and forth across the body repeatedly",
+   "paraphrases": [
+    "a person moves both arms in big repeated swings in front of the chest",
+    "a person opens arms out wide then swings them across the chest repeatedly",
+    "a person swings the arms forward and backward over and over while standing"
+   ],
+   "motion": "Both arms stay mostly straight and swing together, either opening out to the sides and then crossing in front of the chest, or swinging forward and back past the hips. The movement repeats rhythmically many times. The torso may twist slightly with the swings while the legs stay planted.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "arms lift and open",
+    "middle": "arms swing across the body or back and forth repeatedly",
+    "end": "arms come to rest at the sides"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "arm_circles",
+     "visible_difference": "hands trace full circles at shoulder height"
+    },
+    {
+     "name": "clapping",
+     "visible_difference": "hands meet repeatedly in front of the chest with elbows bent"
+    },
+    {
+     "name": "cross_hands_in_front",
+     "visible_difference": "arms cross once and hold still"
+    }
+   ],
+   "persons": 1
+  },
+  "run_on_the_spot": {
+   "id": 98,
+   "name": "run_on_the_spot",
+   "text": "a person jogs in place, lifting knees alternately while arms swing",
+   "paraphrases": [
+    "a person runs without moving forward, raising each foot in turn quickly",
+    "a person alternately lifts left and right legs fast while staying in place",
+    "a person pumps bent arms and lifts the knees in a running rhythm"
+   ],
+   "motion": "The legs alternate quickly, with each knee lifting forward and the foot leaving the ground while the other foot supports the body. The bent arms swing forward and back opposite to the legs. The whole body bounces slightly up and down in rhythm but stays in the same spot.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "arm_R",
+    "arm_L",
+    "hip"
+   ],
+   "phases": {
+    "start": "first knee lifts and arms start pumping",
+    "middle": "fast alternating leg lifts with arm swings",
+    "end": "steps slow and stop"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "butt_kicks",
+     "visible_difference": "heels swing back toward the buttocks instead of knees lifting forward"
+    },
+    {
+     "name": "hopping",
+     "visible_difference": "one leg stays lifted while the other repeatedly jumps"
+    },
+    {
+     "name": "jump_up",
+     "visible_difference": "both feet leave the ground at the same time"
+    }
+   ],
+   "persons": 1
+  },
+  "butt_kicks": {
+   "id": 99,
+   "name": "butt_kicks",
+   "text": "a person jogs in place kicking each heel back toward the buttocks",
+   "paraphrases": [
+    "a person alternately bends each knee to bring the heel up behind",
+    "a person raises the feet behind the body one after another in place",
+    "a person flicks each lower leg backward so the heel nears the hip"
+   ],
+   "motion": "The legs alternate, each knee bending so the foot moves backward and upward until the heel is near the buttocks, while the thigh stays mostly vertical. The other leg supports the body and the movement repeats quickly in place. The arms may swing bent at the sides or rest on the hips.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "hip"
+   ],
+   "phases": {
+    "start": "first heel kicks back",
+    "middle": "heels alternate up behind quickly",
+    "end": "both feet back on the ground"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "run_on_the_spot",
+     "visible_difference": "knees lift forward in front instead of heels moving back"
+    },
+    {
+     "name": "hopping",
+     "visible_difference": "one foot stays up while the body jumps on the other"
+    },
+    {
+     "name": "side_kick",
+     "visible_difference": "one leg extends out to the side"
+    }
+   ],
+   "persons": 1
+  },
+  "cross_toe_touch": {
+   "id": 100,
+   "name": "cross_toe_touch",
+   "text": "a person bends forward and touches each hand to the opposite foot alternately",
+   "paraphrases": [
+    "a person twists and reaches the right hand toward the left foot, then switches",
+    "a person bends down diagonally so one hand meets the opposite toes repeatedly",
+    "a person alternately reaches each hand down across the body to the other foot"
+   ],
+   "motion": "Starting with the feet apart and arms out, the person bends at the hips and twists the torso so the right hand reaches down to the left foot. The torso rises back up and then the left hand reaches down to the right foot. This crossing bend repeats several times on alternating sides.",
+   "body_parts": [
+    "torso",
+    "hip",
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "stands with feet apart and arms out",
+    "middle": "bends and twists so a hand reaches the opposite foot, alternating sides",
+    "end": "returns upright"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "pick_up",
+     "visible_difference": "one bend straight down without twisting, then rising"
+    },
+    {
+     "name": "put_on_a_shoe",
+     "visible_difference": "hands stay at one foot for a while, often with that foot lifted"
+    },
+    {
+     "name": "stretch_oneself",
+     "visible_difference": "torso extends upward or sideways rather than bending to the feet"
+    }
+   ],
+   "persons": 1
+  },
+  "side_kick": {
+   "id": 101,
+   "name": "side_kick",
+   "text": "a person lifts one leg and kicks it out sideways from the hip",
+   "paraphrases": [
+    "a person extends the right leg straight out to the side and pulls it back",
+    "a person leans away and thrusts one foot sideways at hip height",
+    "a person kicks sideways with one leg while the torso tilts the other way"
+   ],
+   "motion": "The weight shifts onto the left leg and the right knee lifts. The right leg then extends quickly out to the side with the foot leading, while the torso tilts toward the left to balance. The leg pulls back and the foot returns to the ground, sometimes repeated.",
+   "body_parts": [
+    "leg_R",
+    "hip",
+    "torso",
+    "feet"
+   ],
+   "phases": {
+    "start": "weight shifts to one leg and the other knee lifts",
+    "middle": "leg extends out to the side",
+    "end": "leg pulls back and foot lands"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "kicking_something",
+     "visible_difference": "leg swings forward rather than out to the side"
+    },
+    {
+     "name": "kicking",
+     "visible_difference": "foot moves forward toward a second person"
+    },
+    {
+     "name": "hopping",
+     "visible_difference": "supporting foot leaves the ground repeatedly and the lifted leg stays bent"
+    }
+   ],
+   "persons": 1
+  },
+  "yawn": {
+   "id": 102,
+   "name": "yawn",
+   "text": "a person raises one hand to the mouth and tilts the head back briefly",
+   "paraphrases": [
+    "a person covers the mouth with the right hand while the head tips back",
+    "a person lifts a hand to the face and stretches the neck slightly upward",
+    "a person brings the right hand to the mouth with a slow backward head tilt"
+   ],
+   "motion": "The right hand rises slowly to the front of the mouth and stays there briefly. The head tilts slightly back and the shoulders and chest may lift, sometimes with the arms stretching a little. The hand then lowers and the head returns to level.",
+   "body_parts": [
+    "hand_R",
+    "arm_R",
+    "head",
+    "torso"
+   ],
+   "phases": {
+    "start": "hand rises toward the mouth",
+    "middle": "hand held at the mouth with head tilted back",
+    "end": "hand lowers and head levels"
+   },
+   "not_observable": [
+    "open mouth",
+    "closed eyes",
+    "sound"
+   ],
+   "confusable_with": [
+    {
+     "name": "sneeze_cough",
+     "visible_difference": "head and torso jerk forward and down rather than tilting back"
+    },
+    {
+     "name": "hush",
+     "visible_difference": "hand held still at the lips with the head staying level"
+    },
+    {
+     "name": "blow_nose",
+     "visible_difference": "both hands cover the nose with the head tipping forward"
+    }
+   ],
+   "persons": 1
+  },
+  "stretch_oneself": {
+   "id": 103,
+   "name": "stretch_oneself",
+   "text": "a person raises both arms overhead and extends the body upward, then relaxes",
+   "paraphrases": [
+    "a person lifts both arms high above the head and lengthens the torso",
+    "a person pushes both hands upward with the chest lifting and back arching",
+    "a person reaches both arms up and outward to stretch, then lowers them"
+   ],
+   "motion": "Both arms rise from the sides or front until they are extended above the head, often with the hands close together. The torso straightens and may lean back or to each side while the arms stay up for a moment. The arms then come down and the body relaxes.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "arms lift up",
+    "middle": "arms held fully extended overhead with the torso stretched",
+    "end": "arms lower and body relaxes"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "cheer_up",
+     "visible_difference": "arms go up quickly and may shake, without slow torso extension"
+    },
+    {
+     "name": "capitulate",
+     "visible_difference": "hands stop beside the head with elbows bent"
+    },
+    {
+     "name": "yawn",
+     "visible_difference": "one hand goes to the mouth"
+    }
+   ],
+   "persons": 1
+  },
+  "blow_nose": {
+   "id": 104,
+   "name": "blow_nose",
+   "text": "a person brings both hands to the nose and bends the head forward",
+   "paraphrases": [
+    "a person holds both hands over the nose while tilting the head down",
+    "a person lifts both hands to the center of the face and wipes the nose",
+    "a person covers the nose with both hands and makes small pressing motions"
+   ],
+   "motion": "Both hands rise together to the front of the face and meet at the nose. The head tips slightly forward and may jerk a little while the hands stay at the nose, sometimes with small wiping motions. The hands then lower away from the face.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "hands rise to the nose",
+    "middle": "hands held at the nose with the head tipped forward",
+    "end": "hands lower"
+   },
+   "not_observable": [
+    "tissue",
+    "sound of blowing"
+   ],
+   "confusable_with": [
+    {
+     "name": "sneeze_cough",
+     "visible_difference": "head and torso jerk forward with a hand only briefly at the mouth"
+    },
+    {
+     "name": "wipe_face",
+     "visible_difference": "hands move over the whole face"
+    },
+    {
+     "name": "yawn",
+     "visible_difference": "one hand at the mouth and the head tilts back"
+    }
+   ],
+   "persons": 1
+  },
+  "hit_with_object": {
+   "id": 105,
+   "name": "hit_with_object",
+   "text": "a person swings the right arm down onto another person, who flinches away",
+   "paraphrases": [
+    "a person raises the arm high and strikes down at another person's body",
+    "two people face each other as one swings an arm down onto the other",
+    "a person hits another person with a downward arm swing as the partner recoils"
+   ],
+   "motion": "The actor faces the partner, lifts the right arm high with the elbow bent, then swings it forward and down toward the partner's head or shoulder. The partner reacts by leaning or stepping back and may raise the arms to shield the head. The swing may repeat once or twice before the actor lowers the arm.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "actor raises the right arm high toward the partner",
+    "middle": "arm swings down onto the partner, partner recoils",
+    "end": "actor lowers the arm, partner shields or steps away"
+   },
+   "not_observable": [
+    "the object held in the hand"
+   ],
+   "confusable_with": [
+    {
+     "name": "punch_slap",
+     "visible_difference": "arm moves forward in a short strike without a high overhead wind-up"
+    },
+    {
+     "name": "wield_knife",
+     "visible_difference": "arm makes repeated thrusting or slashing motions rather than a downward hit"
+    },
+    {
+     "name": "pat_on_back",
+     "visible_difference": "hand lands gently on the partner's back without a fast swing"
+    }
+   ],
+   "persons": 2
+  },
+  "wield_knife": {
+   "id": 106,
+   "name": "wield_knife",
+   "text": "a person thrusts the right hand repeatedly toward another person who backs away",
+   "paraphrases": [
+    "a person makes stabbing or slashing arm motions at another person in front",
+    "two people face each other while one jabs an arm forward at the other",
+    "a person lunges with the right arm toward another person who retreats defensively"
+   ],
+   "motion": "The actor holds the right hand forward at waist or chest height and makes quick thrusts or side-to-side slashes toward the partner, sometimes stepping forward. The partner leans back, steps away, and raises the arms in front of the body to block. The thrusts repeat several times.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso",
+    "leg_R",
+    "leg_L",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "actor raises the right hand toward the partner",
+    "middle": "repeated thrusts or slashes, partner backs off with arms up",
+    "end": "actor pulls the arm back, partner keeps distance"
+   },
+   "not_observable": [
+    "the knife"
+   ],
+   "confusable_with": [
+    {
+     "name": "punch_slap",
+     "visible_difference": "a single strike whose hand reaches the partner's head or body"
+    },
+    {
+     "name": "hit_with_object",
+     "visible_difference": "a high overhead downward swing"
+    },
+    {
+     "name": "shoot_with_gun",
+     "visible_difference": "arm held straight and still, pointed at the partner"
+    }
+   ],
+   "persons": 2
+  },
+  "knock_over": {
+   "id": 107,
+   "name": "knock_over",
+   "text": "a person pushes into another person who falls to the ground",
+   "paraphrases": [
+    "a person shoves or trips another person, making the partner fall down",
+    "two people collide as one drives forward and the other drops to the floor",
+    "a person knocks another person off balance so the partner ends up lying down"
+   ],
+   "motion": "The actor moves toward the partner and pushes with both arms or bumps with the shoulder or leg. The partner's torso tips backward or sideways, the knees bend, and the partner drops to the ground with the hip and torso ending low. The actor stays standing over the fallen partner.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "torso",
+    "hip",
+    "leg_R",
+    "leg_L"
+   ],
+   "phases": {
+    "start": "actor approaches the partner",
+    "middle": "actor shoves, partner loses balance",
+    "end": "partner lies or sits on the ground, actor stands"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "pushing",
+     "visible_difference": "partner only steps back and stays standing"
+    },
+    {
+     "name": "falling_down",
+     "visible_difference": "one person falls with no second person causing it"
+    },
+    {
+     "name": "kicking",
+     "visible_difference": "actor's leg swings into the partner, who usually stays upright"
+    }
+   ],
+   "persons": 2
+  },
+  "grab_stuff": {
+   "id": 108,
+   "name": "grab_stuff",
+   "text": "a person reaches out and snatches something from another person's hands",
+   "paraphrases": [
+    "a person grabs at another person's hands and pulls back quickly toward the body",
+    "two people stand close as one suddenly reaches over and takes from the other",
+    "a person yanks something away from another person, who pulls back or reaches after"
+   ],
+   "motion": "The partner holds the hands in front of the body. The actor reaches the right arm quickly toward the partner's hands and then pulls it back sharply toward the actor's own torso. The partner's hands are pulled forward briefly and may then reach after the actor or pull back.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "torso",
+    "arm_L",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "partner holds hands in front, actor reaches",
+    "middle": "actor's hand grips and pulls back sharply",
+    "end": "actor holds the hand near the body, partner reacts"
+   },
+   "not_observable": [
+    "the object taken"
+   ],
+   "confusable_with": [
+    {
+     "name": "giving_object",
+     "visible_difference": "hands move slowly and the partner offers with the arm extended"
+    },
+    {
+     "name": "exchange_things",
+     "visible_difference": "both people pass hands both ways calmly"
+    },
+    {
+     "name": "shaking_hands",
+     "visible_difference": "hands join and move up and down instead of being pulled away"
+    }
+   ],
+   "persons": 2
+  },
+  "shoot_with_gun": {
+   "id": 109,
+   "name": "shoot_with_gun",
+   "text": "a person points a straight arm at another person, who raises the hands",
+   "paraphrases": [
+    "a person aims the extended right arm at another person who freezes or ducks",
+    "two people face each other while one holds an arm straight out at the other",
+    "a person holds both hands forward aimed at another person, who recoils"
+   ],
+   "motion": "The actor raises the right arm, often supported by the left hand, until it points straight at the partner, and holds it still with small backward jerks. The partner reacts by raising both hands, flinching, falling, or turning away. The actor's arm stays aimed for a while before lowering.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "hand_L",
+    "arm_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "actor lifts the arm toward the partner",
+    "middle": "arm held straight and aimed with small recoil jerks, partner reacts",
+    "end": "actor lowers the arm, partner has raised hands or fallen"
+   },
+   "not_observable": [
+    "the gun",
+    "sound of the shot"
+   ],
+   "confusable_with": [
+    {
+     "name": "point_finger",
+     "visible_difference": "arm points but there is no recoil and the partner shows little reaction"
+    },
+    {
+     "name": "capitulate",
+     "visible_difference": "a single person raises both hands with no one aiming"
+    },
+    {
+     "name": "wield_knife",
+     "visible_difference": "arm thrusts repeatedly rather than being held still"
+    }
+   ],
+   "persons": 2
+  },
+  "step_on_foot": {
+   "id": 110,
+   "name": "step_on_foot",
+   "text": "a person lifts a foot and stamps down on another person's foot",
+   "paraphrases": [
+    "a person steps forward and presses one foot onto another person's foot",
+    "two people stand close as one brings a foot down onto the other's foot",
+    "a person stamps on another person's foot and the partner pulls the leg back"
+   ],
+   "motion": "The actor stands near the partner, lifts the right knee, and brings the foot down hard onto the partner's foot. The partner may lift that foot, bend forward, or step back. The actor then moves the foot away and stands normally.",
+   "body_parts": [
+    "leg_R",
+    "feet",
+    "hip",
+    "leg_L",
+    "torso"
+   ],
+   "phases": {
+    "start": "actor lifts a foot near the partner",
+    "middle": "foot stamps onto the partner's foot, partner flinches",
+    "end": "actor withdraws the foot"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "kicking",
+     "visible_difference": "leg swings forward into the partner's body"
+    },
+    {
+     "name": "walking_towards",
+     "visible_difference": "both people step normally toward each other without a stamp"
+    },
+    {
+     "name": "follow",
+     "visible_difference": "one walks behind the other with no stamping step"
+    }
+   ],
+   "persons": 2
+  },
+  "high-five": {
+   "id": 111,
+   "name": "high-five",
+   "text": "two people raise one hand each and slap palms together above the shoulders",
+   "paraphrases": [
+    "a person lifts a hand high and claps it against another person's raised hand",
+    "two people face each other and meet raised hands at head height",
+    "two people swing an arm up so their hands touch briefly overhead"
+   ],
+   "motion": "Both people face each other and each raises one arm so the hand is at or above head height. The hands swing toward each other and meet briefly between the two people, then pull back. Both arms then lower while the torsos stay upright.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "arm_L",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "both raise a hand",
+    "middle": "hands meet between them above the shoulders",
+    "end": "hands separate and lower"
+   },
+   "not_observable": [
+    "open palms",
+    "sound of the slap"
+   ],
+   "confusable_with": [
+    {
+     "name": "shaking_hands",
+     "visible_difference": "hands meet at waist height and stay joined, moving up and down"
+    },
+    {
+     "name": "cheers_and_drink",
+     "visible_difference": "hands meet at chest height and then go to the mouth"
+    },
+    {
+     "name": "hand_waving",
+     "visible_difference": "one person waves a hand side to side with no contact"
+    }
+   ],
+   "persons": 2
+  },
+  "cheers_and_drink": {
+   "id": 112,
+   "name": "cheers_and_drink",
+   "text": "two people touch raised hands together, then each lifts a hand to the mouth",
+   "paraphrases": [
+    "a person clinks hands with another person at chest height, then both drink",
+    "two people bring hands together in front, then raise them to their faces",
+    "two people tap their hands together and then tip them toward their mouths"
+   ],
+   "motion": "Both people face each other and each extends the right hand forward at chest height until the hands meet briefly in the middle. Each person then pulls the hand back to the mouth, tilting the head slightly back while the hand stays there. The hands lower at the end.",
+   "body_parts": [
+    "arm_R",
+    "hand_R",
+    "head"
+   ],
+   "phases": {
+    "start": "both raise hands toward each other",
+    "middle": "hands meet briefly between them",
+    "end": "each hand moves to the mouth and the head tilts back"
+   },
+   "not_observable": [
+    "cups or glasses",
+    "the drink"
+   ],
+   "confusable_with": [
+    {
+     "name": "drink_water",
+     "visible_difference": "one person brings a hand to the mouth with no partner contact"
+    },
+    {
+     "name": "high-five",
+     "visible_difference": "hands meet overhead and then lower without going to the mouth"
+    },
+    {
+     "name": "giving_object",
+     "visible_difference": "one hand passes forward to the other with no hand going to the mouth"
+    }
+   ],
+   "persons": 2
+  },
+  "carry_object": {
+   "id": 113,
+   "name": "carry_object",
+   "text": "two people walk together while holding their hands low between them",
+   "paraphrases": [
+    "a person and another person lift and walk with arms extended toward each other",
+    "two people move in the same direction with hands held at a shared point",
+    "two people bend, lift together, and walk while keeping hands at waist height"
+   ],
+   "motion": "Both people bend slightly and place their hands at waist or hip height facing each other, then straighten up together. They walk in the same direction, keeping a steady distance apart with their arms held forward or downward toward a shared point. At the end they bend and lower their hands together.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L",
+    "leg_R",
+    "leg_L",
+    "feet",
+    "torso"
+   ],
+   "phases": {
+    "start": "both bend and grip low",
+    "middle": "walk together keeping hands at the same height",
+    "end": "both lower their hands and release"
+   },
+   "not_observable": [
+    "the carried object"
+   ],
+   "confusable_with": [
+    {
+     "name": "walking_towards",
+     "visible_difference": "people move toward each other rather than together"
+    },
+    {
+     "name": "follow",
+     "visible_difference": "one walks behind the other with arms swinging freely"
+    },
+    {
+     "name": "move_heavy_objects",
+     "visible_difference": "a single person moves something low without a partner"
+    }
+   ],
+   "persons": 2
+  },
+  "take_a_photo": {
+   "id": 114,
+   "name": "take_a_photo",
+   "text": "a person holds both hands in front of the face aimed at another person",
+   "paraphrases": [
+    "a person raises both hands to eye level facing another person who poses",
+    "two people face each other as one holds both hands up near the face",
+    "a person aims raised hands toward another person, who stands still or poses"
+   ],
+   "motion": "The actor stands facing the partner at a distance and raises both hands to the front of the face or chest, holding them still and close together. The partner stands still, sometimes posing with an arm raised. The actor may step slightly to adjust and then lowers the hands.",
+   "body_parts": [
+    "hand_R",
+    "hand_L",
+    "arm_R",
+    "arm_L",
+    "head"
+   ],
+   "phases": {
+    "start": "actor raises hands to face level",
+    "middle": "hands held still, partner poses",
+    "end": "actor lowers the hands"
+   },
+   "not_observable": [
+    "camera or phone",
+    "pressing the shutter"
+   ],
+   "confusable_with": [
+    {
+     "name": "taking_a_selfie",
+     "visible_difference": "one person holds a hand up in front facing themselves"
+    },
+    {
+     "name": "shoot_with_gun",
+     "visible_difference": "one arm extended straight toward the partner"
+    },
+    {
+     "name": "point_finger",
+     "visible_difference": "one arm extended toward the partner, not both hands at the face"
+    }
+   ],
+   "persons": 2
+  },
+  "follow": {
+   "id": 115,
+   "name": "follow",
+   "text": "a person walks behind another person, moving in the same direction",
+   "paraphrases": [
+    "two people walk one after the other along the same path",
+    "a person trails another person, staying a steady distance behind while walking",
+    "two people move in a line, the second walking behind the first"
+   ],
+   "motion": "Both people walk with alternating leg steps and natural arm swings. One person leads and the other walks behind, facing the leader's back and keeping a similar distance. Both move in the same direction until they stop.",
+   "body_parts": [
+    "leg_R",
+    "leg_L",
+    "feet",
+    "arm_R",
+    "arm_L"
+   ],
+   "phases": {
+    "start": "leader starts walking with the follower behind",
+    "middle": "both walk in the same direction one behind the other",
+    "end": "both slow down and stop"
+   },
+   "not_observable": [],
+   "confusable_with": [
+    {
+     "name": "walking_towards",
+     "visible_difference": "people walk facing each other and approach"
+    },
+    {
+     "name": "walking_apart",
+     "visible_difference": "people walk away from each other in opposite directions"
+    },
+    {
+     "name": "carry_object",
+     "visible_difference": "both walk with arms held toward each other at a shared point"
+    }
+   ],
+   "persons": 2
+  },
+  "whisper": {
+   "id": 116,
+   "name": "whisper",
+   "text": "a person leans toward another person's ear with a hand beside the mouth",
+   "paraphrases": [
+    "a person bends the head close to another person's head and talks",
+    "two people stand close as one holds a hand near the other's ear",
+    "a person brings the mouth to another person's ear while the partner tilts"
+   ],
+   "motion": "The actor steps close to the partner and leans the torso and head sideways toward the partner's head. The right hand rises to the side of the actor's mouth and stays there. The partner keeps still or tilts the head toward the actor, then they separate.",
+   "body_parts": [
+    "head",
+    "torso",
+    "hand_R",
+    "arm_R"
+   ],
+   "phases": {
+    "start": "actor approaches and leans in",
+    "middle": "head next to the partner's head with hand at the mouth",
+    "end": "actor leans back"
+   },
+   "not_observable": [
+    "speech",
+    "sound",
+    "mouth movement"
+   ],
+   "confusable_with": [
+    {
+     "name": "hugging",
+     "visible_difference": "arms wrap around the partner's body"
+    },
+    {
+     "name": "hush",
+     "visible_difference": "one person holds a hand at their own lips with no partner nearby"
+    },
+    {
+     "name": "pat_on_back",
+     "visible_difference": "hand moves on the partner's back rather than near the mouth"
+    }
+   ],
+   "persons": 2
+  },
+  "exchange_things": {
+   "id": 117,
+   "name": "exchange_things",
+   "text": "two people each extend a hand forward and pass things to one another",
+   "paraphrases": [
+    "a person hands something to another person and receives something back",
+    "two people reach toward each other with hands meeting twice between them",
+    "a person and another person swap items by reaching their hands forward together"
+   ],
+   "motion": "Both people face each other and extend their arms forward so their hands meet in the space between them. Each person both offers with one hand and takes with the other, so the hands cross over or meet twice. Both then pull their hands back to their own bodies.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "hand_R",
+    "hand_L"
+   ],
+   "phases": {
+    "start": "both reach forward",
+    "middle": "hands meet in the middle to swap",
+    "end": "both pull their hands back"
+   },
+   "not_observable": [
+    "the items exchanged"
+   ],
+   "confusable_with": [
+    {
+     "name": "giving_object",
+     "visible_difference": "only one person extends a hand to give and the other just receives"
+    },
+    {
+     "name": "shaking_hands",
+     "visible_difference": "hands clasp and move up and down"
+    },
+    {
+     "name": "grab_stuff",
+     "visible_difference": "one person reaches quickly and pulls sharply away"
+    }
+   ],
+   "persons": 2
+  },
+  "support_somebody": {
+   "id": 118,
+   "name": "support_somebody",
+   "text": "a person holds up another person who walks unsteadily with an arm across shoulders",
+   "paraphrases": [
+    "two people walk side by side as one leans heavily on the other",
+    "a person wraps an arm around another person to help them walk",
+    "a person steadies another person whose arm rests on the helper's shoulders"
+   ],
+   "motion": "The partner stands or walks with a bent, unsteady posture, with one arm placed over the actor's shoulders. The actor stands close at the side, with one arm around the partner's back or waist and the other holding the partner's arm. They walk slowly together with small, uneven steps.",
+   "body_parts": [
+    "arm_R",
+    "arm_L",
+    "torso",
+    "leg_R",
+    "leg_L",
+    "hip"
+   ],
+   "phases": {
+    "start": "actor moves beside the partner and puts an arm around",
+    "middle": "both walk slowly with the partner leaning on the actor",
+    "end": "they stop or the partner stands steady"
+   },
+   "not_observable": [
+    "the partner's injury or weakness"
+   ],
+   "confusable_with": [
+    {
+     "name": "hugging",
+     "visible_difference": "people face each other and wrap arms without walking"
+    },
+    {
+     "name": "carry_object",
+     "visible_difference": "both walk apart with arms held forward"
+    },
+    {
+     "name": "staggering",
+     "visible_difference": "one person walks unsteadily without anyone supporting"
+    }
+   ],
+   "persons": 2
+  },
+  "rock-paper-scissors": {
+   "id": 119,
+   "name": "rock-paper-scissors",
+   "text": "two people face each other and bounce one hand down together several times",
+   "paraphrases": [
+    "a person and another person shake hands in rhythm, then show them forward",
+    "two people pump their right hands up and down together before stopping",
+    "two people play a hand game, bouncing hands in sync then extending them"
+   ],
+   "motion": "Both people face each other and raise the right hand in front of the chest. Both hands move up and down together in short beats, usually three times, then stop extended forward between them. They may repeat the round, sometimes with one person raising a hand after winning.",
+   "body_parts": [
+    "arm_R",
+    "hand_R"
+   ],
+   "phases": {
+    "start": "both raise a hand in front",
+    "middle": "hands bounce together in rhythm",
+    "end": "hands stop extended forward"
+   },
+   "not_observable": [
+    "hand shapes (rock, paper, or scissors)",
+    "finger positions"
+   ],
+   "confusable_with": [
+    {
+     "name": "shaking_hands",
+     "visible_difference": "hands clasp together and move as one"
+    },
+    {
+     "name": "shake_fist",
+     "visible_difference": "a single person shakes a raised hand alone"
+    },
+    {
+     "name": "high-five",
+     "visible_difference": "hands meet overhead with contact"
+    }
+   ],
+   "persons": 2
+  }
+ }
+}

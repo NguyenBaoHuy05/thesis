@@ -1,0 +1,120 @@
+{"answers": [
+{"action": "make_OK_sign", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm only, body still"},
+ "raise_hold_lower": {"label": "has2", "evidence": "hand held still, then lowered"},
+ "hand_upright": {"label": "has2", "evidence": "hand held upright with palm forward"},
+ "one_hand_raised_front": {"label": "has1", "evidence": "hand at shoulder height with elbow bent"},
+ "single_occurrence": {"label": "has1", "evidence": "one gesture"},
+ "repeated_short_strokes": {"label": "lacks2", "evidence": "hand held still, no side-to-side strokes as in hand_waving"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "no repeated waving"},
+ "arm_extends_forward": {"label": "lacks1", "evidence": "elbow stays bent"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hand at shoulder or face height"}
+}},
+{"action": "make_victory_sign", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm only"},
+ "raise_hold_lower": {"label": "has2", "evidence": "upright hand held still, then lowered"},
+ "hand_upright": {"label": "has2", "evidence": "hand tip above the wrist during the hold"},
+ "hand_beside_head": {"label": "has1", "evidence": "hand beside or in front of the face"},
+ "single_occurrence": {"label": "has1", "evidence": "one gesture"},
+ "arm_extends_forward": {"label": "lacks2", "evidence": "elbow bent near the face, unlike taking_a_selfie"},
+ "long_hold": {"label": "lacks1", "evidence": "held only a moment, shorter than a selfie"},
+ "elbow_raised_high": {"label": "lacks1", "evidence": "elbow not held out sideways as in salute"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hand at shoulder or head height"}
+}},
+{"action": "staple_book", "labels": {
+ "hands_touch_each_other": {"label": "has2", "evidence": "right hand on top of the left"},
+ "hands_low_in_front": {"label": "has2", "evidence": "hands at waist or table height"},
+ "downward_press": {"label": "has2", "evidence": "right hand pushes sharply down onto the left"},
+ "asymmetric_hand_roles": {"label": "has2", "evidence": "left hand below and still, right presses"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "sharp downward press"},
+ "torso_bent_forward": {"label": "has1", "evidence": "shoulders lean over the hands"},
+ "hands_come_together": {"label": "has1", "evidence": "hands meet in front at the start"},
+ "continuous_small_hand_motion": {"label": "lacks2", "evidence": "discrete presses, unlike counting_money or cutting_paper"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "presses, not sliding strokes"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "a few presses, not a steady rhythm as in clapping"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one hand presses, unlike mirrored clapping"},
+ "hands_together_at_chest": {"label": "lacks2", "evidence": "hands at waist height, not chest as in clapping"}
+}},
+{"action": "counting_money", "labels": {
+ "asymmetric_hand_roles": {"label": "has2", "evidence": "left hand still, right hand moves over it"},
+ "repeated_short_strokes": {"label": "has2", "evidence": "right hand slides across the left repeatedly"},
+ "many_steady_repeats": {"label": "has2", "evidence": "steady rhythm"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "motion mainly at the wrist, arms still"},
+ "continuous_small_hand_motion": {"label": "has1", "evidence": "small motions throughout"},
+ "hands_touch_each_other": {"label": "has1", "evidence": "hands held close, right over left"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head tilts slightly down"},
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands together in front of chest or waist"},
+ "long_hold": {"label": "lacks2", "evidence": "right hand keeps moving, unlike still hands in reading or phone use"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one hand works, unlike both hands turning in play_magic_cube"},
+ "single_occurrence": {"label": "lacks1", "evidence": "many repeats"}
+}},
+{"action": "cutting_nails", "labels": {
+ "asymmetric_hand_roles": {"label": "has2", "evidence": "right hand works at the left fingertips"},
+ "head_bowed_toward_hands": {"label": "has2", "evidence": "head bends down toward the hands"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "small squeezes at the hand, arms still"},
+ "hands_touch_each_other": {"label": "has1", "evidence": "right hand at the left fingertips"},
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands close together in front of chest or waist"},
+ "one_side_then_other": {"label": "has1", "evidence": "hands may switch roles partway"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "pauses between squeezes, unlike steady counting_money"},
+ "continuous_small_hand_motion": {"label": "lacks1", "evidence": "pauses between cuts"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "squeezes in place, no sliding"}
+}},
+{"action": "cutting_paper", "labels": {
+ "continuous_small_hand_motion": {"label": "has2", "evidence": "small repeated wrist motions"},
+ "asymmetric_hand_roles": {"label": "has1", "evidence": "left hand holds, right hand works near it"},
+ "wrist_hand_dominant": {"label": "has1", "evidence": "wrist and forearm motions"},
+ "many_steady_repeats": {"label": "has1", "evidence": "repeated cutting motions"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head tilts down toward the hands"},
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands raised in front of the chest a short distance apart"},
+ "hands_touch_each_other": {"label": "lacks1", "evidence": "hands a short distance apart, unlike cutting_nails"},
+ "downward_press": {"label": "lacks2", "evidence": "no sharp press, unlike staple_book"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "only the right hand works, unlike fold_paper"},
+ "hands_come_together": {"label": "lacks1", "evidence": "hands do not move toward each other as in fold_paper"},
+ "single_occurrence": {"label": "lacks1", "evidence": "repeated motions"}
+}},
+{"action": "snap_fingers", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm only"},
+ "one_hand_raised_front": {"label": "has2", "evidence": "hand raised to chest or shoulder height with elbow bent"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "quick wrist flicks with little arm movement"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "short quick flick"},
+ "raise_hold_lower": {"label": "lacks2", "evidence": "hand flicks rather than staying still, unlike thumb_up or OK sign"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "one or a few flicks, unlike hand_waving"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hand at chest or shoulder height"}
+}},
+{"action": "open_bottle", "labels": {
+ "asymmetric_hand_roles": {"label": "has2", "evidence": "left hand lower and still, right hand twists above it"},
+ "hands_touch_each_other": {"label": "has2", "evidence": "hands meet one above the other"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "right wrist rotates back and forth"},
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands together in front of chest or waist"},
+ "hands_come_together": {"label": "has1", "evidence": "hands meet at the start"},
+ "hands_move_apart": {"label": "has1", "evidence": "right hand lifts away from the left at the end"},
+ "many_steady_repeats": {"label": "has1", "evidence": "repeated wrist twists"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one hand twists, unlike rub_two_hands or play_magic_cube"},
+ "arms_out_to_sides": {"label": "lacks1", "evidence": "hands stay in front, no outward pull as in open_a_box"}
+}},
+{"action": "sniff_smell", "labels": {
+ "single_arm_active": {"label": "has1", "evidence": "usually only the right hand rises"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head bends forward toward the hand"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand held at the nose a moment, then lowers"},
+ "single_occurrence": {"label": "has1", "evidence": "one sniff gesture"},
+ "head_tilted_back": {"label": "lacks2", "evidence": "head bends forward, unlike drink_water"},
+ "hand_at_mouth": {"label": "lacks1", "evidence": "hand below the nose, head moving to it, unlike hush"},
+ "both_hands_at_face": {"label": "lacks1", "evidence": "usually one hand, unlike blow_nose"},
+ "sudden_fast_motion": {"label": "lacks1", "evidence": "no head jerks as in blow_nose"}
+}},
+{"action": "squat_down", "labels": {
+ "hips_lower": {"label": "has2", "evidence": "hips drop toward the heels"},
+ "legs_carry_motion": {"label": "has2", "evidence": "knees and hips bend, arms only balance"},
+ "long_hold": {"label": "has1", "evidence": "low crouch is held"},
+ "hips_rise": {"label": "has1", "evidence": "may stand back up"},
+ "torso_bent_forward": {"label": "has1", "evidence": "torso leans slightly forward"},
+ "arm_extends_forward": {"label": "has1", "evidence": "arms often reach forward for balance"},
+ "hands_down_to_feet": {"label": "has1", "evidence": "hands may rest on the knees"},
+ "single_occurrence": {"label": "has1", "evidence": "one descent"},
+ "seated": {"label": "lacks2", "evidence": "hips drop to the heels, not onto a seat as in sit_down"},
+ "on_one_leg": {"label": "lacks2", "evidence": "both feet stay planted, unlike put_on_a_shoe"},
+ "single_arm_active": {"label": "lacks1", "evidence": "no single hand reaching to the floor as in pick_up"},
+ "sudden_fast_motion": {"label": "lacks1", "evidence": "controlled descent"},
+ "walks_across_floor": {"label": "lacks1", "evidence": "feet stay in place"}
+}}
+]}

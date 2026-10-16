@@ -131,44 +131,13 @@ python ensemble.py --datasets ntu120/xsub --model base --joint-dir <the save pat
 
 # Pretrained Models
 
-## Synergy bottleneck (large only)
+## Partial fine-tuning (large only)
 
-`model.hypergcn_large.Model` with `synergy_enabled: True` replaces the FC
-classifier of a frozen Hyper-GCN by a bottleneck over 19 named body-part
-synergies (`model/synergies.py`):
-
-```text
-skeleton -> Hyper-GCN l1..l_k (frozen) -> f[e,s] = LN(mean over synergy e, segment s)
-         -> g[e,s] = sigmoid(MLP_e(f))  ->  logit_c = sum_{e,s} g * 5/sqrt(C) * <unit(w_c,e), f> + b_c
-```
-
-Logits are exactly the sum of the (synergy, segment) contributions, which are
-the explanation. `synergy_random.yaml` uses random joint groups of the same
-sizes: the control for whether the names matter. See `SEMANTIC_HYPERGRAPH_PLAN.md`.
-
-```bash
-CFG=config/large/nturgbd120-cross-subject
-python main.py --config $CFG/synergy.yaml
-python main.py --config $CFG/synergy_random.yaml
-# other feature level l_k (default l9)
-python main.py --config $CFG/synergy.yaml --model-args "synergy_feature_level='l6'" --work-dir ./work_dir/ntu120/xsub/synergy_l6
-```
-
-Each evaluation writes `epochN_test_synergy_metrics.json` (deletion/insertion AUC
-vs random order, effective synergies, gate statistics, class top synergies,
-precision@3/nDCG against `annotations/class_synergy.json`),
-`epochN_test_explanations.json` and `epochN_test_synergy_profile.npy`.
-
-Locality of the backbone features per layer (swap test, no training needed),
-and rotation stability, seed comparison and heatmaps of a trained model:
-
-```bash
-python evaluate_synergy.py --config $CFG/synergy.yaml --weights OFFICIAL_JOINT.pt --locality-only
-python evaluate_synergy.py --config WORK_DIR/config.yaml --weights BEST.pt --max-batches 40 --plot-classes drink_water kicking
-```
-
-`annotations/class_synergy.json` is an LLM draft for evaluation only; check it
-by hand before reporting plausibility. It has no labels for the random bank.
+`--freeze-until {stem,l1..l9}` (requires `--weights`) freezes the backbone up to
+that layer, BatchNorm statistics included. `Model.features(x, until='lK')`
+returns the backbone features `[N,M,C,T,V]` after layer `lK`, for heads or
+feature caches built on top of a frozen Hyper-GCN. The synergy bottleneck
+(direction 2) was removed; it is archived in commit `f3d8d4f`.
 
 CPU unit checks (no dataset training):
 

@@ -1,0 +1,1230 @@
+{
+ "similar": {
+  "drink_water": [
+   "eat_meal",
+   "brush_teeth",
+   "hush",
+   "sniff_smell",
+   "yawn",
+   "cheers_and_drink"
+  ],
+  "yawn": [
+   "drink_water",
+   "sneeze_cough",
+   "hush",
+   "stretch_oneself",
+   "blow_nose"
+  ],
+  "eat_meal": [
+   "drink_water",
+   "brush_teeth",
+   "sneeze_cough"
+  ],
+  "hush": [
+   "drink_water",
+   "sneeze_cough",
+   "sniff_smell",
+   "yawn",
+   "whisper"
+  ],
+  "sniff_smell": [
+   "drink_water",
+   "hush",
+   "blow_nose"
+  ],
+  "cheers_and_drink": [
+   "drink_water",
+   "giving_object",
+   "shaking_hands",
+   "high-five",
+   "exchange_things"
+  ],
+  "brush_teeth": [
+   "drink_water",
+   "eat_meal",
+   "wipe_face",
+   "fan_self"
+  ],
+  "sneeze_cough": [
+   "eat_meal",
+   "nausea_vomiting",
+   "hush",
+   "yawn",
+   "blow_nose"
+  ],
+  "fan_self": [
+   "brush_teeth",
+   "hand_waving",
+   "wipe_face",
+   "snap_fingers",
+   "shake_fist",
+   "arm_circles"
+  ],
+  "wipe_face": [
+   "brush_teeth",
+   "put_on_glasses",
+   "headache",
+   "fan_self",
+   "flick_hair",
+   "apply_cream_on_face",
+   "blow_nose"
+  ],
+  "brush_hair": [
+   "put_on_a_hat_cap",
+   "take_off_a_hat_cap",
+   "headache",
+   "neck_pain",
+   "flick_hair"
+  ],
+  "flick_hair": [
+   "brush_hair",
+   "take_off_a_hat_cap",
+   "wipe_face",
+   "salute",
+   "neck_pain"
+  ],
+  "neck_pain": [
+   "brush_hair",
+   "phone_call",
+   "shake_head",
+   "headache",
+   "flick_hair"
+  ],
+  "headache": [
+   "brush_hair",
+   "take_off_glasses",
+   "phone_call",
+   "wipe_face",
+   "salute",
+   "neck_pain",
+   "apply_cream_on_face"
+  ],
+  "take_off_a_hat_cap": [
+   "brush_hair",
+   "take_off_headphone",
+   "flick_hair",
+   "throw_up_cap_hat"
+  ],
+  "drop": [
+   "pick_up",
+   "thumb_down",
+   "toss_a_coin"
+  ],
+  "thumb_down": [
+   "drop",
+   "point_to_something",
+   "thumb_up",
+   "make_OK_sign"
+  ],
+  "toss_a_coin": [
+   "drop",
+   "throw",
+   "juggle_table_tennis_ball",
+   "snap_fingers"
+  ],
+  "pick_up": [
+   "drop",
+   "stand_up",
+   "put_on_a_shoe",
+   "take_off_a_shoe",
+   "nod_head_bow",
+   "falling_down",
+   "squat_down",
+   "put_object_into_bag",
+   "take_object_out_of_bag",
+   "move_heavy_objects",
+   "cross_toe_touch"
+  ],
+  "move_heavy_objects": [
+   "pick_up",
+   "put_on_a_shoe",
+   "squat_down",
+   "cross_toe_touch",
+   "carry_object"
+  ],
+  "cross_toe_touch": [
+   "pick_up",
+   "put_on_a_shoe",
+   "move_heavy_objects",
+   "arm_swings",
+   "stretch_oneself"
+  ],
+  "squat_down": [
+   "pick_up",
+   "sit_down",
+   "put_on_a_shoe",
+   "jump_up",
+   "falling_down",
+   "move_heavy_objects"
+  ],
+  "take_off_a_shoe": [
+   "pick_up"
+  ],
+  "put_on_a_shoe": [
+   "pick_up",
+   "squat_down",
+   "move_heavy_objects",
+   "cross_toe_touch"
+  ],
+  "tennis_bat_swing": [
+   "throw",
+   "arm_swings",
+   "hit_with_object"
+  ],
+  "throw": [
+   "punch_slap",
+   "shoot_at_basket",
+   "tennis_bat_swing",
+   "toss_a_coin",
+   "throw_up_cap_hat",
+   "hit_with_object"
+  ],
+  "throw_up_cap_hat": [
+   "throw",
+   "take_off_a_hat_cap",
+   "cheer_up",
+   "shoot_at_basket"
+  ],
+  "hit_with_object": [
+   "throw",
+   "punch_slap",
+   "pushing",
+   "tennis_bat_swing",
+   "wield_knife"
+  ],
+  "punch_slap": [
+   "throw",
+   "pushing",
+   "pat_on_back",
+   "point_finger",
+   "hit_with_object",
+   "wield_knife"
+  ],
+  "shoot_at_basket": [
+   "throw",
+   "cheer_up",
+   "jump_up",
+   "throw_up_cap_hat",
+   "stretch_oneself"
+  ],
+  "sit_down": [
+   "falling_down",
+   "squat_down"
+  ],
+  "falling_down": [
+   "pick_up",
+   "sit_down",
+   "staggering",
+   "squat_down",
+   "knock_over"
+  ],
+  "stand_up": [
+   "pick_up",
+   "jump_up"
+  ],
+  "jump_up": [
+   "stand_up",
+   "cheer_up",
+   "hopping",
+   "shoot_at_basket",
+   "squat_down",
+   "run_on_the_spot"
+  ],
+  "clapping": [
+   "tear_up_paper",
+   "rub_two_hands",
+   "put_palms_together",
+   "ball_up_paper",
+   "arm_swings"
+  ],
+  "rub_two_hands": [
+   "clapping",
+   "put_palms_together",
+   "open_bottle",
+   "ball_up_paper",
+   "apply_cream_on_hand"
+  ],
+  "put_palms_together": [
+   "clapping",
+   "rub_two_hands",
+   "cross_hands_in_front",
+   "cross_arms"
+  ],
+  "ball_up_paper": [
+   "clapping",
+   "tear_up_paper",
+   "rub_two_hands",
+   "fold_paper"
+  ],
+  "tear_up_paper": [
+   "clapping",
+   "open_bottle",
+   "fold_paper",
+   "ball_up_paper",
+   "open_a_box"
+  ],
+  "arm_swings": [
+   "clapping",
+   "cross_hands_in_front",
+   "tennis_bat_swing",
+   "arm_circles",
+   "cross_toe_touch"
+  ],
+  "play_with_phone_tablet": [
+   "reading",
+   "type_on_a_keyboard",
+   "taking_a_selfie",
+   "check_time_(from_watch)",
+   "counting_money",
+   "cutting_nails",
+   "play_magic_cube"
+  ],
+  "reading": [
+   "writing",
+   "play_with_phone_tablet",
+   "check_time_(from_watch)",
+   "counting_money",
+   "play_magic_cube"
+  ],
+  "play_magic_cube": [
+   "reading",
+   "play_with_phone_tablet",
+   "counting_money",
+   "cutting_nails",
+   "open_bottle"
+  ],
+  "counting_money": [
+   "reading",
+   "play_with_phone_tablet",
+   "type_on_a_keyboard",
+   "staple_book",
+   "cutting_nails",
+   "play_magic_cube",
+   "apply_cream_on_hand"
+  ],
+  "writing": [
+   "reading",
+   "type_on_a_keyboard",
+   "cutting_paper",
+   "fold_paper"
+  ],
+  "type_on_a_keyboard": [
+   "writing",
+   "play_with_phone_tablet",
+   "staple_book",
+   "counting_money"
+  ],
+  "cutting_paper": [
+   "writing",
+   "staple_book",
+   "cutting_nails",
+   "fold_paper"
+  ],
+  "fold_paper": [
+   "writing",
+   "tear_up_paper",
+   "staple_book",
+   "cutting_paper",
+   "ball_up_paper",
+   "open_a_box"
+  ],
+  "open_a_box": [
+   "tear_up_paper",
+   "open_bottle",
+   "fold_paper",
+   "put_object_into_bag",
+   "take_object_out_of_bag"
+  ],
+  "open_bottle": [
+   "tear_up_paper",
+   "rub_two_hands",
+   "play_magic_cube",
+   "apply_cream_on_hand",
+   "open_a_box"
+  ],
+  "put_on_jacket": [
+   "put_on_bag",
+   "take_off_bag",
+   "stretch_oneself"
+  ],
+  "take_off_jacket": [
+   "put_on_bag",
+   "take_off_bag",
+   "cross_arms"
+  ],
+  "put_on_bag": [
+   "put_on_jacket",
+   "take_off_jacket",
+   "stretch_oneself"
+  ],
+  "take_off_bag": [
+   "put_on_jacket",
+   "take_off_jacket",
+   "put_object_into_bag"
+  ],
+  "stretch_oneself": [
+   "put_on_jacket",
+   "cheer_up",
+   "back_pain",
+   "shoot_at_basket",
+   "put_on_bag",
+   "capitulate",
+   "arm_circles",
+   "cross_toe_touch",
+   "yawn"
+  ],
+  "cross_arms": [
+   "take_off_jacket",
+   "put_palms_together",
+   "cross_hands_in_front",
+   "chest_pain",
+   "hugging"
+  ],
+  "put_on_glasses": [
+   "wipe_face",
+   "put_on_headphone",
+   "apply_cream_on_face"
+  ],
+  "take_off_glasses": [
+   "headache",
+   "take_off_headphone"
+  ],
+  "put_on_headphone": [
+   "put_on_glasses",
+   "put_on_a_hat_cap",
+   "capitulate"
+  ],
+  "apply_cream_on_face": [
+   "put_on_glasses",
+   "wipe_face",
+   "headache",
+   "apply_cream_on_hand",
+   "blow_nose"
+  ],
+  "take_off_headphone": [
+   "take_off_glasses",
+   "put_on_a_hat_cap",
+   "take_off_a_hat_cap",
+   "capitulate"
+  ],
+  "put_on_a_hat_cap": [
+   "brush_hair",
+   "put_on_headphone",
+   "take_off_headphone"
+  ],
+  "cheer_up": [
+   "jump_up",
+   "shoot_at_basket",
+   "shake_fist",
+   "throw_up_cap_hat",
+   "capitulate",
+   "stretch_oneself"
+  ],
+  "capitulate": [
+   "cheer_up",
+   "put_on_headphone",
+   "take_off_headphone",
+   "stretch_oneself",
+   "shoot_with_gun"
+  ],
+  "hand_waving": [
+   "salute",
+   "fan_self",
+   "bounce_ball",
+   "make_OK_sign",
+   "make_victory_sign",
+   "shake_fist",
+   "high-five"
+  ],
+  "shake_fist": [
+   "cheer_up",
+   "hand_waving",
+   "fan_self",
+   "bounce_ball",
+   "juggle_table_tennis_ball",
+   "rock-paper-scissors"
+  ],
+  "make_OK_sign": [
+   "hand_waving",
+   "salute",
+   "thumb_up",
+   "thumb_down",
+   "make_victory_sign",
+   "snap_fingers"
+  ],
+  "make_victory_sign": [
+   "hand_waving",
+   "taking_a_selfie",
+   "salute",
+   "thumb_up",
+   "make_OK_sign"
+  ],
+  "salute": [
+   "hand_waving",
+   "phone_call",
+   "headache",
+   "flick_hair",
+   "make_OK_sign",
+   "make_victory_sign"
+  ],
+  "kicking": [
+   "kicking_something",
+   "side_kick",
+   "knock_over",
+   "step_on_foot"
+  ],
+  "kicking_something": [
+   "hopping",
+   "kicking",
+   "side_kick",
+   "step_on_foot"
+  ],
+  "side_kick": [
+   "kicking_something",
+   "hopping",
+   "kicking",
+   "butt_kicks"
+  ],
+  "step_on_foot": [
+   "kicking_something",
+   "kicking",
+   "walking_towards"
+  ],
+  "hopping": [
+   "kicking_something",
+   "jump_up",
+   "run_on_the_spot",
+   "butt_kicks",
+   "side_kick"
+  ],
+  "back_pain": [
+   "reach_into_pocket",
+   "chest_pain",
+   "nausea_vomiting",
+   "stretch_oneself"
+  ],
+  "reach_into_pocket": [
+   "back_pain",
+   "touch_pocket",
+   "bounce_ball",
+   "put_object_into_bag",
+   "take_object_out_of_bag"
+  ],
+  "touch_pocket": [
+   "reach_into_pocket",
+   "pat_on_back",
+   "grab_stuff"
+  ],
+  "take_object_out_of_bag": [
+   "pick_up",
+   "reach_into_pocket",
+   "open_a_box"
+  ],
+  "put_object_into_bag": [
+   "pick_up",
+   "reach_into_pocket",
+   "staple_book",
+   "take_off_bag",
+   "open_a_box"
+  ],
+  "bounce_ball": [
+   "hand_waving",
+   "reach_into_pocket",
+   "juggle_table_tennis_ball",
+   "shake_fist"
+  ],
+  "run_on_the_spot": [
+   "hopping",
+   "jump_up",
+   "butt_kicks"
+  ],
+  "butt_kicks": [
+   "hopping",
+   "run_on_the_spot",
+   "side_kick"
+  ],
+  "phone_call": [
+   "salute",
+   "headache",
+   "neck_pain",
+   "whisper"
+  ],
+  "whisper": [
+   "phone_call",
+   "pat_on_back",
+   "hugging",
+   "hush"
+  ],
+  "cutting_nails": [
+   "play_with_phone_tablet",
+   "counting_money",
+   "cutting_paper",
+   "play_magic_cube",
+   "apply_cream_on_hand"
+  ],
+  "staple_book": [
+   "type_on_a_keyboard",
+   "counting_money",
+   "cutting_paper",
+   "fold_paper",
+   "put_object_into_bag"
+  ],
+  "point_finger": [
+   "point_to_something",
+   "punch_slap",
+   "wield_knife",
+   "shoot_with_gun",
+   "take_a_photo"
+  ],
+  "point_to_something": [
+   "taking_a_selfie",
+   "point_finger",
+   "thumb_down",
+   "shoot_with_gun"
+  ],
+  "shoot_with_gun": [
+   "point_to_something",
+   "point_finger",
+   "capitulate",
+   "wield_knife",
+   "take_a_photo"
+  ],
+  "taking_a_selfie": [
+   "play_with_phone_tablet",
+   "point_to_something",
+   "make_victory_sign",
+   "take_a_photo"
+  ],
+  "take_a_photo": [
+   "taking_a_selfie",
+   "point_finger",
+   "shoot_with_gun"
+  ],
+  "check_time_(from_watch)": [
+   "reading",
+   "play_with_phone_tablet",
+   "cross_hands_in_front",
+   "thumb_up"
+  ],
+  "thumb_up": [
+   "check_time_(from_watch)",
+   "thumb_down",
+   "make_OK_sign",
+   "make_victory_sign",
+   "snap_fingers"
+  ],
+  "cross_hands_in_front": [
+   "check_time_(from_watch)",
+   "put_palms_together",
+   "cross_arms",
+   "arm_swings"
+  ],
+  "apply_cream_on_hand": [
+   "rub_two_hands",
+   "counting_money",
+   "cutting_nails",
+   "open_bottle",
+   "apply_cream_on_face"
+  ],
+  "nod_head_bow": [
+   "pick_up",
+   "shake_head",
+   "nausea_vomiting"
+  ],
+  "shake_head": [
+   "nod_head_bow",
+   "neck_pain"
+  ],
+  "nausea_vomiting": [
+   "nod_head_bow",
+   "sneeze_cough",
+   "chest_pain",
+   "back_pain"
+  ],
+  "blow_nose": [
+   "wipe_face",
+   "sneeze_cough",
+   "sniff_smell",
+   "apply_cream_on_face",
+   "yawn"
+  ],
+  "staggering": [
+   "falling_down",
+   "walking_towards",
+   "walking_apart",
+   "follow",
+   "support_somebody"
+  ],
+  "support_somebody": [
+   "staggering",
+   "pat_on_back",
+   "hugging",
+   "carry_object",
+   "follow"
+  ],
+  "walking_apart": [
+   "staggering",
+   "pushing",
+   "carry_object",
+   "follow"
+  ],
+  "walking_towards": [
+   "staggering",
+   "step_on_foot",
+   "carry_object",
+   "follow"
+  ],
+  "follow": [
+   "staggering",
+   "walking_towards",
+   "walking_apart",
+   "carry_object",
+   "support_somebody"
+  ],
+  "knock_over": [
+   "falling_down",
+   "kicking",
+   "pushing"
+  ],
+  "chest_pain": [
+   "back_pain",
+   "nausea_vomiting",
+   "cross_arms"
+  ],
+  "snap_fingers": [
+   "fan_self",
+   "thumb_up",
+   "make_OK_sign",
+   "toss_a_coin"
+  ],
+  "wield_knife": [
+   "punch_slap",
+   "point_finger",
+   "hit_with_object",
+   "shoot_with_gun"
+  ],
+  "pushing": [
+   "punch_slap",
+   "hugging",
+   "walking_apart",
+   "hit_with_object",
+   "knock_over"
+  ],
+  "hugging": [
+   "pushing",
+   "pat_on_back",
+   "cross_arms",
+   "whisper",
+   "support_somebody"
+  ],
+  "pat_on_back": [
+   "punch_slap",
+   "hugging",
+   "touch_pocket",
+   "whisper",
+   "support_somebody"
+  ],
+  "exchange_things": [
+   "giving_object",
+   "shaking_hands",
+   "grab_stuff",
+   "cheers_and_drink",
+   "rock-paper-scissors"
+  ],
+  "giving_object": [
+   "shaking_hands",
+   "grab_stuff",
+   "high-five",
+   "cheers_and_drink",
+   "exchange_things"
+  ],
+  "grab_stuff": [
+   "giving_object",
+   "touch_pocket",
+   "shaking_hands",
+   "exchange_things"
+  ],
+  "shaking_hands": [
+   "giving_object",
+   "grab_stuff",
+   "high-five",
+   "cheers_and_drink",
+   "exchange_things",
+   "rock-paper-scissors"
+  ],
+  "high-five": [
+   "hand_waving",
+   "giving_object",
+   "shaking_hands",
+   "cheers_and_drink",
+   "rock-paper-scissors"
+  ],
+  "rock-paper-scissors": [
+   "shaking_hands",
+   "shake_fist",
+   "high-five",
+   "exchange_things"
+  ],
+  "carry_object": [
+   "walking_towards",
+   "walking_apart",
+   "move_heavy_objects",
+   "follow",
+   "support_somebody"
+  ],
+  "juggle_table_tennis_ball": [
+   "bounce_ball",
+   "toss_a_coin",
+   "shake_fist"
+  ],
+  "arm_circles": [
+   "fan_self",
+   "arm_swings",
+   "stretch_oneself"
+  ]
+ },
+ "opposite": {
+  "sit_down": [
+   "stand_up"
+  ],
+  "stand_up": [
+   "sit_down"
+  ],
+  "put_on_jacket": [
+   "take_off_jacket"
+  ],
+  "take_off_jacket": [
+   "put_on_jacket"
+  ],
+  "put_on_a_shoe": [
+   "take_off_a_shoe"
+  ],
+  "take_off_a_shoe": [
+   "put_on_a_shoe"
+  ],
+  "put_on_glasses": [
+   "take_off_glasses"
+  ],
+  "take_off_glasses": [
+   "put_on_glasses"
+  ],
+  "put_on_a_hat_cap": [
+   "take_off_a_hat_cap"
+  ],
+  "take_off_a_hat_cap": [
+   "put_on_a_hat_cap"
+  ],
+  "walking_towards": [
+   "walking_apart"
+  ],
+  "walking_apart": [
+   "walking_towards"
+  ],
+  "put_on_headphone": [
+   "take_off_headphone"
+  ],
+  "take_off_headphone": [
+   "put_on_headphone"
+  ],
+  "put_on_bag": [
+   "take_off_bag"
+  ],
+  "take_off_bag": [
+   "put_on_bag"
+  ],
+  "put_object_into_bag": [
+   "take_object_out_of_bag"
+  ],
+  "take_object_out_of_bag": [
+   "put_object_into_bag"
+  ]
+ },
+ "attribute_relations": {
+  "implies": [
+   [
+    "walk_same_direction",
+    "both_same_motion"
+   ],
+   [
+    "walk_same_direction",
+    "walks_across_floor"
+   ]
+  ],
+  "excludes": [
+   [
+    "single_occurrence",
+    "many_steady_repeats"
+   ],
+   [
+    "single_occurrence",
+    "repeated_short_strokes"
+   ],
+   [
+    "single_occurrence",
+    "legs_cycle_in_place"
+   ],
+   [
+    "both_arms_symmetric",
+    "single_arm_active"
+   ],
+   [
+    "both_arms_symmetric",
+    "asymmetric_hand_roles"
+   ],
+   [
+    "both_arms_symmetric",
+    "one_side_then_other"
+   ],
+   [
+    "single_arm_active",
+    "legs_carry_motion"
+   ],
+   [
+    "single_arm_active",
+    "head_carries_motion"
+   ],
+   [
+    "legs_carry_motion",
+    "head_carries_motion"
+   ],
+   [
+    "wrist_hand_dominant",
+    "legs_carry_motion"
+   ],
+   [
+    "wrist_hand_dominant",
+    "head_carries_motion"
+   ],
+   [
+    "hands_together_at_chest",
+    "hands_low_in_front"
+   ],
+   [
+    "legs_cycle_in_place",
+    "walks_across_floor"
+   ],
+   [
+    "walk_same_direction",
+    "legs_cycle_in_place"
+   ],
+   [
+    "walk_same_direction",
+    "distance_decreases"
+   ],
+   [
+    "walk_same_direction",
+    "distance_increases"
+   ]
+  ]
+ },
+ "single_source_similar": [
+  [
+   "arm_circles",
+   "cheer_up"
+  ],
+  [
+   "ball_up_paper",
+   "play_magic_cube"
+  ],
+  [
+   "blow_nose",
+   "hush"
+  ],
+  [
+   "blow_nose",
+   "put_on_glasses"
+  ],
+  [
+   "blow_nose",
+   "take_a_photo"
+  ],
+  [
+   "bounce_ball",
+   "staple_book"
+  ],
+  [
+   "brush_hair",
+   "salute"
+  ],
+  [
+   "brush_teeth",
+   "hush"
+  ],
+  [
+   "brush_teeth",
+   "phone_call"
+  ],
+  [
+   "butt_kicks",
+   "kicking_something"
+  ],
+  [
+   "butt_kicks",
+   "take_off_a_shoe"
+  ],
+  [
+   "capitulate",
+   "put_on_a_hat_cap"
+  ],
+  [
+   "check_time_(from_watch)",
+   "drop"
+  ],
+  [
+   "check_time_(from_watch)",
+   "reach_into_pocket"
+  ],
+  [
+   "check_time_(from_watch)",
+   "thumb_down"
+  ],
+  [
+   "cheer_up",
+   "hand_waving"
+  ],
+  [
+   "chest_pain",
+   "put_palms_together"
+  ],
+  [
+   "clapping",
+   "high-five"
+  ],
+  [
+   "clapping",
+   "staple_book"
+  ],
+  [
+   "counting_money",
+   "cutting_paper"
+  ],
+  [
+   "counting_money",
+   "open_bottle"
+  ],
+  [
+   "counting_money",
+   "rub_two_hands"
+  ],
+  [
+   "counting_money",
+   "writing"
+  ],
+  [
+   "cross_toe_touch",
+   "take_off_a_shoe"
+  ],
+  [
+   "cutting_nails",
+   "reading"
+  ],
+  [
+   "cutting_paper",
+   "play_magic_cube"
+  ],
+  [
+   "drink_water",
+   "sneeze_cough"
+  ],
+  [
+   "drop",
+   "giving_object"
+  ],
+  [
+   "drop",
+   "throw"
+  ],
+  [
+   "eat_meal",
+   "hush"
+  ],
+  [
+   "eat_meal",
+   "writing"
+  ],
+  [
+   "exchange_things",
+   "high-five"
+  ],
+  [
+   "fan_self",
+   "juggle_table_tennis_ball"
+  ],
+  [
+   "flick_hair",
+   "shake_head"
+  ],
+  [
+   "fold_paper",
+   "type_on_a_keyboard"
+  ],
+  [
+   "follow",
+   "step_on_foot"
+  ],
+  [
+   "giving_object",
+   "point_finger"
+  ],
+  [
+   "giving_object",
+   "point_to_something"
+  ],
+  [
+   "giving_object",
+   "rock-paper-scissors"
+  ],
+  [
+   "grab_stuff",
+   "punch_slap"
+  ],
+  [
+   "hand_waving",
+   "point_to_something"
+  ],
+  [
+   "hand_waving",
+   "snap_fingers"
+  ],
+  [
+   "hand_waving",
+   "taking_a_selfie"
+  ],
+  [
+   "headache",
+   "put_on_headphone"
+  ],
+  [
+   "hit_with_object",
+   "pat_on_back"
+  ],
+  [
+   "hopping",
+   "staggering"
+  ],
+  [
+   "juggle_table_tennis_ball",
+   "play_with_phone_tablet"
+  ],
+  [
+   "juggle_table_tennis_ball",
+   "snap_fingers"
+  ],
+  [
+   "knock_over",
+   "punch_slap"
+  ],
+  [
+   "make_OK_sign",
+   "taking_a_selfie"
+  ],
+  [
+   "make_victory_sign",
+   "phone_call"
+  ],
+  [
+   "move_heavy_objects",
+   "pushing"
+  ],
+  [
+   "move_heavy_objects",
+   "take_off_a_shoe"
+  ],
+  [
+   "nausea_vomiting",
+   "pick_up"
+  ],
+  [
+   "nod_head_bow",
+   "sneeze_cough"
+  ],
+  [
+   "open_a_box",
+   "staple_book"
+  ],
+  [
+   "pick_up",
+   "sit_down"
+  ],
+  [
+   "play_with_phone_tablet",
+   "take_a_photo"
+  ],
+  [
+   "punch_slap",
+   "shake_fist"
+  ],
+  [
+   "punch_slap",
+   "tennis_bat_swing"
+  ],
+  [
+   "put_on_a_hat_cap",
+   "salute"
+  ],
+  [
+   "put_on_headphone",
+   "take_off_glasses"
+  ],
+  [
+   "put_palms_together",
+   "reading"
+  ],
+  [
+   "run_on_the_spot",
+   "staggering"
+  ],
+  [
+   "shake_fist",
+   "snap_fingers"
+  ],
+  [
+   "shake_head",
+   "staggering"
+  ],
+  [
+   "side_kick",
+   "step_on_foot"
+  ],
+  [
+   "snap_fingers",
+   "thumb_down"
+  ],
+  [
+   "sneeze_cough",
+   "sniff_smell"
+  ],
+  [
+   "sniff_smell",
+   "yawn"
+  ],
+  [
+   "squat_down",
+   "stand_up"
+  ],
+  [
+   "squat_down",
+   "take_off_a_shoe"
+  ],
+  [
+   "staple_book",
+   "take_object_out_of_bag"
+  ],
+  [
+   "stretch_oneself",
+   "throw_up_cap_hat"
+  ],
+  [
+   "support_somebody",
+   "touch_pocket"
+  ],
+  [
+   "take_off_glasses",
+   "wipe_face"
+  ],
+  [
+   "throw_up_cap_hat",
+   "toss_a_coin"
+  ]
+ ]
+}

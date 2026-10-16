@@ -1,0 +1,118 @@
+{"answers": [
+{"action": "take_off_a_hat_cap", "labels": {
+ "hand_on_head_top": {"label": "has2", "evidence": "hand rises to top of head"},
+ "single_arm_active": {"label": "has1", "evidence": "usually right hand only"},
+ "hands_above_head": {"label": "has1", "evidence": "hand lifts up away from head"},
+ "elbow_raised_high": {"label": "has1", "evidence": "elbow raised to reach head top"},
+ "single_occurrence": {"label": "has2", "evidence": "done once"},
+ "sudden_fast_motion": {"label": "lacks1", "evidence": "hand lifts calmly, unlike throw_up_cap_hat"},
+ "fast_arm_swing": {"label": "lacks2", "evidence": "no fast high swing, unlike throw_up_cap_hat"},
+ "downward_press": {"label": "lacks1", "evidence": "hand moves up, no press unlike put_on_a_hat_cap"},
+ "hand_beside_head": {"label": "lacks1", "evidence": "hand at top, not at ears like take_off_headphone"}
+}},
+{"action": "cheer_up", "labels": {
+ "both_arms_symmetric": {"label": "has2", "evidence": "both arms rise together"},
+ "hands_above_head": {"label": "has2", "evidence": "arms raised above the head"},
+ "elbow_raised_high": {"label": "has2", "evidence": "elbows above shoulder height"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "arms rise from the sides"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "arms rise quickly"},
+ "head_tilted_back": {"label": "has1", "evidence": "torso may lean back slightly"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both arms raised, unlike hand_waving"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "no side-to-side swings, unlike hand_waving"},
+ "long_hold": {"label": "lacks1", "evidence": "arms pump rather than hold still, unlike capitulate"}
+}},
+{"action": "hand_waving", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm waves, left at side"},
+ "repeated_short_strokes": {"label": "has2", "evidence": "forearm swings left and right with upper arm still"},
+ "many_steady_repeats": {"label": "has2", "evidence": "swings repeat"},
+ "hand_upright": {"label": "has2", "evidence": "raised hand held with fingers above wrist"},
+ "elbow_raised_high": {"label": "has1", "evidence": "elbow raised out to the side"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "hand out to the side"},
+ "hands_above_head": {"label": "has1", "evidence": "hand at or above head height"},
+ "single_occurrence": {"label": "lacks2", "evidence": "many swings"},
+ "long_hold": {"label": "lacks2", "evidence": "hand keeps swinging, unlike salute or point"},
+ "arm_extends_forward": {"label": "lacks2", "evidence": "elbow bent, unlike point_to_something"},
+ "hand_beside_head": {"label": "lacks1", "evidence": "hand away from head, unlike salute"},
+ "wrist_hand_dominant": {"label": "lacks1", "evidence": "forearm swings, not wrist only like fan_self"}
+}},
+{"action": "kicking_something", "labels": {
+ "legs_carry_motion": {"label": "has2", "evidence": "right leg swings, arms only balance"},
+ "on_one_leg": {"label": "has2", "evidence": "balances on left leg while right kicks"},
+ "sudden_fast_motion": {"label": "has2", "evidence": "leg swings quickly forward"},
+ "single_occurrence": {"label": "has2", "evidence": "one kick"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "arms move out for balance"},
+ "touches_partner_lower_body": {"label": "lacks2", "evidence": "no partner hit, unlike kicking"},
+ "partner_recoils": {"label": "lacks2", "evidence": "no second person reacting, unlike kicking"},
+ "downward_press": {"label": "lacks1", "evidence": "foot swings forward, not down, unlike step_on_foot"}
+}},
+{"action": "reach_into_pocket", "labels": {
+ "hand_at_own_hip": {"label": "has2", "evidence": "right hand at side of hip or thigh"},
+ "single_arm_active": {"label": "has2", "evidence": "right arm only"},
+ "hand_retracts_to_body": {"label": "has1", "evidence": "hand comes out and rises to front of body"},
+ "single_occurrence": {"label": "has1", "evidence": "one reach"},
+ "hands_behind_torso": {"label": "lacks1", "evidence": "hand at side of hip, not lower back like back_pain"},
+ "torso_bent_forward": {"label": "lacks1", "evidence": "torso stays upright, unlike back_pain"},
+ "long_hold": {"label": "lacks1", "evidence": "hand at hip briefly, unlike back_pain"},
+ "touches_partner_lower_body": {"label": "lacks2", "evidence": "own hip, no partner unlike touch_pocket"},
+ "one_hand_raised_front": {"label": "lacks2", "evidence": "hand goes down, unlike check_time"}
+}},
+{"action": "hopping", "labels": {
+ "on_one_leg": {"label": "has2", "evidence": "one foot held up throughout"},
+ "legs_carry_motion": {"label": "has2", "evidence": "standing leg bends and straightens"},
+ "airborne": {"label": "has2", "evidence": "small jumps leave the floor"},
+ "legs_cycle_in_place": {"label": "has1", "evidence": "body bobs up and down with repeated landings"},
+ "many_steady_repeats": {"label": "has2", "evidence": "repeated small jumps"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "arms out for balance"},
+ "single_occurrence": {"label": "lacks2", "evidence": "repeated hops, unlike jump_up"},
+ "one_side_then_other": {"label": "lacks2", "evidence": "same leg throughout, unlike run_on_the_spot"},
+ "walks_across_floor": {"label": "lacks1", "evidence": "no alternating steps"}
+}},
+{"action": "jump_up", "labels": {
+ "airborne": {"label": "has2", "evidence": "both feet leave the floor"},
+ "legs_carry_motion": {"label": "has2", "evidence": "knees bend and straighten to jump"},
+ "hips_lower": {"label": "has1", "evidence": "knees and hips bend before takeoff"},
+ "hips_rise": {"label": "has2", "evidence": "legs straighten quickly lifting hips"},
+ "single_occurrence": {"label": "has1", "evidence": "usually one jump"},
+ "fast_arm_swing": {"label": "has1", "evidence": "arms swing back then up"},
+ "both_arms_symmetric": {"label": "has1", "evidence": "both arms swing together"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "quick takeoff"},
+ "on_one_leg": {"label": "lacks2", "evidence": "both legs used, unlike hopping"},
+ "many_steady_repeats": {"label": "lacks1", "evidence": "not repeated like hopping"},
+ "long_hold": {"label": "lacks1", "evidence": "does not stay low, unlike squat_down"}
+}},
+{"action": "phone_call", "labels": {
+ "hand_beside_head": {"label": "has2", "evidence": "right hand next to the ear"},
+ "single_arm_active": {"label": "has2", "evidence": "right arm only"},
+ "long_hold": {"label": "has2", "evidence": "hand held still at ear most of the time"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand rises, stays, lowers"},
+ "single_occurrence": {"label": "has1", "evidence": "one raise"},
+ "elbow_raised_high": {"label": "lacks2", "evidence": "elbow points down, unlike salute"},
+ "hands_behind_torso": {"label": "lacks1", "evidence": "hand at ear, not behind neck like neck_pain"},
+ "head_bowed_toward_hands": {"label": "lacks1", "evidence": "head not bent down, unlike headache"}
+}},
+{"action": "play_with_phone_tablet", "labels": {
+ "hands_together_at_chest": {"label": "has2", "evidence": "hands close together in front of chest"},
+ "head_bowed_toward_hands": {"label": "has2", "evidence": "head tilts down toward hands"},
+ "continuous_small_hand_motion": {"label": "has2", "evidence": "small repeated hand movements"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "only hands move, arms stay"},
+ "long_hold": {"label": "has1", "evidence": "pose held through the action"},
+ "asymmetric_hand_roles": {"label": "has1", "evidence": "one hand moves near the other holding hand"},
+ "hands_low_in_front": {"label": "lacks1", "evidence": "hands at chest, not low like typing"},
+ "arm_extends_forward": {"label": "lacks2", "evidence": "elbows bent, unlike taking_a_selfie"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hands stay low, unlike taking_a_selfie"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both hands raised, unlike taking_a_selfie"}
+}},
+{"action": "type_on_a_keyboard", "labels": {
+ "hands_low_in_front": {"label": "has2", "evidence": "hands side by side at waist height"},
+ "both_arms_symmetric": {"label": "has2", "evidence": "both forearms forward doing the same"},
+ "continuous_small_hand_motion": {"label": "has2", "evidence": "small fast taps throughout"},
+ "wrist_hand_dominant": {"label": "has2", "evidence": "hands tap, arms and body still"},
+ "many_steady_repeats": {"label": "has1", "evidence": "repeated taps"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head tilted down"},
+ "seated": {"label": "has1", "evidence": "often seated"},
+ "asymmetric_hand_roles": {"label": "lacks2", "evidence": "both hands active, unlike writing"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both hands move, unlike writing"},
+ "hands_together_at_chest": {"label": "lacks2", "evidence": "hands low and apart, unlike phone use"},
+ "hands_touch_each_other": {"label": "lacks1", "evidence": "hands stay side by side apart"}
+}}
+]}

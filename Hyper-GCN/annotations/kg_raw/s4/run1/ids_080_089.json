@@ -1,0 +1,122 @@
+{"answers": [
+{"action": "toss_a_coin", "labels": {
+"single_arm_active": {"label": "has1", "evidence": "right hand makes the flick while the left mostly waits"},
+"wrist_hand_dominant": {"label": "has1", "evidence": "flick is mainly at the wrist and forearm"},
+"one_hand_raised_front": {"label": "has2", "evidence": "right hand held in front of chest or waist with elbow bent"},
+"sudden_fast_motion": {"label": "has2", "evidence": "one short quick upward flick"},
+"single_occurrence": {"label": "has2", "evidence": "one flick then catch"},
+"hands_come_together": {"label": "has1", "evidence": "left hand comes under or over the right to catch"},
+"hands_touch_each_other": {"label": "has1", "evidence": "hands meet in front to catch"},
+"head_tilted_back": {"label": "has1", "evidence": "head may tilt up slightly"},
+"repeated_short_strokes": {"label": "lacks2", "evidence": "no continuous repeated taps as in juggling"},
+"many_steady_repeats": {"label": "lacks2", "evidence": "single flick, not repeated cycles"},
+"continuous_small_hand_motion": {"label": "lacks1", "evidence": "hand pauses after one flick"},
+"fast_arm_swing": {"label": "lacks2", "evidence": "no large swing from behind the shoulder as in throw"},
+"elbow_raised_high": {"label": "lacks1", "evidence": "elbow stays bent low in front"}
+}},
+{"action": "fold_paper", "labels": {
+"asymmetric_hand_roles": {"label": "has1", "evidence": "one hand moves onto the other and presses along it"},
+"hands_low_in_front": {"label": "has2", "evidence": "hands at waist or table height in front"},
+"hands_come_together": {"label": "has2", "evidence": "one hand moves over to the other and they meet"},
+"hands_touch_each_other": {"label": "has2", "evidence": "hands meet and press together"},
+"downward_press": {"label": "has1", "evidence": "slight downward push along a line"},
+"head_bowed_toward_hands": {"label": "has2", "evidence": "head bent down toward the hands"},
+"repeated_short_strokes": {"label": "has1", "evidence": "hand slides along the other two or three times"},
+"single_arm_active": {"label": "lacks1", "evidence": "both hands work together"},
+"sudden_fast_motion": {"label": "lacks1", "evidence": "smooth slide rather than a sharp press as in stapling"},
+"hands_together_at_chest": {"label": "lacks1", "evidence": "hands at waist height, not chest"},
+"continuous_small_hand_motion": {"label": "lacks1", "evidence": "few discrete presses, not continuous small motions"}
+}},
+{"action": "ball_up_paper", "labels": {
+"hands_come_together": {"label": "has2", "evidence": "hands move toward each other until nearly touching"},
+"hands_touch_each_other": {"label": "has2", "evidence": "hands press together"},
+"hands_together_at_chest": {"label": "has2", "evidence": "hands held close together in front of the chest"},
+"continuous_small_hand_motion": {"label": "has1", "evidence": "hands keep pressing and turning around each other"},
+"wrist_hand_dominant": {"label": "has1", "evidence": "turning mainly at the hands and wrists"},
+"both_arms_symmetric": {"label": "has1", "evidence": "both hands close in from both sides"},
+"hands_move_apart": {"label": "lacks2", "evidence": "hands squeeze together rather than pulling apart as in tearing"},
+"hands_low_in_front": {"label": "lacks1", "evidence": "hands at chest, not waist height"},
+"asymmetric_hand_roles": {"label": "lacks1", "evidence": "both hands move, neither stays still"}
+}},
+{"action": "play_magic_cube", "labels": {
+"hands_together_at_chest": {"label": "has2", "evidence": "hands close together in front of chest"},
+"wrist_hand_dominant": {"label": "has2", "evidence": "wrists rotate while arms stay still"},
+"continuous_small_hand_motion": {"label": "has2", "evidence": "repeated short wrist turns for the whole action"},
+"head_bowed_toward_hands": {"label": "has2", "evidence": "head tilted down toward the hands"},
+"many_steady_repeats": {"label": "has1", "evidence": "repeated short wrist turns"},
+"long_hold": {"label": "has1", "evidence": "arm and hand position kept for most of the action"},
+"asymmetric_hand_roles": {"label": "lacks1", "evidence": "often both wrists turn, not one hand over a still hand"},
+"hands_move_apart": {"label": "lacks1", "evidence": "hands stay at about the same distance"},
+"single_occurrence": {"label": "lacks1", "evidence": "turns repeat rather than one twist and lift"}
+}},
+{"action": "apply_cream_on_face", "labels": {
+"both_hands_at_face": {"label": "has1", "evidence": "one or both hands on the cheeks and forehead"},
+"hand_beside_head": {"label": "has1", "evidence": "hands at the cheeks and side of forehead"},
+"continuous_small_hand_motion": {"label": "has1", "evidence": "small repeated circles on the face"},
+"repeated_short_strokes": {"label": "has1", "evidence": "hands rub repeatedly against the face"},
+"many_steady_repeats": {"label": "has1", "evidence": "repeated small circular rubs"},
+"hands_touch_each_other": {"label": "has1", "evidence": "hands meet briefly in front of chest first"},
+"both_arms_symmetric": {"label": "has1", "evidence": "both hands rub mirrored cheeks"},
+"raise_hold_lower": {"label": "lacks1", "evidence": "hands keep rubbing instead of holding still as in headache"},
+"long_hold": {"label": "lacks1", "evidence": "hands move between face parts rather than staying still"},
+"single_occurrence": {"label": "lacks1", "evidence": "many small circles rather than one or two strokes as in wipe_face"},
+"hands_together_at_chest": {"label": "lacks1", "evidence": "main rubbing happens at the face, not at the chest"}
+}},
+{"action": "apply_cream_on_hand", "labels": {
+"asymmetric_hand_roles": {"label": "has2", "evidence": "right hand rubs over a mostly still left hand"},
+"hands_touch_each_other": {"label": "has2", "evidence": "one hand rubs over the other"},
+"hands_come_together": {"label": "has1", "evidence": "hands come together in front"},
+"repeated_short_strokes": {"label": "has2", "evidence": "repeated sliding motions over the other hand"},
+"continuous_small_hand_motion": {"label": "has2", "evidence": "rubbing continues while arms stay still"},
+"many_steady_repeats": {"label": "has1", "evidence": "rubbing cycles repeat"},
+"hands_together_at_chest": {"label": "has1", "evidence": "hands together in front of chest or waist"},
+"head_bowed_toward_hands": {"label": "has1", "evidence": "head tilts slightly down"},
+"one_side_then_other": {"label": "has1", "evidence": "hands may switch roles"},
+"both_hands_at_face": {"label": "lacks2", "evidence": "hands never reach the face"}
+}},
+{"action": "put_on_bag", "labels": {
+"hands_behind_torso": {"label": "has2", "evidence": "arms move back behind the shoulders"},
+"one_side_then_other": {"label": "has2", "evidence": "right arm goes back, then the left arm"},
+"torso_twists": {"label": "has1", "evidence": "torso twists slightly as each arm reaches back"},
+"elbow_raised_high": {"label": "has1", "evidence": "arm bends and lifts back behind the shoulder"},
+"single_occurrence": {"label": "has1", "evidence": "one sequence of lifting and putting on"},
+"both_arms_symmetric": {"label": "lacks2", "evidence": "arms move one after the other, not together as in stretching"},
+"hands_above_head": {"label": "lacks1", "evidence": "hands stay at shoulder level, not overhead"}
+}},
+{"action": "take_off_bag", "labels": {
+"hands_behind_torso": {"label": "has1", "evidence": "arm moves back and out from behind the body"},
+"one_side_then_other": {"label": "has2", "evidence": "one arm slides out, then the other"},
+"torso_twists": {"label": "has1", "evidence": "torso twists slightly"},
+"hand_crosses_midline": {"label": "has1", "evidence": "left hand reaches toward the right side"},
+"hands_come_together": {"label": "has1", "evidence": "hands come together in front or at one side at the end"},
+"hands_down_to_feet": {"label": "has1", "evidence": "hands lower toward the floor"},
+"single_occurrence": {"label": "has1", "evidence": "one removal sequence"},
+"both_arms_symmetric": {"label": "lacks1", "evidence": "arms act in sequence, not mirrored"}
+}},
+{"action": "put_object_into_bag", "labels": {
+"asymmetric_hand_roles": {"label": "has2", "evidence": "left hand holds still while right moves down onto it"},
+"hands_low_in_front": {"label": "has2", "evidence": "work happens at waist height or lower in front"},
+"hands_come_together": {"label": "has2", "evidence": "right hand moves down to the left hand"},
+"hands_touch_each_other": {"label": "has1", "evidence": "right hand pushes in beside the left"},
+"downward_press": {"label": "has1", "evidence": "right hand pushes in and down"},
+"one_hand_raised_front": {"label": "has1", "evidence": "right hand starts at chest height in front"},
+"torso_bent_forward": {"label": "has1", "evidence": "torso sometimes bends slightly forward"},
+"single_occurrence": {"label": "has1", "evidence": "one downward insert"},
+"hand_retracts_to_body": {"label": "lacks1", "evidence": "hand only comes back up a little, does not rise to the chest"},
+"hands_down_to_feet": {"label": "lacks2", "evidence": "hands stay above the knees, unlike pick_up"},
+"hand_at_own_hip": {"label": "lacks2", "evidence": "hand goes to the other hand, not to own hip as in reaching into pocket"}
+}},
+{"action": "take_object_out_of_bag", "labels": {
+"asymmetric_hand_roles": {"label": "has2", "evidence": "left hand holds still low while right hand works at it"},
+"hands_low_in_front": {"label": "has2", "evidence": "right hand works at waist height or lower"},
+"hands_come_together": {"label": "has2", "evidence": "right hand moves down to the left hand"},
+"hands_touch_each_other": {"label": "has1", "evidence": "right hand stays at the left hand briefly"},
+"hand_retracts_to_body": {"label": "has2", "evidence": "right hand lifts back up to chest height"},
+"one_hand_raised_front": {"label": "has1", "evidence": "right hand may stay raised in front of chest at end"},
+"torso_bent_forward": {"label": "has1", "evidence": "torso sometimes bends slightly forward"},
+"single_occurrence": {"label": "has1", "evidence": "one reach in and lift out"},
+"downward_press": {"label": "lacks1", "evidence": "no pushing in and down; hand lifts out instead"},
+"hands_down_to_feet": {"label": "lacks2", "evidence": "hands do not reach the floor, unlike pick_up"},
+"hand_at_own_hip": {"label": "lacks2", "evidence": "hand goes to the other hand, not own hip as in reaching into pocket"}
+}}
+]}

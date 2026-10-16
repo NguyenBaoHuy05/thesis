@@ -1,0 +1,115 @@
+{"answers": [
+{"action": "sneeze_cough", "labels": {
+ "hand_at_mouth": {"label": "has2", "evidence": "hand held in front of the mouth during the jerks"},
+ "sudden_fast_motion": {"label": "has2", "evidence": "abrupt short forward jerk of head and torso"},
+ "torso_bent_forward": {"label": "has1", "evidence": "upper torso jerks forward and down"},
+ "single_arm_active": {"label": "has1", "evidence": "usually only the right hand rises to the mouth"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand rises to the mouth, stays, then lowers"},
+ "head_tilted_back": {"label": "lacks2", "evidence": "head jerks forward, not back as in yawn"},
+ "long_hold": {"label": "lacks1", "evidence": "body straightens quickly, no long bent hold as in vomiting"},
+ "head_bowed_toward_hands": {"label": "lacks1", "evidence": "head drops only briefly during jerks, not held low"}
+}},
+{"action": "staggering", "labels": {
+ "unsteady_sway": {"label": "has2", "evidence": "torso sways in irregular directions, feet land unevenly"},
+ "walks_across_floor": {"label": "has2", "evidence": "uneven steps carry the body a short distance"},
+ "legs_carry_motion": {"label": "has2", "evidence": "irregular steps are the main movement, arms balance"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "arms move out from the body to keep balance"},
+ "hips_lower": {"label": "lacks2", "evidence": "body stays upright, does not drop to the floor as in falling_down"},
+ "airborne": {"label": "lacks2", "evidence": "feet do not leave the floor together as in hopping"},
+ "on_one_leg": {"label": "lacks1", "evidence": "no leg held up while balancing on the other"},
+ "legs_cycle_in_place": {"label": "lacks1", "evidence": "hips travel across the floor"},
+ "many_steady_repeats": {"label": "lacks1", "evidence": "step spacing and rhythm are irregular"},
+ "long_hold": {"label": "lacks1", "evidence": "body keeps moving, no held position"}
+}},
+{"action": "falling_down", "labels": {
+ "hips_lower": {"label": "has2", "evidence": "hip drops rapidly toward the floor"},
+ "sudden_fast_motion": {"label": "has2", "evidence": "drop is faster than sitting down"},
+ "single_occurrence": {"label": "has2", "evidence": "the fall happens once"},
+ "legs_carry_motion": {"label": "has1", "evidence": "knees bend to drop the body"},
+ "torso_bent_forward": {"label": "has1", "evidence": "torso tilts forward or sideways"},
+ "hands_down_to_feet": {"label": "has1", "evidence": "hands reach toward the floor to break the fall"},
+ "long_hold": {"label": "has1", "evidence": "body stays down on the floor"},
+ "unsteady_sway": {"label": "has1", "evidence": "torso tips as balance is lost"},
+ "hips_rise": {"label": "lacks2", "evidence": "body stays down, unlike pick_up returning to standing"},
+ "seated": {"label": "lacks1", "evidence": "ends on the floor, not at chair height"}
+}},
+{"action": "headache", "labels": {
+ "long_hold": {"label": "has2", "evidence": "hands stay on the head for a long time"},
+ "hand_beside_head": {"label": "has1", "evidence": "hands on the temples or side of the forehead"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hands rise to the head, are held, then lower"},
+ "elbow_raised_high": {"label": "has1", "evidence": "elbows bent and raised"},
+ "hands_behind_torso": {"label": "lacks2", "evidence": "hands at the front of the head, not behind at the neck as in neck_pain"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "hands held, at most small rubbing, no strokes as in wipe_face"}
+}},
+{"action": "chest_pain", "labels": {
+ "hand_on_own_chest": {"label": "has2", "evidence": "hand pressed on center or left of chest"},
+ "long_hold": {"label": "has2", "evidence": "posture held for a while"},
+ "torso_bent_forward": {"label": "has1", "evidence": "torso bends forward a little, shoulders round"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand moves to chest, stays, then lowers"},
+ "single_arm_active": {"label": "has1", "evidence": "usually only the right hand moves to the chest"},
+ "hand_crosses_midline": {"label": "has1", "evidence": "right hand often goes to the left side of the chest"},
+ "hands_behind_torso": {"label": "lacks2", "evidence": "hand on front of chest, not lower back as in back_pain"},
+ "hand_at_mouth": {"label": "lacks1", "evidence": "hand stays at the chest, not the mouth as in vomiting"},
+ "hand_at_own_hip": {"label": "lacks1", "evidence": "hand at the chest, not near the hip"}
+}},
+{"action": "back_pain", "labels": {
+ "hands_behind_torso": {"label": "has2", "evidence": "hands move behind the body to the lower back"},
+ "hand_at_own_hip": {"label": "has2", "evidence": "hand rests on the lower back near the hips"},
+ "long_hold": {"label": "has2", "evidence": "hands stay on the back for a while, unlike brief pocket reach"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hands move back, stay, then return"},
+ "both_arms_symmetric": {"label": "has1", "evidence": "often both hands go to the lower back together"},
+ "hands_above_head": {"label": "lacks2", "evidence": "hands stay low at the back, not overhead as in stretching"},
+ "hand_on_own_chest": {"label": "lacks2", "evidence": "hands on the back, not the front of the chest"}
+}},
+{"action": "neck_pain", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right hand goes to the neck, other arm still"},
+ "hands_behind_torso": {"label": "has1", "evidence": "hand reaches behind the head to the back of the neck"},
+ "head_carries_motion": {"label": "has1", "evidence": "head tilts and rotates while the hand holds"},
+ "long_hold": {"label": "has1", "evidence": "hand stays on the neck"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand rises, stays at the neck, lowers"},
+ "elbow_raised_high": {"label": "has1", "evidence": "elbow bent and pointing up"},
+ "hand_beside_head": {"label": "lacks1", "evidence": "hand at the back of the neck, not the temple as in headache"},
+ "sudden_fast_motion": {"label": "lacks2", "evidence": "slow hold, no quick sweep as in flick_hair"},
+ "hand_on_head_top": {"label": "lacks1", "evidence": "hand stays below the crown, unlike brush_hair"}
+}},
+{"action": "nausea_vomiting", "labels": {
+ "torso_bent_forward": {"label": "has2", "evidence": "torso bends forward from the hips"},
+ "head_bowed_toward_hands": {"label": "has2", "evidence": "head drops down and forward and stays low"},
+ "long_hold": {"label": "has2", "evidence": "bent posture held for a while"},
+ "hand_at_mouth": {"label": "has1", "evidence": "one hand may move to the mouth"},
+ "hand_on_own_chest": {"label": "has1", "evidence": "one hand may rest on the stomach"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "upper body jerks forward a few times"},
+ "hands_down_to_feet": {"label": "has1", "evidence": "other hand may rest on the knee"}
+}},
+{"action": "fan_self", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right hand fans, rest of body still"},
+ "repeated_short_strokes": {"label": "has2", "evidence": "forearm swings back and forth at the elbow"},
+ "many_steady_repeats": {"label": "has2", "evidence": "swings repeated many times"},
+ "wrist_hand_dominant": {"label": "has1", "evidence": "motion mostly at wrist and elbow"},
+ "continuous_small_hand_motion": {"label": "has1", "evidence": "rapid small swings without pause"},
+ "one_hand_raised_front": {"label": "has1", "evidence": "hand raised in front of face or neck, elbow bent"},
+ "hands_above_head": {"label": "lacks2", "evidence": "hand stays at face height, lower than in hand_waving"},
+ "hand_at_mouth": {"label": "lacks2", "evidence": "hand swings toward and away from the face, not held at the mouth"},
+ "raise_hold_lower": {"label": "lacks1", "evidence": "hand keeps swinging, no still pause"},
+ "single_occurrence": {"label": "lacks1", "evidence": "many swing cycles"}
+}},
+{"action": "punch_slap", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm strikes"},
+ "fast_arm_swing": {"label": "has2", "evidence": "arm drawn back then swung fast forward"},
+ "sudden_fast_motion": {"label": "has2", "evidence": "strike is abrupt and fast"},
+ "touches_partner_upper_body": {"label": "has2", "evidence": "hand reaches the partner's head or chest"},
+ "partner_recoils": {"label": "has2", "evidence": "partner's head and body jerk back"},
+ "partner_raises_arms": {"label": "has1", "evidence": "partner may raise an arm to protect"},
+ "single_occurrence": {"label": "has1", "evidence": "usually one strike"},
+ "arm_extends_forward": {"label": "has1", "evidence": "thrust extends the arm toward the partner"},
+ "torso_twists": {"label": "has1", "evidence": "torso rotates into the strike"},
+ "hand_retracts_to_body": {"label": "has1", "evidence": "arm pulls back after the strike"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one arm strikes, unlike two-handed pushing"},
+ "beside_or_behind_partner": {"label": "lacks2", "evidence": "actor faces the partner, unlike pat_on_back"},
+ "sustained_contact": {"label": "lacks2", "evidence": "contact only at the moment of the strike"},
+ "both_same_motion": {"label": "lacks1", "evidence": "partner only reacts"},
+ "hands_above_head": {"label": "lacks1", "evidence": "no overhead swing as in hit_with_object"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "single strike, not repeated taps"},
+ "distance_increases": {"label": "lacks1", "evidence": "partner's feet mostly stay, unlike pushing"}
+}}
+]}

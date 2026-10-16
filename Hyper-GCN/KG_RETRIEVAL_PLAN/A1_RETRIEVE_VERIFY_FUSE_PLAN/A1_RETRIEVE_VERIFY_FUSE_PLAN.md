@@ -1,9 +1,10 @@
 # A1 — Retrieve → Verify → Fuse: kế hoạch triển khai
 
 > Trạng thái: **kế hoạch, chưa triển khai**.
-> Tài liệu cha: [KG_RETRIEVAL_PLAN.md](KG_RETRIEVAL_PLAN.md) (mục A1, §1 thành phần dùng chung, §4 ablation K0–K6).
-> Liên quan: [../KG_PRIMITIVE_PLAN.md](../KG_PRIMITIVE_PLAN.md),
-> [../OLD_SEMANTIC_HYPERGRAPH_PLAN.md](../OLD_SEMANTIC_HYPERGRAPH_PLAN.md) (P1: nhóm ngẫu nhiên ≈ nhóm ngữ nghĩa).
+> Tài liệu cha: [KG_RETRIEVAL_PLAN.md](../KG_RETRIEVAL_PLAN.md) (mục A1, §1 thành phần dùng chung, §4 ablation K0–K6).
+> Xây KG: [KG_CONSTRUCTION_LLM_PLAN.md](../KG_CONSTRUCTION_LLM_PLAN/KG_CONSTRUCTION_LLM_PLAN.md).
+> Liên quan: [KG_PRIMITIVE_PLAN.md](../../KG_PRIMITIVE_PLAN.md),
+> [OLD_SEMANTIC_HYPERGRAPH_PLAN.md](../../OLD_SEMANTIC_HYPERGRAPH_PLAN.md) (P1: nhóm ngẫu nhiên ≈ nhóm ngữ nghĩa).
 >
 > Vai trò: A1 là kiến trúc **đầu tiên** — dựng toàn bộ hạ tầng dùng chung (KG, embedding, đầu thuộc
 > tính, retrieval, bộ ablation) mà A2–A5 tái sử dụng, và trả lời câu hỏi gác cổng:
@@ -89,6 +90,9 @@ Backbone đóng băng hoàn toàn ⇒ `z` cố định cho mỗi mẫu → **cac
 - Cache thêm logit của `fc` gốc → K0 có sẵn, không chạy lại.
 
 ## 2. Knowledge graph `annotations/action_kg.json`
+
+> Quy trình xây KG bằng LLM, prompt và lược đồ đầy đủ (thay cho lược đồ rút gọn dưới đây):
+> [KG_CONSTRUCTION_LLM_PLAN.md](../KG_CONSTRUCTION_LLM_PLAN/KG_CONSTRUCTION_LLM_PLAN.md).
 
 ```json
 {

@@ -1,0 +1,116 @@
+{"answers": [
+{"action": "step_on_foot", "labels": {
+ "legs_carry_motion": {"label": "has2", "evidence": "actor lifts the knee and stamps the foot"},
+ "downward_press": {"label": "has2", "evidence": "foot brought down hard and stops on the partner's foot"},
+ "on_one_leg": {"label": "has1", "evidence": "right knee lifted before the stamp"},
+ "touches_partner_lower_body": {"label": "has2", "evidence": "actor's foot lands on the partner's foot"},
+ "sudden_fast_motion": {"label": "has1", "evidence": "hard stamp"},
+ "partner_recoils": {"label": "has1", "evidence": "partner lifts the foot, bends or steps back"},
+ "single_occurrence": {"label": "has2", "evidence": "one stamp"},
+ "walks_across_floor": {"label": "lacks1", "evidence": "a single stamp rather than steps across the floor as in walking_towards"},
+ "both_same_motion": {"label": "lacks1", "evidence": "actor stamps while the partner reacts"},
+ "touches_partner_upper_body": {"label": "lacks1", "evidence": "contact is at the foot, not the body as in kicking"}
+}},
+{"action": "high-five", "labels": {
+ "hands_meet_between": {"label": "has2", "evidence": "raised hands meet briefly between the two people"},
+ "both_same_motion": {"label": "has2", "evidence": "both raise and swing a hand"},
+ "single_arm_active": {"label": "has2", "evidence": "each person raises one arm"},
+ "hands_above_head": {"label": "has1", "evidence": "hand at or above head height"},
+ "hand_upright": {"label": "has1", "evidence": "raised hand held up before the slap"},
+ "single_occurrence": {"label": "has2", "evidence": "one slap"},
+ "sustained_contact": {"label": "lacks2", "evidence": "brief touch, unlike shaking_hands"},
+ "hand_at_mouth": {"label": "lacks2", "evidence": "hands lower without going to the mouth, unlike cheers_and_drink"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "no up-and-down shaking"},
+ "hands_low_in_front": {"label": "lacks1", "evidence": "hands meet high, not at waist as in shaking_hands"}
+}},
+{"action": "cheers_and_drink", "labels": {
+ "hands_meet_between": {"label": "has2", "evidence": "right hands meet briefly in the middle"},
+ "both_same_motion": {"label": "has2", "evidence": "both extend, touch and drink"},
+ "hand_at_mouth": {"label": "has2", "evidence": "each hand moves to the mouth and stays"},
+ "hand_retracts_to_body": {"label": "has2", "evidence": "hand pulled back to the mouth"},
+ "head_tilted_back": {"label": "has1", "evidence": "head tilts slightly back while drinking"},
+ "arm_extends_forward": {"label": "has1", "evidence": "right hand extended forward at chest height"},
+ "one_hand_raised_front": {"label": "has1", "evidence": "hand raised in front at chest height"},
+ "single_arm_active": {"label": "has1", "evidence": "right arm does the movement"},
+ "single_occurrence": {"label": "has1", "evidence": "one toast and drink"},
+ "hands_above_head": {"label": "lacks2", "evidence": "hands meet at chest height, not overhead as in high-five"},
+ "sustained_contact": {"label": "lacks1", "evidence": "hands touch only briefly"}
+}},
+{"action": "carry_object", "labels": {
+ "walk_same_direction": {"label": "has2", "evidence": "both walk in the same direction at a steady distance"},
+ "walks_across_floor": {"label": "has2", "evidence": "both walk together"},
+ "both_same_motion": {"label": "has2", "evidence": "both bend, walk and lower together"},
+ "hands_low_in_front": {"label": "has2", "evidence": "hands at waist or hip height toward a shared point"},
+ "both_arms_symmetric": {"label": "has1", "evidence": "both arms held forward or down together"},
+ "torso_bent_forward": {"label": "has1", "evidence": "both bend to grip and to lower"},
+ "long_hold": {"label": "has1", "evidence": "hands kept at the same height while walking"},
+ "distance_decreases": {"label": "lacks2", "evidence": "distance stays steady, unlike walking_towards"},
+ "beside_or_behind_partner": {"label": "lacks1", "evidence": "people face each other rather than one behind as in follow"}
+}},
+{"action": "take_a_photo", "labels": {
+ "both_hands_at_face": {"label": "has1", "evidence": "both hands raised to the front of the face"},
+ "hands_together_at_chest": {"label": "has1", "evidence": "hands held close together in front of the face or chest"},
+ "both_arms_symmetric": {"label": "has1", "evidence": "both hands raised together"},
+ "raise_hold_lower": {"label": "has2", "evidence": "hands rise, hold still, then lower"},
+ "long_hold": {"label": "has1", "evidence": "hands held still while the partner poses"},
+ "arm_extends_forward": {"label": "lacks2", "evidence": "hands close to the face, not an arm extended as in shoot_with_gun or point_finger"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both hands raised, unlike point_finger"},
+ "distance_decreases": {"label": "lacks1", "evidence": "actor stays at a distance"},
+ "sustained_contact": {"label": "lacks1", "evidence": "no contact between the people"},
+ "both_same_motion": {"label": "lacks1", "evidence": "actor holds the hands up while the partner stands still"}
+}},
+{"action": "follow", "labels": {
+ "walks_across_floor": {"label": "has2", "evidence": "both walk with alternating steps"},
+ "walk_same_direction": {"label": "has2", "evidence": "both move in the same direction at a similar distance"},
+ "beside_or_behind_partner": {"label": "has2", "evidence": "follower walks behind facing the leader's back"},
+ "both_same_motion": {"label": "has2", "evidence": "both walk at the same time"},
+ "legs_carry_motion": {"label": "has2", "evidence": "walking steps with natural arm swing"},
+ "distance_decreases": {"label": "lacks2", "evidence": "distance stays similar, unlike walking_towards"},
+ "distance_increases": {"label": "lacks2", "evidence": "distance stays similar, unlike walking_apart"},
+ "hands_low_in_front": {"label": "lacks1", "evidence": "arms swing freely, not held toward a shared point as in carry_object"},
+ "sustained_contact": {"label": "lacks1", "evidence": "no contact"}
+}},
+{"action": "whisper", "labels": {
+ "distance_decreases": {"label": "has2", "evidence": "actor steps close to the partner"},
+ "hand_at_mouth": {"label": "has1", "evidence": "right hand raised and held at the mouth"},
+ "single_arm_active": {"label": "has1", "evidence": "only the right hand rises"},
+ "raise_hold_lower": {"label": "has1", "evidence": "hand rises to the mouth, stays, lowers"},
+ "beside_or_behind_partner": {"label": "has1", "evidence": "actor leans in at the side of the partner's head"},
+ "sustained_contact": {"label": "lacks1", "evidence": "no arms wrap the partner, unlike hugging"},
+ "touches_partner_upper_body": {"label": "lacks1", "evidence": "hand stays at own mouth, not on the partner's back as in pat_on_back"},
+ "both_same_motion": {"label": "lacks1", "evidence": "actor leans in while partner stays still"}
+}},
+{"action": "exchange_things", "labels": {
+ "hands_meet_between": {"label": "has2", "evidence": "hands meet in the space between them"},
+ "both_same_motion": {"label": "has2", "evidence": "both reach forward and pull back"},
+ "arm_extends_forward": {"label": "has2", "evidence": "both extend their arms forward"},
+ "hand_retracts_to_body": {"label": "has2", "evidence": "both pull their hands back to their bodies"},
+ "one_side_then_other": {"label": "has1", "evidence": "one hand offers and the other takes, meeting twice"},
+ "sustained_contact": {"label": "lacks2", "evidence": "hands do not stay clasped, unlike shaking_hands"},
+ "sudden_fast_motion": {"label": "lacks2", "evidence": "calm movements, unlike the sharp pull of grab_stuff"},
+ "repeated_short_strokes": {"label": "lacks1", "evidence": "no up-and-down shaking"}
+}},
+{"action": "support_somebody", "labels": {
+ "sustained_contact": {"label": "has2", "evidence": "actor's arm stays around the partner's back"},
+ "touches_partner_upper_body": {"label": "has2", "evidence": "arm around the partner's back and partner's arm over the shoulders"},
+ "beside_or_behind_partner": {"label": "has2", "evidence": "actor stands close at the partner's side"},
+ "walk_same_direction": {"label": "has2", "evidence": "both walk slowly together"},
+ "walks_across_floor": {"label": "has2", "evidence": "they walk with small steps"},
+ "both_same_motion": {"label": "has1", "evidence": "both walk together"},
+ "unsteady_sway": {"label": "has1", "evidence": "partner walks with small uneven steps"},
+ "torso_bent_forward": {"label": "has1", "evidence": "partner has a bent posture"},
+ "elbow_raised_high": {"label": "has1", "evidence": "partner's arm raised over the actor's shoulders"},
+ "distance_decreases": {"label": "has1", "evidence": "actor moves beside the partner at the start"}
+}},
+{"action": "rock-paper-scissors", "labels": {
+ "both_same_motion": {"label": "has2", "evidence": "both hands move up and down together"},
+ "single_arm_active": {"label": "has2", "evidence": "each person moves only the right hand"},
+ "one_hand_raised_front": {"label": "has2", "evidence": "right hand raised in front of the chest"},
+ "repeated_short_strokes": {"label": "has2", "evidence": "hands move up and down in short beats"},
+ "many_steady_repeats": {"label": "has1", "evidence": "beats repeated in rhythm, rounds may repeat"},
+ "arm_extends_forward": {"label": "has1", "evidence": "hands stop extended forward"},
+ "hands_meet_between": {"label": "lacks2", "evidence": "hands stop apart without touching, unlike shaking_hands or high-five"},
+ "sustained_contact": {"label": "lacks2", "evidence": "no clasp, unlike shaking_hands"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hands stay at chest height, unlike high-five"}
+}}
+]}

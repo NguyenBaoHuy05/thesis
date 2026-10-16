@@ -1,0 +1,119 @@
+{"answers": [
+{"action": "open_a_box", "labels": {
+"hands_move_apart": {"label": "has2", "evidence": "hands move apart sideways and upward"},
+"hands_low_in_front": {"label": "has2", "evidence": "hands at a point in front of the waist or lower"},
+"torso_bent_forward": {"label": "has1", "evidence": "torso leans slightly forward"},
+"head_bowed_toward_hands": {"label": "has1", "evidence": "head tilted down toward the hands"},
+"both_arms_symmetric": {"label": "has1", "evidence": "hands spread apart to both sides"},
+"hands_touch_each_other": {"label": "has1", "evidence": "hands come together before pulling apart"},
+"asymmetric_hand_roles": {"label": "lacks1", "evidence": "both hands move rather than one holding still"},
+"hands_together_at_chest": {"label": "lacks2", "evidence": "hands work at waist height, not chest as in tearing paper"},
+"repeated_short_strokes": {"label": "lacks1", "evidence": "no repeated short pulls as in tearing paper"}
+}},
+{"action": "move_heavy_objects", "labels": {
+"hands_down_to_feet": {"label": "has2", "evidence": "both hands reach near the floor in front"},
+"torso_bent_forward": {"label": "has2", "evidence": "bends at the hips and leans to push or pull"},
+"hips_lower": {"label": "has1", "evidence": "bends at hips and knees and body stays low"},
+"hips_rise": {"label": "has1", "evidence": "rises toward upright at the end"},
+"walks_across_floor": {"label": "has1", "evidence": "small steps sideways or backward"},
+"both_arms_symmetric": {"label": "has1", "evidence": "both arms low and close together"},
+"head_bowed_toward_hands": {"label": "has1", "evidence": "body and head stay lowered toward the hands"},
+"long_hold": {"label": "has1", "evidence": "body stays low through the middle"},
+"arm_extends_forward": {"label": "lacks1", "evidence": "arms reach down, not straight forward at chest as in pushing"},
+"hands_together_at_chest": {"label": "lacks2", "evidence": "hands low near the floor, not at chest"},
+"touches_partner_upper_body": {"label": "lacks1", "evidence": "no second person is pushed"}
+}},
+{"action": "shake_fist", "labels": {
+"single_arm_active": {"label": "has2", "evidence": "right arm moves while body stays still"},
+"one_hand_raised_front": {"label": "has2", "evidence": "hand at shoulder or head height with elbow bent"},
+"repeated_short_strokes": {"label": "has2", "evidence": "short quick back-and-forth strokes"},
+"many_steady_repeats": {"label": "has1", "evidence": "strokes repeated several times"},
+"sudden_fast_motion": {"label": "has1", "evidence": "strokes are short and quick"},
+"hands_above_head": {"label": "lacks2", "evidence": "hand stays at shoulder or head height, not overhead as in cheer_up"},
+"both_arms_symmetric": {"label": "lacks2", "evidence": "only one arm, unlike cheer_up"},
+"arms_out_to_sides": {"label": "lacks1", "evidence": "no wide side-to-side arc as in waving"},
+"arm_extends_forward": {"label": "lacks2", "evidence": "elbow stays bent, no forward strike"},
+"single_occurrence": {"label": "lacks2", "evidence": "strokes repeat rather than a single strike"},
+"raise_hold_lower": {"label": "lacks1", "evidence": "raised hand keeps shaking instead of holding still"}
+}},
+{"action": "throw_up_cap_hat", "labels": {
+"hand_on_head_top": {"label": "has2", "evidence": "right hand rises to the top of the head"},
+"fast_arm_swing": {"label": "has2", "evidence": "arm swings forward and upward quickly"},
+"hands_above_head": {"label": "has2", "evidence": "arm extended above the head"},
+"single_arm_active": {"label": "has1", "evidence": "right arm does the throw"},
+"elbow_raised_high": {"label": "has1", "evidence": "hand at top of head lifts the elbow"},
+"head_tilted_back": {"label": "has1", "evidence": "head tilts back to follow the throw"},
+"sudden_fast_motion": {"label": "has2", "evidence": "quick upward swing"},
+"single_occurrence": {"label": "has2", "evidence": "one throw"},
+"both_arms_symmetric": {"label": "lacks2", "evidence": "one arm goes to the head first, not both together as in cheer_up"}
+}},
+{"action": "capitulate", "labels": {
+"both_arms_symmetric": {"label": "has2", "evidence": "both arms lift together"},
+"hand_beside_head": {"label": "has2", "evidence": "hands beside the head"},
+"hands_above_head": {"label": "has1", "evidence": "hands sometimes slightly above the head"},
+"elbow_raised_high": {"label": "has2", "evidence": "arms lifted with elbows bent out to the sides"},
+"hand_upright": {"label": "has2", "evidence": "raised hands held upright beside the head"},
+"arms_out_to_sides": {"label": "has1", "evidence": "hands held out beside the head"},
+"long_hold": {"label": "has2", "evidence": "hands held still for a while"},
+"single_occurrence": {"label": "has1", "evidence": "one raise"},
+"arm_extends_forward": {"label": "lacks1", "evidence": "elbows stay bent"},
+"repeated_short_strokes": {"label": "lacks2", "evidence": "hands held still, no shaking as in cheer_up"},
+"many_steady_repeats": {"label": "lacks1", "evidence": "no repeated cycle"},
+"sudden_fast_motion": {"label": "lacks1", "evidence": "arms rise without a sudden jerk"}
+}},
+{"action": "cross_arms", "labels": {
+"hand_crosses_midline": {"label": "has2", "evidence": "forearms cross over the chest"},
+"long_hold": {"label": "has2", "evidence": "folded pose held with little motion"},
+"both_arms_symmetric": {"label": "has1", "evidence": "both arms bend toward the center together"},
+"single_occurrence": {"label": "has1", "evidence": "arms fold once"},
+"hand_on_own_chest": {"label": "lacks1", "evidence": "hands go to the opposite upper arms, not pressed on the chest"},
+"hands_touch_each_other": {"label": "lacks1", "evidence": "forearms cross with hands apart"},
+"torso_bent_forward": {"label": "lacks2", "evidence": "body stays upright, unlike chest_pain"},
+"arm_extends_forward": {"label": "lacks2", "evidence": "arms fold against the chest, not out in front"},
+"elbow_raised_high": {"label": "lacks1", "evidence": "elbows stay low at the sides"}
+}},
+{"action": "arm_circles", "labels": {
+"arms_out_to_sides": {"label": "has2", "evidence": "arms lifted out to the sides"},
+"both_arms_symmetric": {"label": "has2", "evidence": "both arms circle together"},
+"elbow_raised_high": {"label": "has2", "evidence": "straight arms at shoulder height"},
+"many_steady_repeats": {"label": "has2", "evidence": "circles repeated several times"},
+"hand_crosses_midline": {"label": "lacks2", "evidence": "arms stay out to the sides, never crossing in front"},
+"fast_arm_swing": {"label": "lacks1", "evidence": "small steady circles rather than long swings"},
+"single_occurrence": {"label": "lacks2", "evidence": "repeated circles, not one extension"},
+"long_hold": {"label": "lacks1", "evidence": "arms keep moving"},
+"single_arm_active": {"label": "lacks2", "evidence": "both arms move, unlike fanning with one hand"},
+"torso_twists": {"label": "lacks1", "evidence": "torso stays still"}
+}},
+{"action": "arm_swings", "labels": {
+"both_arms_symmetric": {"label": "has2", "evidence": "both arms swing together"},
+"many_steady_repeats": {"label": "has2", "evidence": "movement repeats rhythmically many times"},
+"arms_out_to_sides": {"label": "has1", "evidence": "arms open out to the sides"},
+"hand_crosses_midline": {"label": "has1", "evidence": "arms cross in front of the chest"},
+"fast_arm_swing": {"label": "has1", "evidence": "straight arms swing through long paths"},
+"torso_twists": {"label": "has1", "evidence": "torso may twist with the swings"},
+"hands_touch_each_other": {"label": "lacks1", "evidence": "hands pass without meeting as in clapping"},
+"long_hold": {"label": "lacks2", "evidence": "arms keep swinging, never hold crossed"},
+"single_occurrence": {"label": "lacks2", "evidence": "many repeats"}
+}},
+{"action": "run_on_the_spot", "labels": {
+"legs_carry_motion": {"label": "has2", "evidence": "legs alternate quickly"},
+"legs_cycle_in_place": {"label": "has2", "evidence": "body bounces but stays in the same spot"},
+"many_steady_repeats": {"label": "has2", "evidence": "fast rhythmic leg lifts"},
+"on_one_leg": {"label": "has1", "evidence": "one foot supports while the other knee lifts"},
+"one_side_then_other": {"label": "has1", "evidence": "left and right legs lift in turn"},
+"airborne": {"label": "lacks1", "evidence": "feet alternate rather than leaving the ground together"},
+"walks_across_floor": {"label": "lacks1", "evidence": "hips stay in place"},
+"both_arms_symmetric": {"label": "lacks1", "evidence": "arms swing opposite to each other"},
+"single_occurrence": {"label": "lacks2", "evidence": "repeated cycles"}
+}},
+{"action": "butt_kicks", "labels": {
+"legs_carry_motion": {"label": "has2", "evidence": "knees bend to kick heels back"},
+"legs_cycle_in_place": {"label": "has2", "evidence": "repeats quickly in place"},
+"many_steady_repeats": {"label": "has2", "evidence": "heels alternate quickly many times"},
+"on_one_leg": {"label": "has1", "evidence": "other leg supports while one heel kicks back"},
+"one_side_then_other": {"label": "has1", "evidence": "legs alternate"},
+"walks_across_floor": {"label": "lacks1", "evidence": "stays in place"},
+"airborne": {"label": "lacks1", "evidence": "no jumping on one leg as in hopping"},
+"single_occurrence": {"label": "lacks2", "evidence": "repeated kicks"}
+}}
+]}

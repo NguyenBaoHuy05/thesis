@@ -1,0 +1,604 @@
+{
+ "actions": [
+  {
+   "id": 0,
+   "name": "drink_water",
+   "persons": 1
+  },
+  {
+   "id": 1,
+   "name": "eat_meal",
+   "persons": 1
+  },
+  {
+   "id": 2,
+   "name": "brush_teeth",
+   "persons": 1
+  },
+  {
+   "id": 3,
+   "name": "brush_hair",
+   "persons": 1
+  },
+  {
+   "id": 4,
+   "name": "drop",
+   "persons": 1
+  },
+  {
+   "id": 5,
+   "name": "pick_up",
+   "persons": 1
+  },
+  {
+   "id": 6,
+   "name": "throw",
+   "persons": 1
+  },
+  {
+   "id": 7,
+   "name": "sit_down",
+   "persons": 1
+  },
+  {
+   "id": 8,
+   "name": "stand_up",
+   "persons": 1
+  },
+  {
+   "id": 9,
+   "name": "clapping",
+   "persons": 1
+  },
+  {
+   "id": 10,
+   "name": "reading",
+   "persons": 1
+  },
+  {
+   "id": 11,
+   "name": "writing",
+   "persons": 1
+  },
+  {
+   "id": 12,
+   "name": "tear_up_paper",
+   "persons": 1
+  },
+  {
+   "id": 13,
+   "name": "put_on_jacket",
+   "persons": 1
+  },
+  {
+   "id": 14,
+   "name": "take_off_jacket",
+   "persons": 1
+  },
+  {
+   "id": 15,
+   "name": "put_on_a_shoe",
+   "persons": 1
+  },
+  {
+   "id": 16,
+   "name": "take_off_a_shoe",
+   "persons": 1
+  },
+  {
+   "id": 17,
+   "name": "put_on_glasses",
+   "persons": 1
+  },
+  {
+   "id": 18,
+   "name": "take_off_glasses",
+   "persons": 1
+  },
+  {
+   "id": 19,
+   "name": "put_on_a_hat_cap",
+   "persons": 1
+  },
+  {
+   "id": 20,
+   "name": "take_off_a_hat_cap",
+   "persons": 1
+  },
+  {
+   "id": 21,
+   "name": "cheer_up",
+   "persons": 1
+  },
+  {
+   "id": 22,
+   "name": "hand_waving",
+   "persons": 1
+  },
+  {
+   "id": 23,
+   "name": "kicking_something",
+   "persons": 1
+  },
+  {
+   "id": 24,
+   "name": "reach_into_pocket",
+   "persons": 1
+  },
+  {
+   "id": 25,
+   "name": "hopping",
+   "persons": 1
+  },
+  {
+   "id": 26,
+   "name": "jump_up",
+   "persons": 1
+  },
+  {
+   "id": 27,
+   "name": "phone_call",
+   "persons": 1
+  },
+  {
+   "id": 28,
+   "name": "play_with_phone_tablet",
+   "persons": 1
+  },
+  {
+   "id": 29,
+   "name": "type_on_a_keyboard",
+   "persons": 1
+  },
+  {
+   "id": 30,
+   "name": "point_to_something",
+   "persons": 1
+  },
+  {
+   "id": 31,
+   "name": "taking_a_selfie",
+   "persons": 1
+  },
+  {
+   "id": 32,
+   "name": "check_time_(from_watch)",
+   "persons": 1
+  },
+  {
+   "id": 33,
+   "name": "rub_two_hands",
+   "persons": 1
+  },
+  {
+   "id": 34,
+   "name": "nod_head_bow",
+   "persons": 1
+  },
+  {
+   "id": 35,
+   "name": "shake_head",
+   "persons": 1
+  },
+  {
+   "id": 36,
+   "name": "wipe_face",
+   "persons": 1
+  },
+  {
+   "id": 37,
+   "name": "salute",
+   "persons": 1
+  },
+  {
+   "id": 38,
+   "name": "put_palms_together",
+   "persons": 1
+  },
+  {
+   "id": 39,
+   "name": "cross_hands_in_front",
+   "persons": 1
+  },
+  {
+   "id": 40,
+   "name": "sneeze_cough",
+   "persons": 1
+  },
+  {
+   "id": 41,
+   "name": "staggering",
+   "persons": 1
+  },
+  {
+   "id": 42,
+   "name": "falling_down",
+   "persons": 1
+  },
+  {
+   "id": 43,
+   "name": "headache",
+   "persons": 1
+  },
+  {
+   "id": 44,
+   "name": "chest_pain",
+   "persons": 1
+  },
+  {
+   "id": 45,
+   "name": "back_pain",
+   "persons": 1
+  },
+  {
+   "id": 46,
+   "name": "neck_pain",
+   "persons": 1
+  },
+  {
+   "id": 47,
+   "name": "nausea_vomiting",
+   "persons": 1
+  },
+  {
+   "id": 48,
+   "name": "fan_self",
+   "persons": 1
+  },
+  {
+   "id": 49,
+   "name": "punch_slap",
+   "persons": 2
+  },
+  {
+   "id": 50,
+   "name": "kicking",
+   "persons": 2
+  },
+  {
+   "id": 51,
+   "name": "pushing",
+   "persons": 2
+  },
+  {
+   "id": 52,
+   "name": "pat_on_back",
+   "persons": 2
+  },
+  {
+   "id": 53,
+   "name": "point_finger",
+   "persons": 2
+  },
+  {
+   "id": 54,
+   "name": "hugging",
+   "persons": 2
+  },
+  {
+   "id": 55,
+   "name": "giving_object",
+   "persons": 2
+  },
+  {
+   "id": 56,
+   "name": "touch_pocket",
+   "persons": 2
+  },
+  {
+   "id": 57,
+   "name": "shaking_hands",
+   "persons": 2
+  },
+  {
+   "id": 58,
+   "name": "walking_towards",
+   "persons": 2
+  },
+  {
+   "id": 59,
+   "name": "walking_apart",
+   "persons": 2
+  },
+  {
+   "id": 60,
+   "name": "put_on_headphone",
+   "persons": 1
+  },
+  {
+   "id": 61,
+   "name": "take_off_headphone",
+   "persons": 1
+  },
+  {
+   "id": 62,
+   "name": "shoot_at_basket",
+   "persons": 1
+  },
+  {
+   "id": 63,
+   "name": "bounce_ball",
+   "persons": 1
+  },
+  {
+   "id": 64,
+   "name": "tennis_bat_swing",
+   "persons": 1
+  },
+  {
+   "id": 65,
+   "name": "juggle_table_tennis_ball",
+   "persons": 1
+  },
+  {
+   "id": 66,
+   "name": "hush",
+   "persons": 1
+  },
+  {
+   "id": 67,
+   "name": "flick_hair",
+   "persons": 1
+  },
+  {
+   "id": 68,
+   "name": "thumb_up",
+   "persons": 1
+  },
+  {
+   "id": 69,
+   "name": "thumb_down",
+   "persons": 1
+  },
+  {
+   "id": 70,
+   "name": "make_OK_sign",
+   "persons": 1
+  },
+  {
+   "id": 71,
+   "name": "make_victory_sign",
+   "persons": 1
+  },
+  {
+   "id": 72,
+   "name": "staple_book",
+   "persons": 1
+  },
+  {
+   "id": 73,
+   "name": "counting_money",
+   "persons": 1
+  },
+  {
+   "id": 74,
+   "name": "cutting_nails",
+   "persons": 1
+  },
+  {
+   "id": 75,
+   "name": "cutting_paper",
+   "persons": 1
+  },
+  {
+   "id": 76,
+   "name": "snap_fingers",
+   "persons": 1
+  },
+  {
+   "id": 77,
+   "name": "open_bottle",
+   "persons": 1
+  },
+  {
+   "id": 78,
+   "name": "sniff_smell",
+   "persons": 1
+  },
+  {
+   "id": 79,
+   "name": "squat_down",
+   "persons": 1
+  },
+  {
+   "id": 80,
+   "name": "toss_a_coin",
+   "persons": 1
+  },
+  {
+   "id": 81,
+   "name": "fold_paper",
+   "persons": 1
+  },
+  {
+   "id": 82,
+   "name": "ball_up_paper",
+   "persons": 1
+  },
+  {
+   "id": 83,
+   "name": "play_magic_cube",
+   "persons": 1
+  },
+  {
+   "id": 84,
+   "name": "apply_cream_on_face",
+   "persons": 1
+  },
+  {
+   "id": 85,
+   "name": "apply_cream_on_hand",
+   "persons": 1
+  },
+  {
+   "id": 86,
+   "name": "put_on_bag",
+   "persons": 1
+  },
+  {
+   "id": 87,
+   "name": "take_off_bag",
+   "persons": 1
+  },
+  {
+   "id": 88,
+   "name": "put_object_into_bag",
+   "persons": 1
+  },
+  {
+   "id": 89,
+   "name": "take_object_out_of_bag",
+   "persons": 1
+  },
+  {
+   "id": 90,
+   "name": "open_a_box",
+   "persons": 1
+  },
+  {
+   "id": 91,
+   "name": "move_heavy_objects",
+   "persons": 1
+  },
+  {
+   "id": 92,
+   "name": "shake_fist",
+   "persons": 1
+  },
+  {
+   "id": 93,
+   "name": "throw_up_cap_hat",
+   "persons": 1
+  },
+  {
+   "id": 94,
+   "name": "capitulate",
+   "persons": 1
+  },
+  {
+   "id": 95,
+   "name": "cross_arms",
+   "persons": 1
+  },
+  {
+   "id": 96,
+   "name": "arm_circles",
+   "persons": 1
+  },
+  {
+   "id": 97,
+   "name": "arm_swings",
+   "persons": 1
+  },
+  {
+   "id": 98,
+   "name": "run_on_the_spot",
+   "persons": 1
+  },
+  {
+   "id": 99,
+   "name": "butt_kicks",
+   "persons": 1
+  },
+  {
+   "id": 100,
+   "name": "cross_toe_touch",
+   "persons": 1
+  },
+  {
+   "id": 101,
+   "name": "side_kick",
+   "persons": 1
+  },
+  {
+   "id": 102,
+   "name": "yawn",
+   "persons": 1
+  },
+  {
+   "id": 103,
+   "name": "stretch_oneself",
+   "persons": 1
+  },
+  {
+   "id": 104,
+   "name": "blow_nose",
+   "persons": 1
+  },
+  {
+   "id": 105,
+   "name": "hit_with_object",
+   "persons": 2
+  },
+  {
+   "id": 106,
+   "name": "wield_knife",
+   "persons": 2
+  },
+  {
+   "id": 107,
+   "name": "knock_over",
+   "persons": 2
+  },
+  {
+   "id": 108,
+   "name": "grab_stuff",
+   "persons": 2
+  },
+  {
+   "id": 109,
+   "name": "shoot_with_gun",
+   "persons": 2
+  },
+  {
+   "id": 110,
+   "name": "step_on_foot",
+   "persons": 2
+  },
+  {
+   "id": 111,
+   "name": "high-five",
+   "persons": 2
+  },
+  {
+   "id": 112,
+   "name": "cheers_and_drink",
+   "persons": 2
+  },
+  {
+   "id": 113,
+   "name": "carry_object",
+   "persons": 2
+  },
+  {
+   "id": 114,
+   "name": "take_a_photo",
+   "persons": 2
+  },
+  {
+   "id": 115,
+   "name": "follow",
+   "persons": 2
+  },
+  {
+   "id": 116,
+   "name": "whisper",
+   "persons": 2
+  },
+  {
+   "id": 117,
+   "name": "exchange_things",
+   "persons": 2
+  },
+  {
+   "id": 118,
+   "name": "support_somebody",
+   "persons": 2
+  },
+  {
+   "id": 119,
+   "name": "rock-paper-scissors",
+   "persons": 2
+  }
+ ]
+}

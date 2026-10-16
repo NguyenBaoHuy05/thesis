@@ -1,0 +1,24 @@
+{
+ "implies": [
+  ["walk_same_direction", "both_same_motion"],
+  ["walk_same_direction", "walks_across_floor"]
+ ],
+ "excludes": [
+  ["single_occurrence", "many_steady_repeats"],
+  ["single_occurrence", "repeated_short_strokes"],
+  ["single_occurrence", "legs_cycle_in_place"],
+  ["both_arms_symmetric", "single_arm_active"],
+  ["both_arms_symmetric", "asymmetric_hand_roles"],
+  ["both_arms_symmetric", "one_side_then_other"],
+  ["single_arm_active", "legs_carry_motion"],
+  ["single_arm_active", "head_carries_motion"],
+  ["legs_carry_motion", "head_carries_motion"],
+  ["wrist_hand_dominant", "legs_carry_motion"],
+  ["wrist_hand_dominant", "head_carries_motion"],
+  ["hands_together_at_chest", "hands_low_in_front"],
+  ["legs_cycle_in_place", "walks_across_floor"],
+  ["walk_same_direction", "legs_cycle_in_place"],
+  ["walk_same_direction", "distance_decreases"],
+  ["walk_same_direction", "distance_increases"]
+ ]
+}

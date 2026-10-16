@@ -1,4 +1,4 @@
-"""Checked initialization from official Hyper-GCN and synergy checkpoints."""
+"""Checked initialization from official Hyper-GCN checkpoints."""
 
 from collections import OrderedDict
 from collections.abc import Mapping
@@ -9,7 +9,7 @@ from model.training import is_extension_key
 
 
 def load_model_weights(model, checkpoint, allow_new=False, ignore_weights=()):
-    """Allow missing synergy / semantic-hyperedge parameters only when
+    """Allow missing extension parameters (``is_extension_key``) only when
     ``allow_new`` (fine-tuning from an official checkpoint in train mode)."""
     if not isinstance(checkpoint, Mapping):
         raise ValueError("checkpoint must be a state_dict or contain a state_dict mapping")

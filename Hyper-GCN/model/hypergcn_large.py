@@ -5,8 +5,6 @@ import torch
 import torch.nn as nn
 import torch.utils.data
 import torch.nn.functional as F
-from model.synergies import synergy_bank, validate_bank
-from model.synergy_bottleneck import SynergyBottleneck, SynergyOutput
 
 LAYERS = tuple('l{}'.format(i) for i in range(1, 10))
 # Residual input of l3, l6, l9: the output of l1, l4, l7.
@@ -313,9 +311,7 @@ class TCN_GCN_unit(nn.Module):
 
 class Model(nn.Module):
     def __init__(self, num_class=60, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3, hyper_joints=0,
-                 drop_out=0, synergy_enabled=False, synergy_bank_kind="semantic", synergy_seed=0,
-                 synergy_segments=4, synergy_feature_level='l9', synergy_gate_hidden=64,
-                 synergy_gate_temperature=1.0, synergy_gate_weight=1e-3, synergy_readout_scale=5.0):
+                 drop_out=0):
         super(Model, self).__init__()
 
         if graph is None:
@@ -344,7 +340,6 @@ class Model(nn.Module):
         self.l7 = TCN_GCN_unit(self.embedding_channels * 2, self.embedding_channels * 4, num_point, hyper_joints, A, stride=2)
         self.l8 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A)
         self.l9 = TCN_GCN_unit(self.embedding_channels * 4, self.embedding_channels * 4, num_point, hyper_joints, A)
-        # Kept in synergy mode so official checkpoints load, but not used there.
         self.fc = nn.Linear(self.embedding_channels * 4, self.num_class)
 
         # nn.init.xavier_normal_(self.to_joint_embedding.weight)
@@ -355,27 +350,6 @@ class Model(nn.Module):
             self.drop_out = nn.Dropout(drop_out)
         else:
             self.drop_out = lambda x: x
-        # Synergy bottleneck (SEMANTIC_HYPERGRAPH_PLAN.md) in place of fc: it
-        # reads the output of synergy_feature_level; later layers are not run.
-        self.synergy = None
-        self.feature_level = 'l9'
-        if synergy_enabled:
-            if synergy_feature_level not in LAYERS:
-                raise ValueError('synergy_feature_level must be one of {}'.format(LAYERS))
-            self.feature_level = synergy_feature_level
-            synergies = synergy_bank(synergy_bank_kind, synergy_seed)
-            validate_bank(synergies)
-            level = LAYERS.index(self.feature_level)
-            level_channels = self.embedding_channels * (1 if level < 3 else 2 if level < 6 else 4)
-            self.synergy = SynergyBottleneck(
-                level_channels, synergies, num_class, segments=synergy_segments,
-                gate_hidden=synergy_gate_hidden, gate_temperature=synergy_gate_temperature,
-                gate_weight=synergy_gate_weight, readout_scale=synergy_readout_scale, dropout=drop_out,
-            )
-
-    def unused_layers(self):
-        """Layers after the feature level: kept so checkpoints load, never run."""
-        return LAYERS[LAYERS.index(self.feature_level) + 1:]
 
     def features(self, x, until='l9'):
         """Backbone features [N,M,C,T,V] after layer ``until`` and the hyper-joint outputs."""
@@ -400,16 +374,7 @@ class Model(nn.Module):
             hyper_outputs.append(h_x)
         return x.view(N, M, x.size(1), x.size(2), V), tuple(hyper_outputs)
 
-    def forward(self, x, gate_mask=None):
-        """gate_mask [N,S,E] (synergy mode only) multiplies the synergy gates."""
-        if self.synergy is not None:
-            actor_valid = x.detach().abs().sum(dim=(1, 2, 3)) > 0
-            features, hyper_outputs = self.features(x, self.feature_level)
-            result = self.synergy(features, actor_valid, gate_mask)
-            return SynergyOutput(hyper_outputs=hyper_outputs, **result)
-        if gate_mask is not None:
-            raise ValueError('gate_mask needs synergy_enabled=True')
-
+    def forward(self, x):
         x, hyper_outputs = self.features(x)
         x = x.flatten(3).mean(3).mean(1)
         x = self.drop_out(x)

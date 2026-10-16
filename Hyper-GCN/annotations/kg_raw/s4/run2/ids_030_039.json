@@ -1,0 +1,114 @@
+{"answers": [
+{"action": "point_to_something", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm rises, rest of body still"},
+ "arm_extends_forward": {"label": "has2", "evidence": "arm straight and held out at shoulder height"},
+ "raise_hold_lower": {"label": "has2", "evidence": "arm rises, held still, then lowers"},
+ "single_occurrence": {"label": "has2", "evidence": "motion happens once"},
+ "arms_out_to_sides": {"label": "has1", "evidence": "hand sometimes out to the side of the shoulder"},
+ "hands_above_head": {"label": "lacks1", "evidence": "hand at shoulder height, not raised as in selfie"},
+ "both_arms_symmetric": {"label": "lacks1", "evidence": "one arm, unlike two-handed gun shooting"},
+ "hands_touch_each_other": {"label": "lacks1", "evidence": "hands not joined"},
+ "many_steady_repeats": {"label": "lacks1", "evidence": "no repeated jabs"},
+ "partner_raises_arms": {"label": "lacks1", "evidence": "no partner reacting"}
+}},
+{"action": "taking_a_selfie", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm raised, rest still"},
+ "long_hold": {"label": "has2", "evidence": "hand held still in raised position for a while"},
+ "raise_hold_lower": {"label": "has2", "evidence": "arm lifts, holds, then lowers"},
+ "hands_above_head": {"label": "has1", "evidence": "hand slightly above the head"},
+ "single_occurrence": {"label": "has1", "evidence": "one raise and hold"},
+ "arm_extends_forward": {"label": "lacks1", "evidence": "elbow partly bent, not fully straight as in pointing"},
+ "both_hands_at_face": {"label": "lacks2", "evidence": "one hand, unlike two-handed photo"},
+ "hands_together_at_chest": {"label": "lacks2", "evidence": "hand raised high, not at chest as in phone use"},
+ "head_bowed_toward_hands": {"label": "lacks2", "evidence": "head not bowed toward low hands"}
+}},
+{"action": "check_time_(from_watch)", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "left forearm lifts, right arm mostly still"},
+ "one_hand_raised_front": {"label": "has2", "evidence": "wrist held in front of chest with elbow bent"},
+ "head_bowed_toward_hands": {"label": "has1", "evidence": "head tilts down toward the wrist"},
+ "raise_hold_lower": {"label": "has2", "evidence": "forearm lifts, held briefly, then drops"},
+ "single_occurrence": {"label": "has2", "evidence": "action happens once"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one forearm lifts, unlike crossing hands"},
+ "hands_together_at_chest": {"label": "lacks2", "evidence": "only one hand raised, unlike reading"},
+ "hand_crosses_midline": {"label": "lacks1", "evidence": "forearms do not cross into an X"},
+ "continuous_small_hand_motion": {"label": "lacks1", "evidence": "wrist held still"},
+ "long_hold": {"label": "lacks1", "evidence": "pose held only briefly"}
+}},
+{"action": "rub_two_hands", "labels": {
+ "hands_touch_each_other": {"label": "has2", "evidence": "hands stay in contact"},
+ "hands_together_at_chest": {"label": "has2", "evidence": "hands together in front of the chest"},
+ "repeated_short_strokes": {"label": "has2", "evidence": "hands slide back and forth against each other"},
+ "many_steady_repeats": {"label": "has2", "evidence": "rubbing strokes repeated"},
+ "continuous_small_hand_motion": {"label": "has2", "evidence": "hands keep moving while body stays still"},
+ "wrist_hand_dominant": {"label": "has1", "evidence": "motion at forearms and hands only"},
+ "hands_move_apart": {"label": "lacks2", "evidence": "hands stay in contact, unlike clapping"},
+ "raise_hold_lower": {"label": "lacks2", "evidence": "no still pause, unlike palms together"},
+ "single_occurrence": {"label": "lacks2", "evidence": "repeated strokes"},
+ "asymmetric_hand_roles": {"label": "lacks1", "evidence": "both hands slide, not one stroking over a still hand"}
+}},
+{"action": "nod_head_bow", "labels": {
+ "head_carries_motion": {"label": "has1", "evidence": "head moves forward and down while arms stay passive"},
+ "torso_bent_forward": {"label": "has1", "evidence": "in a bow the torso leans forward from the hips"},
+ "hands_down_to_feet": {"label": "lacks2", "evidence": "arms hang, no reach to the floor as in picking up"},
+ "hips_lower": {"label": "lacks1", "evidence": "knees do not bend down"},
+ "hand_at_mouth": {"label": "lacks2", "evidence": "arms at sides, no hand to mouth as in vomiting"},
+ "hand_on_own_chest": {"label": "lacks1", "evidence": "no hand on stomach"},
+ "long_hold": {"label": "lacks1", "evidence": "short pause at the lowest point"},
+ "single_arm_active": {"label": "lacks1", "evidence": "arms passive"}
+}},
+{"action": "shake_head", "labels": {
+ "head_carries_motion": {"label": "has2", "evidence": "head rotates left and right with shoulders still"},
+ "many_steady_repeats": {"label": "has2", "evidence": "rotation repeated several times in a row"},
+ "single_occurrence": {"label": "lacks2", "evidence": "repeated rotations"},
+ "torso_bent_forward": {"label": "lacks1", "evidence": "torso upright, unlike a bow"},
+ "walks_across_floor": {"label": "lacks2", "evidence": "feet stay put, unlike staggering"},
+ "unsteady_sway": {"label": "lacks2", "evidence": "body stays steady"},
+ "torso_twists": {"label": "lacks1", "evidence": "shoulders stay still"},
+ "single_arm_active": {"label": "lacks1", "evidence": "arms at sides, no hand at the neck"}
+}},
+{"action": "wipe_face", "labels": {
+ "both_hands_at_face": {"label": "has1", "evidence": "often both hands at the face"},
+ "repeated_short_strokes": {"label": "has1", "evidence": "hands stroke up-down or side to side across the face"},
+ "long_hold": {"label": "lacks2", "evidence": "hands keep moving, unlike headache"},
+ "raise_hold_lower": {"label": "lacks1", "evidence": "strokes instead of a still pause"},
+ "single_occurrence": {"label": "lacks1", "evidence": "strokes often repeat"},
+ "hands_together_at_chest": {"label": "lacks1", "evidence": "hands go straight to the face"},
+ "hands_come_together": {"label": "lacks1", "evidence": "no joining of hands first as in applying cream"}
+}},
+{"action": "salute", "labels": {
+ "single_arm_active": {"label": "has2", "evidence": "right arm lifts, left arm at side"},
+ "elbow_raised_high": {"label": "has2", "evidence": "elbow points out to the side at shoulder height"},
+ "hand_beside_head": {"label": "has2", "evidence": "hand at the right side of the forehead"},
+ "raise_hold_lower": {"label": "has2", "evidence": "arm lifts, held still, then drops"},
+ "single_occurrence": {"label": "has2", "evidence": "one salute"},
+ "hand_on_head_top": {"label": "lacks2", "evidence": "hand at forehead side, not on top as in putting on a cap"},
+ "hands_above_head": {"label": "lacks2", "evidence": "hand stays at forehead height"},
+ "both_arms_symmetric": {"label": "lacks2", "evidence": "one arm only"},
+ "head_bowed_toward_hands": {"label": "lacks1", "evidence": "head upright, unlike headache"}
+}},
+{"action": "put_palms_together", "labels": {
+ "both_arms_symmetric": {"label": "has2", "evidence": "both hands rise and meet, mirrored"},
+ "hands_touch_each_other": {"label": "has2", "evidence": "hands pressed together"},
+ "hands_together_at_chest": {"label": "has2", "evidence": "hands joined at chest center"},
+ "hands_come_together": {"label": "has2", "evidence": "hands move together until they meet"},
+ "long_hold": {"label": "has2", "evidence": "hands held still together for a while"},
+ "raise_hold_lower": {"label": "has2", "evidence": "hands rise, hold, then lower"},
+ "single_occurrence": {"label": "has2", "evidence": "one joining"},
+ "hand_upright": {"label": "has1", "evidence": "joined hands held with tips above wrists"},
+ "repeated_short_strokes": {"label": "lacks2", "evidence": "no rubbing strokes"},
+ "many_steady_repeats": {"label": "lacks2", "evidence": "no rhythmic clapping"},
+ "continuous_small_hand_motion": {"label": "lacks2", "evidence": "hands held still"},
+ "hand_crosses_midline": {"label": "lacks2", "evidence": "hands meet at center without crossing"}
+}},
+{"action": "cross_hands_in_front", "labels": {
+ "both_arms_symmetric": {"label": "has2", "evidence": "both arms lift and cross together"},
+ "hand_crosses_midline": {"label": "has2", "evidence": "forearms cross, each hand on the opposite side"},
+ "raise_hold_lower": {"label": "has2", "evidence": "arms lift, crossed position held, then lower"},
+ "single_occurrence": {"label": "has2", "evidence": "one crossing"},
+ "hands_together_at_chest": {"label": "lacks1", "evidence": "hands end on opposite sides rather than meeting at center"},
+ "hands_come_together": {"label": "lacks1", "evidence": "hands pass each other rather than meeting"},
+ "hand_on_own_chest": {"label": "lacks2", "evidence": "arms held in front, not folded against the chest"},
+ "single_arm_active": {"label": "lacks2", "evidence": "both forearms lift, unlike checking time"},
+ "one_hand_raised_front": {"label": "lacks1", "evidence": "both arms raised"}
+}}
+]}

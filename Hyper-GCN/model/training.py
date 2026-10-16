@@ -2,11 +2,14 @@
 
 STEM = ("data_bn", "to_joint_embedding", "pos_embedding")
 LAYERS = tuple("l{}".format(i) for i in range(1, 10))
+# Top-level modules added on top of Hyper-GCN (e.g. "kg."): absent from official
+# checkpoints, always trainable.
+EXTENSION_PREFIXES = ()
 
 
 def is_extension_key(key):
     """Parameters that official Hyper-GCN checkpoints do not have."""
-    return key.startswith("synergy.")
+    return key.startswith(EXTENSION_PREFIXES)
 
 
 def frozen_modules(freeze_until=None):
@@ -29,12 +32,9 @@ def _unwrap(model):
 
 
 def configure_trainable_parameters(model, freeze_until=None):
-    """The synergy bottleneck always trains. In synergy mode the unused
-    classifier ``fc`` and the layers after the feature level are frozen."""
+    """Extension modules always train; frozen backbone modules do not."""
     model_ref = _unwrap(model)
     frozen = frozen_modules(freeze_until)
-    if getattr(model_ref, "synergy", None) is not None:
-        frozen = frozen + ("fc",) + tuple(model_ref.unused_layers())
     for name, parameter in model_ref.named_parameters():
         trainable = is_extension_key(name) or name.split(".")[0] not in frozen
         parameter.requires_grad_(trainable)

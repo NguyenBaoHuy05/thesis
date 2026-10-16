@@ -1,0 +1,232 @@
+{"actions": [
+  {
+    "id": 80,
+    "name": "toss_a_coin",
+    "text": "a person flicks the right hand upward from chest height and catches with both hands",
+    "paraphrases": [
+      "a person makes a quick upward flick of one hand then brings hands together",
+      "a person jerks the right hand up in front, then cups both hands together",
+      "a person gives a short upward hand flick, then the hands meet below it"
+    ],
+    "motion": "The right hand is held in front of the chest or waist with the elbow bent. It makes one short, quick upward flick, mainly at the wrist and forearm, and the head may tilt up slightly. The hand then moves to catch, often with the left hand coming under or over the right hand in front of the body.",
+    "body_parts": ["hand_R", "hand_L", "arm_R", "head"],
+    "phases": {
+      "start": "right hand held in front with the elbow bent",
+      "middle": "quick upward flick of the right hand",
+      "end": "hands come together in front to catch"
+    },
+    "not_observable": ["coin", "coin flipping in the air"],
+    "confusable_with": [
+      {"name": "juggle_table_tennis_ball", "visible_difference": "the hand repeats small upward taps continuously instead of one flick and catch"},
+      {"name": "snap_fingers", "visible_difference": "the flick is not followed by the hands meeting to catch"},
+      {"name": "throw", "visible_difference": "the arm swings forward from behind the shoulder with a much larger motion"}
+    ]
+  },
+  {
+    "id": 81,
+    "name": "fold_paper",
+    "text": "a person brings both hands together in front, then presses one along the other",
+    "paraphrases": [
+      "a person moves both hands toward each other at waist height and presses down",
+      "a person brings the hands together, then slides one hand flat across the other",
+      "a person bends over hands held low in front and repeatedly brings them together"
+    ],
+    "motion": "Both hands are held in front of the body at waist or table height, a short distance apart. One hand moves over toward the other, the hands meet, and then one hand slides or presses flat along a line with a slight downward push. This may repeat two or three times, with the head bent down toward the hands.",
+    "body_parts": ["hand_R", "hand_L", "arm_R", "arm_L", "head"],
+    "phases": {
+      "start": "hands apart in front at waist height",
+      "middle": "one hand moves onto the other and presses along a line",
+      "end": "hands rest together or lower"
+    },
+    "not_observable": ["paper", "fold crease"],
+    "confusable_with": [
+      {"name": "ball_up_paper", "visible_difference": "hands squeeze and turn around each other in a compact cluster instead of pressing flat"},
+      {"name": "cutting_paper", "visible_difference": "one hand makes small repeated motions while advancing, hands staying apart"},
+      {"name": "staple_book", "visible_difference": "the right hand presses sharply straight down rather than sliding along"}
+    ]
+  },
+  {
+    "id": 82,
+    "name": "ball_up_paper",
+    "text": "a person squeezes both hands together repeatedly, turning them around each other in front",
+    "paraphrases": [
+      "a person presses both hands together and rotates them around each other repeatedly",
+      "a person brings both hands together at chest height and kneads them in small turns",
+      "a person squeezes the hands toward each other again and again in front"
+    ],
+    "motion": "Both hands start apart in front of the chest and move toward each other until they nearly touch. The hands then press together repeatedly and turn around each other, with the space between them shrinking. At the end the hands hold a compact position close together and then lower, or one hand moves away.",
+    "body_parts": ["hand_R", "hand_L", "arm_R", "arm_L"],
+    "phases": {
+      "start": "hands apart in front of the chest",
+      "middle": "hands press together and turn around each other repeatedly",
+      "end": "hands held compact together, then lowered"
+    },
+    "not_observable": ["paper", "ball of paper"],
+    "confusable_with": [
+      {"name": "fold_paper", "visible_difference": "one hand presses flat along the other at waist height without turning"},
+      {"name": "rub_two_hands", "visible_difference": "palms slide flat back and forth against each other without the hands closing in"},
+      {"name": "tear_up_paper", "visible_difference": "hands pull apart in opposite directions instead of squeezing together"}
+    ]
+  },
+  {
+    "id": 83,
+    "name": "play_magic_cube",
+    "text": "a person holds both hands together in front and twists them repeatedly in turns",
+    "paraphrases": [
+      "a person keeps both hands close at chest height and rotates the wrists repeatedly",
+      "a person repeatedly turns one hand and then the other while holding them together",
+      "a person makes small alternating twisting motions with both hands held in front"
+    ],
+    "motion": "Both hands are held close together in front of the chest with the elbows bent and the head tilted down toward them. The wrists rotate in short repeated turns, sometimes one hand and sometimes both, while the hands stay at about the same distance apart. The arms and torso stay mostly still for the whole action.",
+    "body_parts": ["hand_R", "hand_L", "head"],
+    "phases": {
+      "start": "hands brought together in front of the chest",
+      "middle": "repeated short wrist turns of one or both hands",
+      "end": "hands stop and lower"
+    },
+    "not_observable": ["magic cube", "finger movements"],
+    "confusable_with": [
+      {"name": "play_with_phone_tablet", "visible_difference": "hands stay still with no wrist turning"},
+      {"name": "counting_money", "visible_difference": "one hand slides over a still other hand instead of both wrists turning"},
+      {"name": "open_bottle", "visible_difference": "one hand twists above the other, which stays still, and then lifts away"}
+    ]
+  },
+  {
+    "id": 84,
+    "name": "apply_cream_on_face",
+    "text": "a person rubs both hands in small circles on the cheeks and face",
+    "paraphrases": [
+      "a person moves the fingertips repeatedly over the face in small rubbing motions",
+      "a person raises both hands to the face and rubs them around the cheeks",
+      "a person touches the face with one or both hands and rubs it repeatedly"
+    ],
+    "motion": "One or both hands rise to the face, often after the hands meet briefly in front of the chest. The hands rub in small repeated circular motions on the cheeks, forehead, and chin, moving between different parts of the face. The head stays mostly still or tilts slightly, and the hands then lower.",
+    "body_parts": ["hand_R", "hand_L", "arm_R", "arm_L", "head"],
+    "phases": {
+      "start": "hands meet in front of the chest, then rise",
+      "middle": "small repeated circles on different parts of the face",
+      "end": "hands lower"
+    },
+    "not_observable": ["cream", "cream container"],
+    "confusable_with": [
+      {"name": "wipe_face", "visible_difference": "hands make one or two larger downward strokes instead of repeated small circles"},
+      {"name": "headache", "visible_difference": "hands hold the forehead or temples still rather than rubbing around the face"},
+      {"name": "apply_cream_on_hand", "visible_difference": "hands rub each other in front of the chest and never reach the face"}
+    ]
+  },
+  {
+    "id": 85,
+    "name": "apply_cream_on_hand",
+    "text": "a person rubs one hand over the back and palm of the other hand",
+    "paraphrases": [
+      "a person moves the right hand around the left hand in repeated rubbing motions",
+      "a person holds the hands together in front and rubs them over each other",
+      "a person smooths one hand repeatedly over the other hand at chest height"
+    ],
+    "motion": "Both hands come together in front of the chest or waist. The right hand rubs over the back and palm of the left hand in repeated sliding and circular motions, and then the hands may switch roles. The head tilts slightly down and the arms and torso stay mostly still.",
+    "body_parts": ["hand_R", "hand_L", "arm_R", "arm_L"],
+    "phases": {
+      "start": "hands come together in front",
+      "middle": "one hand rubs over the other repeatedly, possibly switching",
+      "end": "hands separate and lower"
+    },
+    "not_observable": ["cream", "cream container"],
+    "confusable_with": [
+      {"name": "rub_two_hands", "visible_difference": "palms slide flat in quick back and forth strokes without one hand moving around the other"},
+      {"name": "apply_cream_on_face", "visible_difference": "hands rise to the face and rub there"},
+      {"name": "cutting_nails", "visible_difference": "one hand makes small squeezing motions at the other's fingertips instead of rubbing over it"}
+    ]
+  },
+  {
+    "id": 86,
+    "name": "put_on_bag",
+    "text": "a person reaches each arm back behind the shoulders in turn, then pulls forward",
+    "paraphrases": [
+      "a person passes one arm and then the other back behind the shoulders",
+      "a person lifts the hands to the shoulders, bends the arms back, and straightens up",
+      "a person moves each arm back behind the body in turn, then adjusts the shoulders"
+    ],
+    "motion": "The person first reaches down or forward with both hands and lifts them to chest height. The right arm bends and moves back behind the right shoulder, then the left arm reaches back behind the left shoulder while the torso twists slightly. Finally the hands rise to the front of the shoulders and pull down, and the shoulders shrug or the torso bounces once.",
+    "body_parts": ["arm_R", "arm_L", "hand_R", "hand_L", "torso"],
+    "phases": {
+      "start": "hands lift from low in front to the chest",
+      "middle": "one arm then the other moves back behind the shoulders",
+      "end": "hands pull down at the front of the shoulders"
+    },
+    "not_observable": ["bag or backpack", "shoulder straps"],
+    "confusable_with": [
+      {"name": "take_off_bag", "visible_difference": "arms come out from behind the shoulders and the hands end low in front"},
+      {"name": "put_on_jacket", "visible_difference": "arms swing wider into sleeves and the hands then work down the front of the chest"},
+      {"name": "stretch_oneself", "visible_difference": "both arms extend up or back together without the one-then-other sequence"}
+    ]
+  },
+  {
+    "id": 87,
+    "name": "take_off_bag",
+    "text": "a person slides the arms back out behind the shoulders and lowers the hands forward",
+    "paraphrases": [
+      "a person pulls one arm then the other out from behind the back",
+      "a person reaches to the shoulders, slips the arms backward, and brings the hands down",
+      "a person moves each arm back behind the shoulder in turn, then lowers both hands"
+    ],
+    "motion": "The hands rise to the front of the shoulders, then the right shoulder drops and the right arm moves back and down out from behind the body. The torso twists slightly as the left hand reaches toward the right side or the left arm slides out behind. The hands come together in front or at one side and lower toward the floor.",
+    "body_parts": ["arm_R", "arm_L", "hand_R", "hand_L", "torso"],
+    "phases": {
+      "start": "hands rise to the front of the shoulders",
+      "middle": "one arm then the other slides back and out with a torso twist",
+      "end": "hands come together low in front or to the side"
+    },
+    "not_observable": ["bag or backpack", "shoulder straps"],
+    "confusable_with": [
+      {"name": "put_on_bag", "visible_difference": "hands start low and the arms end behind the shoulders"},
+      {"name": "take_off_jacket", "visible_difference": "arms pull out of sleeves with larger backward swings and the hands work at the chest first"},
+      {"name": "put_object_into_bag", "visible_difference": "the arms stay in front of the body and never go behind the shoulders"}
+    ]
+  },
+  {
+    "id": 88,
+    "name": "put_object_into_bag",
+    "text": "a person lowers the right hand beside the left hand and pushes it downward",
+    "paraphrases": [
+      "a person brings the right hand from the chest down next to the left hand",
+      "a person holds one hand steady low and moves the other hand down into it",
+      "a person bends slightly and pushes one hand downward near the other, then withdraws it"
+    ],
+    "motion": "The left hand holds still at waist height or lower, in front of or to the side of the body, sometimes with the torso bending slightly forward. The right hand starts higher in front of the chest and moves down to the left hand, pushing in and down. The right hand then comes back up a little and both hands lower.",
+    "body_parts": ["hand_R", "arm_R", "hand_L", "torso"],
+    "phases": {
+      "start": "right hand held at chest height, left hand low",
+      "middle": "right hand moves down and pushes in beside the left hand",
+      "end": "right hand withdraws and both hands lower"
+    },
+    "not_observable": ["bag", "object being put in", "bag opening"],
+    "confusable_with": [
+      {"name": "take_object_out_of_bag", "visible_difference": "right hand starts low and rises to the chest at the end"},
+      {"name": "reach_into_pocket", "visible_difference": "hand goes to the hip or thigh of the body itself, without the other hand holding low"},
+      {"name": "pick_up", "visible_difference": "torso bends deeply and the hand reaches the floor"}
+    ]
+  },
+  {
+    "id": 89,
+    "name": "take_object_out_of_bag",
+    "text": "a person reaches one hand down beside the other hand and lifts it up",
+    "paraphrases": [
+      "a person pushes the right hand down near the left hand, then raises it",
+      "a person holds one hand low and draws the other hand up out of it",
+      "a person bends slightly, reaches down beside the other hand, and lifts the hand up"
+    ],
+    "motion": "The left hand holds still at waist height or lower, sometimes with the torso bending slightly forward. The right hand moves down to the left hand, stays there briefly with small searching movements, then lifts up to chest height in front of the body. The right hand may stay raised in front of the chest at the end.",
+    "body_parts": ["hand_R", "arm_R", "hand_L", "torso"],
+    "phases": {
+      "start": "left hand held low, right hand moves down to it",
+      "middle": "right hand stays low with small searching movements",
+      "end": "right hand lifts to chest height"
+    },
+    "not_observable": ["bag", "object taken out"],
+    "confusable_with": [
+      {"name": "put_object_into_bag", "visible_difference": "right hand starts high and ends low instead of rising at the end"},
+      {"name": "reach_into_pocket", "visible_difference": "hand goes to the hip or thigh of the body itself, without the other hand holding low"},
+      {"name": "pick_up", "visible_difference": "torso bends deeply and the hand reaches the floor before rising"}
+    ]
+  }
+]}

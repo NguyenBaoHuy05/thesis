@@ -27,8 +27,6 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 from model.checkpoint import load_model_weights
-from model.concept_schema import NTU_ACTION_NAMES
-from model.synergy_metrics import SynergyAccumulator, load_annotations
 from model.training import configure_trainable_parameters, set_training_mode
 
 # from torchlight import DictAction
@@ -196,13 +194,10 @@ def get_parser():
     parser.add_argument(
         '--freeze-until', default=None,
         help='freeze the backbone up to this layer (stem, l1..l9) with BatchNorm in eval mode; '
-             'requires --weights. The synergy bottleneck always trains.')
+             'requires --weights. Extension modules always train.')
     parser.add_argument(
         '--eval-before-train', type=str2bool, default=False,
         help='evaluate and retain the initial model before training')
-    parser.add_argument(
-        '--synergy-annotations', default='annotations/class_synergy.json',
-        help='class x synergy relevance labels for plausibility metrics (evaluation only)')
     parser.add_argument(
         '--ignore-weights',
         type=str,
@@ -298,7 +293,6 @@ class Processor():
         else:
             self.load_optimizer()
             self.load_data()
-            self.configure_synergy()
         self.lr = self.arg.base_lr
         self.best_acc = 0
         self.best_acc_epoch = 0
@@ -359,25 +353,6 @@ class Processor():
                 ignore_weights=self.arg.ignore_weights,
             )
             self.print_log('Checkpoint load: {}'.format(report))
-
-    def synergy_annotations(self, bottleneck):
-        path = self.arg.synergy_annotations
-        if not path or not os.path.exists(path):
-            return None
-        return load_annotations(path, NTU_ACTION_NAMES[:bottleneck.num_classes], bottleneck.names)
-
-    def configure_synergy(self):
-        bottleneck = getattr(self.model, 'synergy', None)
-        if bottleneck is None:
-            return
-        audit = bottleneck.audit()
-        audit['feature_level'] = self.model.feature_level
-        audit['freeze_until'] = self.arg.freeze_until
-        audit['annotations'] = self.arg.synergy_annotations if self.synergy_annotations(bottleneck) is not None else None
-        with open(os.path.join(self.arg.work_dir, 'synergy_audit.json'), 'w', encoding='utf-8') as handle:
-            json.dump(audit, handle, indent=2, allow_nan=False)
-        self.print_log('Synergy bottleneck: {} synergies ({}), {} segments, feature level {}'.format(
-            len(audit['synergies']), audit['synergies'][0], audit['segments'], audit['feature_level']))
 
     def load_optimizer(self):
         parameters = [p for p in self.model.parameters() if p.requires_grad]
@@ -449,12 +424,10 @@ class Processor():
         self.print_log('Training epoch: {}'.format(epoch + 1))
         loader = self.data_loader['train']
         self.adjust_learning_rate(epoch)
-        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-        bottleneck = getattr(model_ref, 'synergy', None)
 
         loss_value = []
         acc_value = []
-        component_sums = dict(ce=0.0, divergence=0.0, gate=0.0)
+        component_sums = dict(ce=0.0, divergence=0.0)
         sample_count = 0
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
@@ -470,14 +443,7 @@ class Processor():
 
             # forward
             output = self.model(data)
-            terms = dict(gate=data.new_zeros(()))
-            if hasattr(output, 'action_logits'):
-                ce_loss = self.loss(output.action_logits, label)
-                h_loss = self.h_loss(output.hyper_outputs)
-                loss, terms = bottleneck.total_loss(ce_loss, output)
-                loss = loss + h_loss
-                output = output.action_logits
-            elif isinstance(output, tuple):
+            if isinstance(output, tuple):
                 ce_loss = self.loss(output[0], label)
                 h_loss = self.h_loss(output[1])
                 loss = ce_loss + h_loss
@@ -500,7 +466,7 @@ class Processor():
             acc_value.append(acc.data.item())
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
-            components = dict(ce=ce_loss, divergence=h_loss, **terms)
+            components = dict(ce=ce_loss, divergence=h_loss)
             for name, component in components.items():
                 value = component.detach().item()
                 self.train_writer.add_scalar('loss/' + name, value, self.global_step)
@@ -539,47 +505,13 @@ class Processor():
         torch.save(weights, path)
         return path
 
-    def summarize_synergy(self, accumulator, bottleneck, ln, epoch):
-        """Readout faithfulness, compactness, gates and plausibility (plan section 3)."""
-        summary = dict(epoch=epoch + 1)
-        summary.update(accumulator.summary(self.synergy_annotations(bottleneck)))
-        prefix = os.path.join(self.arg.work_dir, 'epoch{}_{}_'.format(epoch + 1, ln))
-        with open(prefix + 'synergy_metrics.json', 'w', encoding='utf-8') as handle:
-            json.dump(summary, handle, indent=2, allow_nan=False)
-        with open(prefix + 'explanations.json', 'w', encoding='utf-8') as handle:
-            json.dump(accumulator.explanations, handle, indent=2, allow_nan=False)
-        np.save(prefix + 'synergy_profile.npy', accumulator.profile())
-
-        plausible = summary.get('plausibility') or {}
-
-        def fmt(value):
-            return 'n/a' if value is None else '{:.4f}'.format(value)
-
-        self.print_log('\tSynergy: deletion_auc={} (random {}), insertion_auc={} (random {}), '
-                       'effective={}, gate_mean={}, precision@3={}'.format(
-                           fmt(summary['deletion_auc']), fmt(summary['random_deletion_auc']),
-                           fmt(summary['insertion_auc']), fmt(summary['random_insertion_auc']),
-                           fmt(summary['effective_synergies']), fmt(summary['gate_mean']),
-                           fmt(plausible.get('precision_at_k'))))
-        if self.arg.phase == 'train':
-            for key in ('deletion_auc', 'random_deletion_auc', 'insertion_auc', 'random_insertion_auc',
-                        'deletion_gap', 'insertion_gap', 'effective_synergies', 'gate_mean'):
-                self.val_writer.add_scalar('synergy/' + key, summary[key], self.global_step)
-            if plausible.get('precision_at_k') is not None:
-                self.val_writer.add_scalar('synergy/precision_at_3', plausible['precision_at_k'], self.global_step)
-        return summary
-
-    def append_history(self, epoch, ln, test_loss, accuracy, selection_score, is_best, synergy_summary):
+    def append_history(self, epoch, ln, test_loss, accuracy, selection_score, is_best):
         """One JSON line per evaluated epoch: train losses, test metrics, best flag."""
         record = dict(epoch=epoch + 1, split=ln, test_loss=test_loss, test_top1=accuracy,
                       selection_score=selection_score, is_best=bool(is_best),
                       checkpoint=self.best_weights_path if is_best else None)
         if epoch >= 0 and getattr(self, 'last_train_summary', None) is not None:
             record['train'] = self.last_train_summary
-        if synergy_summary is not None:
-            record['synergy'] = {key: value for key, value in synergy_summary.items()
-                                 if key not in ('epoch', 'class_top_synergies', 'gate_mean_per_synergy',
-                                                'dominant_synergy_share')}
         with open(os.path.join(self.arg.work_dir, 'history.jsonl'), 'a', encoding='utf-8') as handle:
             handle.write(json.dumps(record, allow_nan=False) + '\n')
 
@@ -590,15 +522,11 @@ class Processor():
         if result_file is not None:
             f_r = open(result_file, 'w')
         self.model.eval()
-        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-        bottleneck = getattr(model_ref, 'synergy', None)
         self.print_log('Eval epoch: {}'.format(epoch + 1))
         accuracies = {}
         for ln in loader_name:
             loss_value = []
             score_frag = []
-            accumulator = (SynergyAccumulator(bottleneck, NTU_ACTION_NAMES[:bottleneck.num_classes])
-                           if bottleneck is not None else None)
             step = 0
             process = tqdm(self.data_loader[ln], ncols=40)
             for batch_idx, (data, label, index) in enumerate(process):
@@ -606,11 +534,7 @@ class Processor():
                     data = data.float().cuda(self.output_device)
                     label = label.long().cuda(self.output_device)
                     output = self.model(data)
-                    if hasattr(output, 'action_logits'):
-                        loss = self.loss(output.action_logits, label)
-                        accumulator.update(output, label)
-                        output = output.action_logits
-                    elif isinstance(output, tuple):
+                    if isinstance(output, tuple):
                         loss = self.loss(output[0], label)
                         output = output[0]
                     else:
@@ -635,9 +559,6 @@ class Processor():
             accuracy = self.data_loader[ln].dataset.top_k(score, 1)
             accuracies[ln] = accuracy
             selection_score = accuracy
-            synergy_summary = None
-            if accumulator is not None:
-                synergy_summary = self.summarize_synergy(accumulator, bottleneck, ln, epoch)
             initial_candidate = epoch == -1 and getattr(self, 'best_weights_path', None) is None
             is_best = selection_score > self.best_acc or initial_candidate
             if is_best:
@@ -673,8 +594,7 @@ class Processor():
                 self.print_log('\tTop{}: {:.2f}%'.format(
                     k, 100 * self.data_loader[ln].dataset.top_k(score, k)))
             if record_history:
-                self.append_history(epoch, ln, float(loss), accuracy, selection_score,
-                                    is_best, synergy_summary)
+                self.append_history(epoch, ln, float(loss), accuracy, selection_score, is_best)
 
             if save_score:
                 with open('{}/epoch{}_{}_score.pkl'.format(

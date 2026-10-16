@@ -1,0 +1,30 @@
+{
+ "corrections": [],
+ "new_attributes": [
+  {
+   "name": "knee_lifts_forward",
+   "group": "whole_body",
+   "text": "While standing on one leg, the other thigh swings up in front so the knee rises ahead of the hip.",
+   "definition": "From a standing support on one foot, the thigh of the other leg swings up in front of the body so the knee joint rises clearly forward of and up toward the height of the hip, with the ankle below or in front of the knee, and then lowers again. A knee that bends only to bring the heel up behind the body while the thigh stays vertical does not count, and thighs that become horizontal only because the hips lower onto a seat do not count.",
+   "body_parts": ["leg_R", "leg_L", "hip"],
+   "observable": "direct",
+   "positive_examples": ["run_on_the_spot", "step_on_foot", "kicking_something", "side_kick", "kicking"],
+   "negative_examples": ["butt_kicks", "jump_up", "sit_down"]
+  }
+ ],
+ "not_separable": {"reason": null},
+ "new_attribute_labels": {
+  "knee_lifts_forward": {
+   "run_on_the_spot": {"label": "has2", "evidence": "each knee lifts forward in front of the hip on alternating legs"},
+   "butt_kicks": {"label": "lacks2", "evidence": "thigh stays vertical; the heel rises behind toward the buttocks instead"},
+   "step_on_foot": {"label": "has2", "evidence": "actor lifts the right knee in front before stamping down"},
+   "kicking_something": {"label": "has2", "evidence": "right leg swings forward and up, knee rising in front of the hip"},
+   "kicking": {"label": "has1", "evidence": "right leg swings forward and up toward the partner; low kicks lift the knee less"},
+   "side_kick": {"label": "has1", "evidence": "right knee lifts in front before the leg extends to the side"},
+   "put_on_a_shoe": {"label": "has1", "evidence": "one leg is raised with the knee bent toward the hands when standing"},
+   "take_off_a_shoe": {"label": "has1", "evidence": "one leg is lifted with the knee bent toward the hands when standing"},
+   "jump_up": {"label": "lacks1", "evidence": "both knees bend and straighten together; no single knee lifts in front"},
+   "sit_down": {"label": "lacks1", "evidence": "thighs become horizontal by the hips lowering, with both feet on the floor"}
+  }
+ }
+}

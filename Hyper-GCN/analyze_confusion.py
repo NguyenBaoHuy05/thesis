@@ -3,7 +3,7 @@
 
 main.py writes ``<best checkpoint>_right.txt`` after training: one line per
 test sample, ``predicted,true``. The confused pairs show which actions the
-model cannot tell apart, e.g. where the synergy bank needs another synergy.
+model cannot tell apart, e.g. where the KG needs a discriminating attribute.
 
 Usage:
   python analyze_confusion.py RESULT [--compare OTHER_RESULT] [--top 25] [--out report.json]
