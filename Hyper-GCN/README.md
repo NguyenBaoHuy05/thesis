@@ -131,52 +131,44 @@ python ensemble.py --datasets ntu120/xsub --model base --joint-dir <the save pat
 
 # Pretrained Models
 
-## Semantic hypergraph / synergy bottleneck (large only)
+## Synergy bottleneck (large only)
 
-`model.hypergcn_large.Model` with `synergy_enabled: True` adds named semantic
-hyperedges (body-part synergies, `model/synergies.py`) to l7-l9 and replaces the
-FC classifier by a synergy bottleneck:
+`model.hypergcn_large.Model` with `synergy_enabled: True` replaces the FC
+classifier of a frozen Hyper-GCN by a bottleneck over 19 named body-part
+synergies (`model/synergies.py`):
 
 ```text
-skeleton -> l1..l6 (frozen) -> l7..l9: A = A_phys + alpha G_dyn + beta G_sem(s)   (beta = 0 at start)
-         -> f[e,s] = mean over synergy e and segment s,  g[e,s] = gate (tied to W_sem of l9)
-         -> logit_c = sum_{e,s} g[e,s] <w_c,e, f[e,s]> + b_c
+skeleton -> Hyper-GCN l1..l_k (frozen) -> f[e,s] = LN(mean over synergy e, segment s)
+         -> g[e,s] = sigmoid(MLP_e(f))  ->  logit_c = sum_{e,s} g * 5/sqrt(C) * <unit(w_c,e), f> + b_c
 ```
 
 Logits are exactly the sum of the (synergy, segment) contributions, which are
-the explanation. Design, ablations and evaluation: `SEMANTIC_HYPERGRAPH_PLAN.md`.
-All runs start from an official large joint checkpoint (`weights` in the config):
+the explanation. `synergy_random.yaml` uses random joint groups of the same
+sizes: the control for whether the names matter. See `SEMANTIC_HYPERGRAPH_PLAN.md`.
 
 ```bash
-# P1: frozen backbone, bottleneck only (feasibility)
-python main.py --config config/large/nturgbd120-cross-subject/synergy_p1_frozen.yaml
-# M: main model; B1: same fine-tuning schedule without synergies (also re-measures B0)
-python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml
-python main.py --config config/large/nturgbd120-cross-subject/synergy_b1_finetune.yaml
-# Ablations A1-A5, A7: synergy_a*.yaml. A6 (segments) and seeds from the command line:
-python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml --model-args synergy_segments=8 --work-dir ./work_dir/ntu120/xsub/synergy_s8
-python main.py --config config/large/nturgbd120-cross-subject/synergy.yaml --seed 2 --work-dir ./work_dir/ntu120/xsub/synergy_seed2
+CFG=config/large/nturgbd120-cross-subject
+python main.py --config $CFG/synergy.yaml
+python main.py --config $CFG/synergy_random.yaml
+# other feature level l_k (default l9)
+python main.py --config $CFG/synergy.yaml --model-args "synergy_feature_level='l6'" --work-dir ./work_dir/ntu120/xsub/synergy_l6
 ```
 
-`--freeze-until lK` freezes the embedding and l1..lK (BatchNorm in eval mode),
-`--backbone-lr-scale` scales the learning rate of the other backbone layers.
-Pair synergies need joint-mode input (`vel: False`, `bone: False`) to detect
-duplicated second actors. Each evaluation writes `epochN_test_synergy_metrics.json`
-(readout deletion/insertion AUC vs random order, effective synergies, gate
-statistics, class top synergies, precision@3/nDCG against
-`annotations/class_synergy.json`), `epochN_test_explanations.json` and
-`epochN_test_synergy_profile.npy` (mean contribution [class, synergy, segment]).
+Each evaluation writes `epochN_test_synergy_metrics.json` (deletion/insertion AUC
+vs random order, effective synergies, gate statistics, class top synergies,
+precision@3/nDCG against `annotations/class_synergy.json`),
+`epochN_test_explanations.json` and `epochN_test_synergy_profile.npy`.
 
-Whole-network deletion/insertion (gates removed in G_sem and in the readout),
-rotation stability, seed comparison and heatmaps:
+Locality of the backbone features per layer (swap test, no training needed),
+and rotation stability, seed comparison and heatmaps of a trained model:
 
 ```bash
-python evaluate_synergy.py --config WORK_DIR/config.yaml --weights BEST.pt --max-batches 40 \
-    --plot-classes drink_water kicking hugging [--compare OTHER_SEED/synergy_eval/synergy_eval.json]
+python evaluate_synergy.py --config $CFG/synergy.yaml --weights OFFICIAL_JOINT.pt --locality-only
+python evaluate_synergy.py --config WORK_DIR/config.yaml --weights BEST.pt --max-batches 40 --plot-classes drink_water kicking
 ```
 
 `annotations/class_synergy.json` is an LLM draft for evaluation only; check it
-by hand before reporting plausibility. It has no labels for the random bank (A2).
+by hand before reporting plausibility. It has no labels for the random bank.
 
 CPU unit checks (no dataset training):
 

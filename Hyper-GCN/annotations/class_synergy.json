@@ -5,9 +5,9 @@
   "synergies": [
     "hand_R-head", "hand_L-head", "bimanual", "arm_R-torso", "arm_L-torso", "hand_R-hip", "hand_L-hip",
     "hand_R-foot_R", "hand_L-foot_L", "legs", "leg_R-torso", "leg_L-torso", "head-torso", "spine",
-    "shoulder_twist", "arm_R-leg_L", "arm_L-leg_R", "upper_body", "hip-knee-spine",
-    "hand(A)-head(B)", "hand(A)-torso(B)", "hand(A)-hand(B)", "torso(A)-torso(B)", "foot(A)-body(B)"
+    "shoulder_twist", "arm_R-leg_L", "arm_L-leg_R", "upper_body", "hip-knee-spine"
   ],
+  "unused_labels": "two-person labels such as hand(A)-hand(B) are kept for reference; the model has no two-person synergies, so they are ignored",
   "labels": {
     "drink_water": {"hand_R-head": 2, "hand_L-head": 1, "head-torso": 1},
     "eat_meal": {"hand_R-head": 2, "hand_L-head": 1, "bimanual": 1},

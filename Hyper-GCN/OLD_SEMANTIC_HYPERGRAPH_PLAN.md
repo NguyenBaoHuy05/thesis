@@ -3,17 +3,17 @@
 > Trạng thái: **hướng được chọn để thực nghiệm** (có GPU L4).
 > Liên quan: [KG_PRIMITIVE_PLAN.md](KG_PRIMITIVE_PLAN.md) (hướng 1, dùng chung bank hyperedge và chú thích LLM).
 >
-> **Đã triển khai (code P0–P3):** `model/synergies.py` (bank, bank ngẫu nhiên A2, `pair_validity`),
-> `model/synergy_bottleneck.py` (pooling, cổng, `SemanticHyperedges`, readout B1/B2, contrib),
-> `SemanticHYPERGC` + `synergy_*` trong `model/hypergcn_large.py`, `--freeze-until` /
-> `--backbone-lr-scale` trong `main.py`, `model/synergy_metrics.py`, `evaluate_synergy.py`
-> (deletion/insertion toàn mạng, ổn định, heatmap), `annotations/class_synergy.json` (bản nháp LLM,
-> cần kiểm tra tay), config `config/large/nturgbd120-cross-subject/synergy*.yaml`, test `tests/test_synergy.py`.
-> Pipeline concept hình học + logic cũ (B2 ~46%) đã xóa khỏi code.
-> Hai điểm lệch so với mục 2.2: (1) `G_sem` dùng `Dv⁻¹ H diag(g) De⁻¹ Hᵀ` với bậc đỉnh **không trọng số**
-> thay cho `hyper_norm` — `hyper_norm` chia cho bậc có trọng số nên cổng của khớp chỉ thuộc một synergy
-> bị triệt tiêu, còn ở đây g = 0 tắt hẳn synergy; (2) `β` là tham số thường khởi tạo 0, không qua `relu`
-> (relu có gradient 0 tại 0 nên β sẽ không bao giờ rời 0).
+> **Cập nhật — thu gọn về hướng A (backbone đóng băng + nút thắt synergy).** Kết quả P1 trên l9:
+> nhóm ngẫu nhiên ≈ nhóm ngữ nghĩa (86.4–86.9% Top1, cùng deletion/insertion), precision@3 ở mức
+> ngẫu nhiên → đặc trưng backbone không cục bộ (virtual joint + hyperedge kNN trộn toàn thân).
+> Vì vậy code chỉ giữ: `model/synergies.py` (19 synergy + bank ngẫu nhiên), `model/synergy_bottleneck.py`
+> (pooling, cổng, readout B2, contrib), `synergy_feature_level` trong `model/hypergcn_large.py`,
+> `model/synergy_metrics.py`, `evaluate_synergy.py` (đo tính cục bộ theo tầng bằng swap test, ổn định,
+> heatmap), config `synergy.yaml` / `synergy_random.yaml`. Đã bỏ: G_sem / `SemanticHYPERGC` (mục 2.2),
+> cổng tied, synergy hai người, readout scalar, entropy loss, fine-tune l7–l9 — các mục 2.2, 4 (A1, A3–A5, A7)
+> và P2 bên dưới không còn trong code. Điểm lệch còn lại: readout dùng `w_c,e` đơn vị, LN không affine và hệ số
+> cố định `synergy_readout_scale` (mặc định 5); nếu không, `g → g/k, w → k·w` cho cùng logit, λ_g chỉ làm g
+> co lại (P1 lần đầu: gate_mean ≈ 0.03) và giá trị g không diễn giải được.
 
 ## 0. Bối cảnh và lý do đổi hướng
 

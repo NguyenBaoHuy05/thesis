@@ -2,16 +2,11 @@
 
 STEM = ("data_bn", "to_joint_embedding", "pos_embedding")
 LAYERS = tuple("l{}".format(i) for i in range(1, 10))
-HEAD = ("fc", "synergy")
 
 
 def is_extension_key(key):
     """Parameters that official Hyper-GCN checkpoints do not have."""
-    return key.startswith("synergy.") or ".semantic." in key
-
-
-def is_head_key(key):
-    return key.split(".")[0] in HEAD or ".semantic." in key
+    return key.startswith("synergy.")
 
 
 def frozen_modules(freeze_until=None):
@@ -34,16 +29,14 @@ def _unwrap(model):
 
 
 def configure_trainable_parameters(model, freeze_until=None):
-    """New parameters (synergy bottleneck, semantic hyperedges) always train.
-    In synergy mode the unused classifier ``fc`` is frozen."""
+    """The synergy bottleneck always trains. In synergy mode the unused
+    classifier ``fc`` and the layers after the feature level are frozen."""
     model_ref = _unwrap(model)
     frozen = frozen_modules(freeze_until)
-    synergy = getattr(model_ref, "synergy", None) is not None
+    if getattr(model_ref, "synergy", None) is not None:
+        frozen = frozen + ("fc",) + tuple(model_ref.unused_layers())
     for name, parameter in model_ref.named_parameters():
-        top = name.split(".")[0]
-        trainable = is_extension_key(name) or top not in frozen
-        if synergy and top == "fc":
-            trainable = False
+        trainable = is_extension_key(name) or name.split(".")[0] not in frozen
         parameter.requires_grad_(trainable)
         if not trainable:
             parameter.grad = None

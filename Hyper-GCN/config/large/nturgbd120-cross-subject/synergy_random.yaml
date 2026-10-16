@@ -1,10 +1,9 @@
-work_dir: ./work_dir/ntu120/xsub/synergy_a7_l4
+work_dir: ./work_dir/ntu120/xsub/synergy_random
 
-# Ablation A7: fine-tune l4-l9 instead of l7-l9 (GPU cost vs accuracy).
-# Semantic hyperedges stay in l7-l9. Otherwise identical to synergy.yaml.
+# Control for synergy.yaml: random joint groups with the same number and sizes
+# as the semantic bank (change synergy_seed for other random banks).
 weights: /content/large/ntu120/xsub/joint/runs-122-120048.pt
-freeze_until: l3
-backbone_lr_scale: 0.1
+freeze_until: l9
 
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
@@ -39,28 +38,26 @@ model_args:
   graph_args:
     labeling_mode: 'virtual_ensemble'
   synergy_enabled: True
-  synergy_bank_kind: semantic
-  synergy_use_pair: True
+  synergy_bank_kind: random
+  synergy_seed: 0
   synergy_segments: 4
-  synergy_layers: [l7, l8, l9]
-  synergy_readout: embedding
-  synergy_tied: True
+  synergy_feature_level: l9
   synergy_gate_hidden: 64
   synergy_gate_weight: 0.001
-  synergy_entropy_weight: 0.0
+  synergy_readout_scale: 5.0
 
 weight_decay: 0.0001
 optimizer: Adam
 base_lr: 0.001
 lr_decay_rate: 0.1
-step: [20, 26]
-warm_up_epoch: 2
+step: [6, 8]
+warm_up_epoch: 1
 
 device: [0]
 num_worker: 6
 batch_size: 64
-test_batch_size: 64
-num_epoch: 30
+test_batch_size: 256
+num_epoch: 10
 save_epoch: 0
 eval_interval: 2
-eval_epoch: 20
+eval_epoch: 6

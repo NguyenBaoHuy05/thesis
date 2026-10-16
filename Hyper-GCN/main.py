@@ -29,7 +29,7 @@ from tqdm import tqdm
 from model.checkpoint import load_model_weights
 from model.concept_schema import NTU_ACTION_NAMES
 from model.synergy_metrics import SynergyAccumulator, load_annotations
-from model.training import configure_trainable_parameters, is_head_key, set_training_mode
+from model.training import configure_trainable_parameters, set_training_mode
 
 # from torchlight import DictAction
 
@@ -196,10 +196,7 @@ def get_parser():
     parser.add_argument(
         '--freeze-until', default=None,
         help='freeze the backbone up to this layer (stem, l1..l9) with BatchNorm in eval mode; '
-             'requires --weights. New synergy parameters always train.')
-    parser.add_argument(
-        '--backbone-lr-scale', type=float, default=1.0,
-        help='learning-rate scale of the trainable backbone layers (head: fc, synergy, semantic hyperedges)')
+             'requires --weights. The synergy bottleneck always trains.')
     parser.add_argument(
         '--eval-before-train', type=str2bool, default=False,
         help='evaluate and retain the initial model before training')
@@ -374,33 +371,18 @@ class Processor():
         if bottleneck is None:
             return
         audit = bottleneck.audit()
-        audit['semantic_layers'] = [name for name in ('l7', 'l8', 'l9')
-                                    if getattr(self.model, name).gcn1 in self.model.semantic_layers()]
+        audit['feature_level'] = self.model.feature_level
         audit['freeze_until'] = self.arg.freeze_until
         audit['annotations'] = self.arg.synergy_annotations if self.synergy_annotations(bottleneck) is not None else None
         with open(os.path.join(self.arg.work_dir, 'synergy_audit.json'), 'w', encoding='utf-8') as handle:
             json.dump(audit, handle, indent=2, allow_nan=False)
-        self.print_log('Synergy bottleneck: {} single + {} pair synergies, {} segments, readout={}, tied={}, '
-                       'semantic layers={}'.format(
-                           len(audit['single_synergies']), len(audit['pair_synergies']), audit['segments'],
-                           audit['readout'], audit['tied'], audit['semantic_layers']))
+        self.print_log('Synergy bottleneck: {} synergies ({}), {} segments, feature level {}'.format(
+            len(audit['synergies']), audit['synergies'][0], audit['segments'], audit['feature_level']))
 
     def load_optimizer(self):
-        named = [(name, p) for name, p in self.model.named_parameters() if p.requires_grad]
-        if not named:
+        parameters = [p for p in self.model.parameters() if p.requires_grad]
+        if not parameters:
             raise ValueError('No trainable parameters for optimizer')
-        # The head (fc, synergy bottleneck, semantic hyperedges) learns at the
-        # base rate, fine-tuned backbone layers at backbone_lr_scale. beta must
-        # not be decayed back to its initial value 0.
-        groups = [
-            dict(params=[p for name, p in named if not is_head_key(name)],
-                 lr_scale=self.arg.backbone_lr_scale),
-            dict(params=[p for name, p in named if is_head_key(name) and not name.endswith('.semantic.beta')],
-                 lr_scale=1.0),
-            dict(params=[p for name, p in named if name.endswith('.semantic.beta')],
-                 lr_scale=1.0, weight_decay=0.0),
-        ]
-        parameters = [group for group in groups if group['params']]
         if self.arg.optimizer == 'SGD':
             self.optimizer = optim.SGD(
                 parameters,
@@ -472,7 +454,7 @@ class Processor():
 
         loss_value = []
         acc_value = []
-        component_sums = dict(ce=0.0, divergence=0.0, gate=0.0, entropy=0.0)
+        component_sums = dict(ce=0.0, divergence=0.0, gate=0.0)
         sample_count = 0
         self.train_writer.add_scalar('epoch', epoch, self.global_step)
         self.record_time()
@@ -488,11 +470,11 @@ class Processor():
 
             # forward
             output = self.model(data)
-            terms = dict(gate=data.new_zeros(()), entropy=data.new_zeros(()))
+            terms = dict(gate=data.new_zeros(()))
             if hasattr(output, 'action_logits'):
                 ce_loss = self.loss(output.action_logits, label)
                 h_loss = self.h_loss(output.hyper_outputs)
-                loss, terms = bottleneck.total_loss(ce_loss, output, label)
+                loss, terms = bottleneck.total_loss(ce_loss, output)
                 loss = loss + h_loss
                 output = output.action_logits
             elif isinstance(output, tuple):
@@ -561,10 +543,6 @@ class Processor():
         """Readout faithfulness, compactness, gates and plausibility (plan section 3)."""
         summary = dict(epoch=epoch + 1)
         summary.update(accumulator.summary(self.synergy_annotations(bottleneck)))
-        model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-        summary['beta'] = {name: float(getattr(model_ref, name).gcn1.semantic.beta)
-                           for name in ('l7', 'l8', 'l9')
-                           if getattr(model_ref, name).gcn1 in model_ref.semantic_layers()}
         prefix = os.path.join(self.arg.work_dir, 'epoch{}_{}_'.format(epoch + 1, ln))
         with open(prefix + 'synergy_metrics.json', 'w', encoding='utf-8') as handle:
             json.dump(summary, handle, indent=2, allow_nan=False)
@@ -578,12 +556,11 @@ class Processor():
             return 'n/a' if value is None else '{:.4f}'.format(value)
 
         self.print_log('\tSynergy: deletion_auc={} (random {}), insertion_auc={} (random {}), '
-                       'effective={}, gate_mean={}, precision@3={}, beta={}'.format(
+                       'effective={}, gate_mean={}, precision@3={}'.format(
                            fmt(summary['deletion_auc']), fmt(summary['random_deletion_auc']),
                            fmt(summary['insertion_auc']), fmt(summary['random_insertion_auc']),
                            fmt(summary['effective_synergies']), fmt(summary['gate_mean']),
-                           fmt(plausible.get('precision_at_k')),
-                           {k: round(v, 4) for k, v in summary['beta'].items()}))
+                           fmt(plausible.get('precision_at_k'))))
         if self.arg.phase == 'train':
             for key in ('deletion_auc', 'random_deletion_auc', 'insertion_auc', 'random_insertion_auc',
                         'deletion_gap', 'insertion_gap', 'effective_synergies', 'gate_mean'):

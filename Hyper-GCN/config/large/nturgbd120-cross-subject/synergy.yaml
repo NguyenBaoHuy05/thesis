@@ -1,12 +1,12 @@
 work_dir: ./work_dir/ntu120/xsub/synergy
 
-# Main model M (SEMANTIC_HYPERGRAPH_PLAN.md, phase P2): l1-l6 frozen, l7-l9
-# fine-tuned at backbone_lr_scale with semantic hyperedges (beta = 0 at start),
-# tied synergy bottleneck with embedding readout, 19 + 5 synergies, 4 segments.
+# Synergy bottleneck on a frozen Hyper-GCN (SEMANTIC_HYPERGRAPH_PLAN.md): the
+# backbone is frozen up to synergy_feature_level, only the bottleneck trains.
+# Control: synergy_random.yaml (same, random joint groups). Other feature levels:
+#   --model-args "synergy_feature_level='l6'" --work-dir ./work_dir/ntu120/xsub/synergy_l6
 # --weights: official Hyper-GCN large joint checkpoint.
 weights: /content/large/ntu120/xsub/joint/runs-122-120048.pt
-freeze_until: l6
-backbone_lr_scale: 0.1
+freeze_until: l9
 
 feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
@@ -42,27 +42,24 @@ model_args:
     labeling_mode: 'virtual_ensemble'
   synergy_enabled: True
   synergy_bank_kind: semantic
-  synergy_use_pair: True
   synergy_segments: 4
-  synergy_layers: [l7, l8, l9]
-  synergy_readout: embedding
-  synergy_tied: True
+  synergy_feature_level: l9
   synergy_gate_hidden: 64
   synergy_gate_weight: 0.001
-  synergy_entropy_weight: 0.0
+  synergy_readout_scale: 5.0
 
 weight_decay: 0.0001
 optimizer: Adam
 base_lr: 0.001
 lr_decay_rate: 0.1
-step: [20, 26]
-warm_up_epoch: 2
+step: [6, 8]
+warm_up_epoch: 1
 
 device: [0]
 num_worker: 6
 batch_size: 64
-test_batch_size: 64
-num_epoch: 30
+test_batch_size: 256
+num_epoch: 10
 save_epoch: 0
 eval_interval: 2
-eval_epoch: 20
+eval_epoch: 6
