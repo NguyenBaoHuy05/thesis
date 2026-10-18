@@ -1,0 +1,25 @@
+# A1-G G1-0: g1.yaml without edges (layers 0, g = x): does the graph structure help retrieval?
+# Same recipe as g1.yaml; only head_args.layers and work_dir differ.
+work_dir: ./work_dir/kg/g1_0
+
+kg: annotations/action_kg.json
+
+cache_dir: ./kg_cache
+cache_name: ntu120_xsub
+
+head: g1
+head_args:
+  tau: 0.07
+  learn_tau: True
+  feature_dropout: 0.1
+  d: 256
+  layers: 0
+  dropout: 0.1
+  init: learned
+feature_noise: 0.0
+
+epochs: 30
+batch_size: 512
+lr: 0.001
+weight_decay: 0.0
+seed: 0

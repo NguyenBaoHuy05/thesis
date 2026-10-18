@@ -4,7 +4,7 @@ STEM = ("data_bn", "to_joint_embedding", "pos_embedding")
 LAYERS = tuple("l{}".format(i) for i in range(1, 10))
 # Top-level modules added on top of Hyper-GCN (e.g. "kg."): absent from official
 # checkpoints, always trainable.
-EXTENSION_PREFIXES = ()
+EXTENSION_PREFIXES = ("kg.",)
 
 
 def is_extension_key(key):

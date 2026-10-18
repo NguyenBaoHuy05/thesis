@@ -1,0 +1,23 @@
+# K1: RETRIEVE only (s_c = cos(P z, e_c) / tau), text embeddings, no KG edges.
+# Recipe fixed in advance (no validation split): A1 plan S1.1 + option-1 regularization.
+work_dir: ./work_dir/kg/k1
+
+kg: annotations/action_kg.json
+embeddings: annotations/kg_emb_mpnet.npz
+embedding_key: action          # 'action' = text + paraphrases ensemble, 'action_text' = text only
+
+cache_dir: ./kg_cache
+cache_name: ntu120_xsub
+
+head: k1
+head_args:
+  tau: 0.07                    # initial value; clamped to [0.01, 1]
+  learn_tau: True
+  feature_dropout: 0.1
+feature_noise: 0.0             # Gaussian noise on z, in units of the per-channel train std
+
+epochs: 30
+batch_size: 512
+lr: 0.001
+weight_decay: 0.0
+seed: 0

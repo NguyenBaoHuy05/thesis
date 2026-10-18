@@ -11,6 +11,7 @@ This repo is the official implementation for [Adaptive Hyper-Graph Convolution N
 In (a), dotted lines represent the virtualconnections. Each coloured part containing multiple joints represents a hyper-graph with hyper-edges. 
 (b) provides an intuitive comparison between normal graph convolution and hyper-graph convolution operations with the same connectivity degree.
 
+
 # Framework
 <div align='center'>
    <img src="./assets/framework.png"/><br>

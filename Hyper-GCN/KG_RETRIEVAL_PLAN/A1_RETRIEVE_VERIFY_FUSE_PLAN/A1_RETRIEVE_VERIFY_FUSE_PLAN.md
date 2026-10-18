@@ -1,6 +1,7 @@
 # A1 — Retrieve → Verify → Fuse: kế hoạch triển khai
 
-> Trạng thái: **kế hoạch, chưa triển khai**.
+> Trạng thái: **đang triển khai**: P0 đã chạy, P1 chờ duyệt tay, P2 đang làm (2026-10-17).
+> Tiến độ và số liệu: [A1_PROGRESS.md](A1_PROGRESS.md).
 > Tài liệu cha: [KG_RETRIEVAL_PLAN.md](../KG_RETRIEVAL_PLAN.md) (mục A1, §1 thành phần dùng chung, §4 ablation K0–K6).
 > Xây KG: [KG_CONSTRUCTION_LLM_PLAN.md](../KG_CONSTRUCTION_LLM_PLAN/KG_CONSTRUCTION_LLM_PLAN.md).
 > Liên quan: [KG_PRIMITIVE_PLAN.md](../../KG_PRIMITIVE_PLAN.md),

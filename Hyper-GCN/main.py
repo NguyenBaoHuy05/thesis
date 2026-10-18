@@ -27,6 +27,7 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 from model.checkpoint import load_model_weights
+from model.kg_retrieval import a1_loss
 from model.training import configure_trainable_parameters, set_training_mode
 
 # from torchlight import DictAction
@@ -199,6 +200,18 @@ def get_parser():
         '--eval-before-train', type=str2bool, default=False,
         help='evaluate and retain the initial model before training')
     parser.add_argument(
+        '--select-best', type=str2bool, default=True,
+        help='keep the epoch with the best test Top1 (the original behavior). False: report the '
+             'last epoch, so no choice is made on the test split')
+    parser.add_argument(
+        '--kg-loss', action=DictAction, default=dict(),
+        help='A1 loss weights for model.hypergcn_kg.Model: alpha, beta, gamma '
+             '(model/kg_retrieval.py: a1_loss)')
+    parser.add_argument(
+        '--lr-scale', action=DictAction, default=dict(),
+        help='learning-rate multiplier per parameter-name prefix, e.g. {kg.decoder.: 10} for a '
+             'module trained from scratch next to a fine-tuned backbone')
+    parser.add_argument(
         '--ignore-weights',
         type=str,
         default=[],
@@ -355,9 +368,20 @@ class Processor():
             self.print_log('Checkpoint load: {}'.format(report))
 
     def load_optimizer(self):
-        parameters = [p for p in self.model.parameters() if p.requires_grad]
-        if not parameters:
+        named = [(n, p) for n, p in self.model.named_parameters() if p.requires_grad]
+        if not named:
             raise ValueError('No trainable parameters for optimizer')
+        # One group per --lr-scale prefix (first match wins); adjust_learning_rate applies lr_scale.
+        groups = {}
+        for name, parameter in named:
+            name = name[len('module.'):] if name.startswith('module.') else name
+            scale = next((float(v) for k, v in self.arg.lr_scale.items() if name.startswith(k)), 1.0)
+            groups.setdefault(scale, []).append(parameter)
+        parameters = [dict(params=params, lr=self.arg.base_lr * scale, lr_scale=scale)
+                      for scale, params in groups.items()]
+        if self.arg.lr_scale:
+            self.print_log('lr_scale groups: {}'.format(
+                {scale: sum(p.numel() for p in params) for scale, params in groups.items()}))
         if self.arg.optimizer == 'SGD':
             self.optimizer = optim.SGD(
                 parameters,
@@ -442,16 +466,26 @@ class Processor():
             timer['dataloader'] += self.split_time()
 
             # forward
-            output = self.model(data)
-            if isinstance(output, tuple):
-                ce_loss = self.loss(output[0], label)
-                h_loss = self.h_loss(output[1])
+            model_ref = self.model.module if hasattr(self.model, 'module') else self.model
+            if hasattr(model_ref, 'kg'):
+                # KG head (model/hypergcn_kg.py): labels force the ground truth into the candidates;
+                # the A1 loss replaces the label-smoothed CE, the hypergraph divergence loss stays.
+                logits, hyper_outputs, kg_out = self.model(data, label)
+                ce_loss, _ = a1_loss(kg_out, label, model_ref.kg, **self.arg.kg_loss)
+                h_loss = self.h_loss(hyper_outputs)
                 loss = ce_loss + h_loss
-                output = output[0]
+                output = logits
             else:
-                ce_loss = self.loss(output, label)
-                h_loss = data.new_zeros(())
-                loss = ce_loss
+                output = self.model(data)
+                if isinstance(output, tuple):
+                    ce_loss = self.loss(output[0], label)
+                    h_loss = self.h_loss(output[1])
+                    loss = ce_loss + h_loss
+                    output = output[0]
+                else:
+                    ce_loss = self.loss(output, label)
+                    h_loss = data.new_zeros(())
+                    loss = ce_loss
 
             # backward
             self.optimizer.zero_grad()
@@ -560,7 +594,11 @@ class Processor():
             accuracies[ln] = accuracy
             selection_score = accuracy
             initial_candidate = epoch == -1 and getattr(self, 'best_weights_path', None) is None
-            is_best = selection_score > self.best_acc or initial_candidate
+            if self.arg.select_best:
+                is_best = selection_score > self.best_acc or initial_candidate
+            else:
+                # Report the last epoch: no choice is made on the test split.
+                is_best = epoch + 1 == self.arg.num_epoch
             if is_best:
                 self.best_acc = selection_score
                 self.best_acc_epoch = epoch + 1

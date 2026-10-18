@@ -1,0 +1,7299 @@
+{
+  "kg": "annotations/action_kg.json",
+  "kg_hash": "sha256:fb8c63668bb793eb27a0044dd80d2113898060f181ac2ba9ffe013aebfe921ed",
+  "source": "kg similar/opposite relations",
+  "grounded_attributes": [
+    "airborne",
+    "arm_extends_forward",
+    "arms_out_to_sides",
+    "both_arms_symmetric",
+    "both_hands_at_face",
+    "distance_decreases",
+    "distance_increases",
+    "elbow_raised_high",
+    "fast_arm_swing",
+    "hand_at_mouth",
+    "hand_at_own_hip",
+    "hand_crosses_midline",
+    "hand_on_head_top",
+    "hand_on_own_chest",
+    "hand_retracts_to_body",
+    "hands_above_head",
+    "hands_come_together",
+    "hands_down_to_feet",
+    "hands_move_apart",
+    "hands_touch_each_other",
+    "head_bowed_toward_hands",
+    "head_carries_motion",
+    "head_tilted_back",
+    "hips_lower",
+    "hips_rise",
+    "knee_lifts_forward",
+    "legs_carry_motion",
+    "long_hold",
+    "many_steady_repeats",
+    "on_one_leg",
+    "raise_hold_lower",
+    "seated",
+    "single_arm_active",
+    "single_occurrence",
+    "sudden_fast_motion",
+    "torso_bent_forward",
+    "walks_across_floor"
+  ],
+  "pairs": [
+    {
+      "pair": [
+        "put_on_jacket",
+        "take_off_jacket"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_above_head"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_shoe",
+        "take_off_a_shoe"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_retracts_to_body",
+        "legs_cycle_in_place",
+        "long_hold",
+        "many_steady_repeats"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_bag",
+        "take_off_bag"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_low_in_front"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "yawn"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hands_meet_between",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "drop",
+        "thumb_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "fast_arm_swing",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "head_tilted_back",
+        "hips_lower",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "tennis_bat_swing"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "downward_press",
+        "elbow_raised_high",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "many_steady_repeats",
+        "partner_recoils",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "throw_up_cap_hat"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_behind_torso",
+        "head_tilted_back",
+        "partner_recoils",
+        "torso_twists",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_jacket",
+        "put_on_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "elbow_raised_high",
+        "hand_crosses_midline",
+        "hands_down_to_feet",
+        "long_hold",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_jacket",
+        "take_off_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "long_hold",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_jacket",
+        "put_on_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "elbow_raised_high",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "hands_down_to_feet",
+        "long_hold",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_jacket",
+        "take_off_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "long_hold",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_shoe",
+        "move_heavy_objects"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hips_lower",
+        "hips_rise",
+        "knee_lifts_forward",
+        "on_one_leg",
+        "seated",
+        "single_arm_active",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "jump_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "hands_above_head",
+        "hips_rise",
+        "knee_lifts_forward",
+        "legs_carry_motion",
+        "many_steady_repeats",
+        "on_one_leg",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "shoot_at_basket"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "hands_together_at_chest",
+        "hips_rise",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "capitulate"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_beside_head",
+        "hand_upright",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "kicking_something",
+        "side_kick"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "downward_press",
+        "legs_cycle_in_place",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "phone_call",
+        "whisper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_behind_torso",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "single_occurrence",
+        "sustained_contact",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "counting_money"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "cutting_nails"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hands_above_head",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "long_hold",
+        "many_steady_repeats"
+      ]
+    },
+    {
+      "pair": [
+        "point_to_something",
+        "point_finger"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "fast_arm_swing",
+        "hands_above_head",
+        "hands_touch_each_other",
+        "long_hold",
+        "partner_raises_arms",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "point_to_something",
+        "shoot_with_gun"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "hands_above_head",
+        "long_hold",
+        "partner_raises_arms",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "check_time_(from_watch)",
+        "thumb_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "repeated_short_strokes",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "rub_two_hands",
+        "ball_up_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_come_together",
+        "hands_low_in_front",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "wipe_face",
+        "fan_self"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "hand_at_mouth",
+        "hands_above_head",
+        "hands_come_together",
+        "long_hold",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "single_arm_active",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "salute",
+        "make_OK_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_on_head_top",
+        "hand_upright",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "cross_hands_in_front",
+        "cross_arms"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "hand_on_own_chest",
+        "hands_touch_each_other",
+        "long_hold",
+        "raise_hold_lower",
+        "single_arm_active",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "staggering",
+        "support_somebody"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "elbow_raised_high",
+        "hips_lower",
+        "legs_carry_motion",
+        "legs_cycle_in_place",
+        "long_hold",
+        "many_steady_repeats",
+        "on_one_leg",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_upper_body",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "fan_self",
+        "shake_fist"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hand_at_mouth",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "hugging",
+        "cross_arms"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hand_crosses_midline",
+        "hands_touch_each_other",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_upper_body",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_headphone",
+        "capitulate"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hand_upright",
+        "hands_come_together",
+        "hands_move_apart",
+        "head_carries_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "single_arm_active",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_headphone",
+        "capitulate"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hand_upright",
+        "hands_come_together",
+        "hands_move_apart",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "shoot_at_basket",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "hips_rise",
+        "many_steady_repeats",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "juggle_table_tennis_ball",
+        "shake_fist"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_above_head",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "long_hold",
+        "raise_hold_lower",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "hush",
+        "whisper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "beside_or_behind_partner",
+        "both_hands_at_face",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hand_upright",
+        "head_tilted_back",
+        "long_hold",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "thumb_up",
+        "make_OK_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "hand_beside_head",
+        "many_steady_repeats",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "make_OK_sign",
+        "make_victory_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_beside_head",
+        "long_hold",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "staple_book",
+        "fold_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "head_bowed_toward_hands",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "staple_book",
+        "put_object_into_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "hands_down_to_feet",
+        "hands_together_at_chest",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "counting_money",
+        "apply_cream_on_hand"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hands_come_together",
+        "one_side_then_other",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "snap_fingers",
+        "toss_a_coin"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "fast_arm_swing",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "long_hold",
+        "raise_hold_lower",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "open_bottle",
+        "apply_cream_on_hand"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_move_apart",
+        "head_bowed_toward_hands",
+        "one_side_then_other",
+        "repeated_short_strokes",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "move_heavy_objects",
+        "carry_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "capitulate",
+        "shoot_with_gun"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_above_head",
+        "many_steady_repeats",
+        "partner_raises_arms",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "arm_swings",
+        "cross_toe_touch"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hands_above_head",
+        "hands_down_to_feet",
+        "hands_touch_each_other",
+        "legs_carry_motion",
+        "on_one_leg",
+        "one_side_then_other",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "cheers_and_drink",
+        "exchange_things"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_at_mouth",
+        "hands_above_head",
+        "head_tilted_back",
+        "one_side_then_other",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "carry_object",
+        "support_somebody"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [],
+      "opposed_grounded": [],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "distance_decreases",
+        "distance_increases",
+        "elbow_raised_high",
+        "hands_low_in_front",
+        "long_hold",
+        "sustained_contact",
+        "touches_partner_upper_body",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "writing",
+        "cutting_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "downward_press",
+        "hands_come_together",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "seated",
+        "single_arm_active",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "writing",
+        "fold_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "seated",
+        "single_arm_active",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "tear_up_paper",
+        "open_bottle"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_come_together",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_hat_cap",
+        "put_on_headphone"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_move_apart",
+        "head_carries_motion",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_hat_cap",
+        "take_off_headphone"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_move_apart",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_a_hat_cap",
+        "take_off_headphone"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "downward_press",
+        "fast_arm_swing",
+        "hands_come_together",
+        "hands_move_apart",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "kicking_something",
+        "kicking"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "touches_partner_lower_body"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_same_motion",
+        "partner_recoils",
+        "single_arm_active",
+        "sustained_contact",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "hopping",
+        "run_on_the_spot"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "one_side_then_other"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "knee_lifts_forward"
+      ]
+    },
+    {
+      "pair": [
+        "hopping",
+        "butt_kicks"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "one_side_then_other"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "knee_lifts_forward"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "play_magic_cube"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "hands_above_head",
+        "hands_low_in_front",
+        "hands_move_apart",
+        "many_steady_repeats",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "rub_two_hands",
+        "apply_cream_on_hand"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_move_apart",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "one_side_then_other",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "kicking",
+        "side_kick"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "touches_partner_lower_body"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "both_same_motion",
+        "downward_press",
+        "legs_cycle_in_place",
+        "partner_recoils",
+        "single_arm_active",
+        "sustained_contact"
+      ]
+    },
+    {
+      "pair": [
+        "kicking",
+        "step_on_foot"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "downward_press"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "single_arm_active",
+        "sustained_contact",
+        "touches_partner_upper_body",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "pat_on_back",
+        "support_somebody"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "distance_decreases",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "many_steady_repeats",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_lower_body",
+        "unsteady_sway",
+        "walk_same_direction",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "giving_object",
+        "high-five"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_retracts_to_body",
+        "hand_upright",
+        "hands_above_head",
+        "hands_low_in_front",
+        "partner_recoils",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "giving_object",
+        "cheers_and_drink"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_at_mouth",
+        "hands_above_head",
+        "head_tilted_back",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "giving_object",
+        "exchange_things"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "one_side_then_other",
+        "partner_recoils",
+        "single_arm_active",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "touch_pocket",
+        "grab_stuff"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_meet_between"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "hand_at_own_hip",
+        "sudden_fast_motion",
+        "touches_partner_lower_body",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "bounce_ball",
+        "shake_fist"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "one_hand_raised_front"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "downward_press",
+        "hands_low_in_front",
+        "raise_hold_lower",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "thumb_up",
+        "thumb_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_upright"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "thumb_up",
+        "make_victory_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "long_hold",
+        "one_hand_raised_front",
+        "repeated_short_strokes",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "thumb_down",
+        "make_OK_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_upright"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_beside_head",
+        "many_steady_repeats"
+      ]
+    },
+    {
+      "pair": [
+        "counting_money",
+        "play_magic_cube"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_move_apart",
+        "hands_touch_each_other",
+        "long_hold",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "fold_paper",
+        "open_a_box"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_move_apart",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "capitulate",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_at_mouth",
+        "hand_upright",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "long_hold",
+        "many_steady_repeats",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "carry_object",
+        "follow"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_low_in_front"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "legs_carry_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "sustained_contact",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "follow",
+        "support_somebody"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sustained_contact"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "distance_decreases",
+        "distance_increases",
+        "elbow_raised_high",
+        "hands_low_in_front",
+        "legs_carry_motion",
+        "many_steady_repeats",
+        "torso_bent_forward",
+        "touches_partner_upper_body",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "punch_slap"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "partner_recoils",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_increases",
+        "elbow_raised_high",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_behind_torso",
+        "partner_raises_arms",
+        "repeated_short_strokes",
+        "sustained_contact"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "hit_with_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "partner_recoils",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "hands_above_head",
+        "hands_behind_torso",
+        "many_steady_repeats",
+        "partner_raises_arms",
+        "sustained_contact",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "reading",
+        "play_with_phone_tablet"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "continuous_small_hand_motion"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_low_in_front",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "kicking_something",
+        "step_on_foot"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "downward_press",
+        "touches_partner_lower_body"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_same_motion",
+        "partner_recoils",
+        "touches_partner_upper_body",
+        "walk_same_direction",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "headache",
+        "neck_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "hands_behind_torso"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_at_mouth",
+        "hand_on_head_top",
+        "head_bowed_toward_hands",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "hugging",
+        "support_somebody"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "beside_or_behind_partner",
+        "walk_same_direction"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "distance_decreases",
+        "distance_increases",
+        "elbow_raised_high",
+        "long_hold",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "torso_bent_forward",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "shaking_hands",
+        "rock-paper-scissors"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_meet_between",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hands_low_in_front",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "partner_recoils",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "bounce_ball",
+        "juggle_table_tennis_ball"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "downward_press",
+        "one_hand_raised_front"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hands_above_head",
+        "hands_low_in_front",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "long_hold",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "exchange_things",
+        "rock-paper-scissors"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_meet_between",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "one_side_then_other",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "tear_up_paper",
+        "fold_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "downward_press",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hands_low_in_front",
+        "hands_move_apart",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "type_on_a_keyboard"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "hands_low_in_front",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_touch_each_other",
+        "long_hold",
+        "many_steady_repeats",
+        "seated",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "fold_paper",
+        "ball_up_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "continuous_small_hand_motion",
+        "hands_low_in_front",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "hands_move_apart",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_hat_cap",
+        "take_off_a_hat_cap"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "fast_arm_swing",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "hush"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_tilted_back"
+      ],
+      "opposed_grounded": [
+        "head_tilted_back"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_upright",
+        "hands_meet_between",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "many_steady_repeats",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "brush_teeth",
+        "fan_self"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hands_above_head",
+        "hands_low_in_front",
+        "head_carries_motion",
+        "long_hold",
+        "one_hand_raised_front",
+        "raise_hold_lower"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "squat_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hand_retracts_to_body",
+        "head_bowed_toward_hands",
+        "legs_carry_motion",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "take_object_out_of_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_down_to_feet"
+      ],
+      "opposed_grounded": [
+        "hands_down_to_feet"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "downward_press",
+        "hand_at_own_hip",
+        "hands_come_together",
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "long_hold",
+        "on_one_leg",
+        "one_hand_raised_front",
+        "seated",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "cross_toe_touch"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hand_crosses_midline",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "many_steady_repeats",
+        "one_side_then_other",
+        "seated",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "toss_a_coin"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "fast_arm_swing"
+      ],
+      "opposed_grounded": [
+        "fast_arm_swing"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "torso_twists",
+        "touches_partner_upper_body",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "clapping",
+        "tear_up_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_above_head",
+        "hands_meet_between",
+        "many_steady_repeats",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "clapping",
+        "rub_two_hands"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_meet_between",
+        "single_arm_active",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "clapping",
+        "ball_up_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "hands_above_head",
+        "hands_low_in_front",
+        "hands_meet_between",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "clapping",
+        "arm_swings"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_touch_each_other"
+      ],
+      "opposed_grounded": [
+        "hands_touch_each_other"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "continuous_small_hand_motion",
+        "fast_arm_swing",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_meet_between",
+        "hands_move_apart",
+        "hands_together_at_chest",
+        "legs_carry_motion",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_jacket",
+        "cross_arms"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hands_behind_torso",
+        "hands_touch_each_other",
+        "one_side_then_other",
+        "single_arm_active",
+        "torso_bent_forward",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_glasses",
+        "headache"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_move_apart",
+        "head_bowed_toward_hands",
+        "raise_hold_lower",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "fan_self"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hand_upright",
+        "long_hold",
+        "one_hand_raised_front",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "bounce_ball"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "downward_press",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_low_in_front",
+        "long_hold",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "kicking_something",
+        "hopping"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "airborne",
+        "downward_press",
+        "knee_lifts_forward",
+        "legs_cycle_in_place",
+        "many_steady_repeats",
+        "one_side_then_other",
+        "sudden_fast_motion",
+        "touches_partner_lower_body",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "jump_up",
+        "squat_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "airborne",
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hands_down_to_feet",
+        "hips_lower",
+        "knee_lifts_forward",
+        "long_hold",
+        "many_steady_repeats",
+        "seated",
+        "single_occurrence",
+        "torso_bent_forward",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "phone_call",
+        "salute"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "elbow_raised_high"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_behind_torso",
+        "long_hold"
+      ]
+    },
+    {
+      "pair": [
+        "point_to_something",
+        "thumb_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_above_head",
+        "one_hand_raised_front",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "taking_a_selfie",
+        "make_victory_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_upright",
+        "hands_above_head",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands"
+      ]
+    },
+    {
+      "pair": [
+        "nod_head_bow",
+        "shake_head"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "hand_at_mouth",
+        "hand_on_own_chest",
+        "hands_down_to_feet",
+        "hips_lower",
+        "long_hold",
+        "many_steady_repeats",
+        "single_occurrence",
+        "torso_twists",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "shake_head",
+        "neck_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_on_head_top",
+        "hands_behind_torso",
+        "head_carries_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "torso_twists",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "wipe_face",
+        "apply_cream_on_face"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_come_together"
+      ],
+      "opposed_grounded": [
+        "hands_come_together"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hand_beside_head",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "raise_hold_lower"
+      ]
+    },
+    {
+      "pair": [
+        "salute",
+        "headache"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_bowed_toward_hands"
+      ],
+      "opposed_grounded": [
+        "head_bowed_toward_hands"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_behind_torso",
+        "long_hold",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "salute",
+        "flick_hair"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "raise_hold_lower"
+      ],
+      "opposed_grounded": [
+        "raise_hold_lower"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "many_steady_repeats",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "salute",
+        "make_victory_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "elbow_raised_high"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hand_on_head_top",
+        "hand_upright",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "long_hold"
+      ]
+    },
+    {
+      "pair": [
+        "put_palms_together",
+        "cross_hands_in_front"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_crosses_midline"
+      ],
+      "opposed_grounded": [
+        "hand_crosses_midline"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hand_on_own_chest",
+        "hand_upright",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "cross_hands_in_front",
+        "arm_swings"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "fast_arm_swing",
+        "hand_on_own_chest",
+        "hands_touch_each_other",
+        "legs_carry_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_arm_active",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "staggering",
+        "walking_apart"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "airborne",
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hips_lower",
+        "legs_cycle_in_place",
+        "long_hold",
+        "on_one_leg",
+        "partner_recoils",
+        "touches_partner_upper_body",
+        "unsteady_sway",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "staggering",
+        "follow"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hands_low_in_front",
+        "hips_lower",
+        "legs_cycle_in_place",
+        "long_hold",
+        "on_one_leg",
+        "sustained_contact",
+        "unsteady_sway",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "falling_down",
+        "knock_over"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "walks_across_floor"
+      ],
+      "opposed_grounded": [
+        "walks_across_floor"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "distance_decreases",
+        "hands_down_to_feet",
+        "hips_rise",
+        "legs_carry_motion",
+        "long_hold",
+        "partner_recoils",
+        "seated",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "headache",
+        "apply_cream_on_face"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "chest_pain",
+        "nausea_vomiting"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "hand_at_mouth",
+        "hand_at_own_hip",
+        "hand_crosses_midline",
+        "hands_behind_torso",
+        "raise_hold_lower",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "chest_pain",
+        "cross_arms"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hand_at_own_hip",
+        "hand_on_own_chest",
+        "hands_behind_torso",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "raise_hold_lower",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "back_pain",
+        "nausea_vomiting"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_on_own_chest"
+      ],
+      "opposed_grounded": [
+        "hand_on_own_chest"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "hand_at_own_hip",
+        "hands_above_head",
+        "hands_behind_torso",
+        "head_bowed_toward_hands",
+        "raise_hold_lower",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "back_pain",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_at_own_hip",
+        "hand_beside_head",
+        "hand_on_own_chest",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "long_hold",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "fan_self",
+        "arm_circles"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "legs_carry_motion",
+        "long_hold",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "torso_twists",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "punch_slap",
+        "hit_with_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "distance_increases",
+        "elbow_raised_high",
+        "hand_retracts_to_body",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "kicking",
+        "knock_over"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "walks_across_floor"
+      ],
+      "opposed_grounded": [
+        "walks_across_floor"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "distance_decreases",
+        "downward_press",
+        "hips_lower",
+        "knee_lifts_forward",
+        "legs_carry_motion",
+        "on_one_leg",
+        "single_arm_active",
+        "touches_partner_lower_body",
+        "touches_partner_upper_body",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "pushing",
+        "knock_over"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_decreases"
+      ],
+      "opposed_grounded": [
+        "distance_decreases"
+      ],
+      "one_sided": [
+        "distance_increases",
+        "fast_arm_swing",
+        "hips_lower",
+        "single_arm_active",
+        "torso_bent_forward",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "giving_object",
+        "grab_stuff"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "partner_recoils",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "tennis_bat_swing",
+        "hit_with_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "downward_press",
+        "elbow_raised_high",
+        "hand_crosses_midline",
+        "hands_behind_torso",
+        "partner_raises_arms",
+        "partner_recoils",
+        "sustained_contact",
+        "torso_twists",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "hush",
+        "sniff_smell"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_hands_at_face",
+        "hand_upright",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "repeated_short_strokes",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "hush",
+        "yawn"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_tilted_back"
+      ],
+      "opposed_grounded": [
+        "head_tilted_back"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_upright",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "repeated_short_strokes",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "make_OK_sign",
+        "snap_fingers"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "raise_hold_lower"
+      ],
+      "opposed_grounded": [
+        "raise_hold_lower"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "hand_upright",
+        "long_hold",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "counting_money",
+        "cutting_nails"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "cutting_nails",
+        "apply_cream_on_hand"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "hands_come_together",
+        "one_side_then_other",
+        "repeated_short_strokes",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "sniff_smell",
+        "blow_nose"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "apply_cream_on_face",
+        "blow_nose"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands",
+        "head_tilted_back",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_bag",
+        "put_object_into_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_down_to_feet"
+      ],
+      "opposed_grounded": [
+        "hands_down_to_feet"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "downward_press",
+        "hand_at_own_hip",
+        "hand_crosses_midline",
+        "hand_retracts_to_body",
+        "hands_behind_torso",
+        "hands_touch_each_other",
+        "one_hand_raised_front",
+        "one_side_then_other",
+        "single_arm_active",
+        "torso_bent_forward",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "move_heavy_objects",
+        "cross_toe_touch"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "many_steady_repeats",
+        "on_one_leg",
+        "one_side_then_other",
+        "single_occurrence",
+        "torso_twists",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "shake_fist",
+        "rock-paper-scissors"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_same_motion",
+        "hands_meet_between",
+        "raise_hold_lower",
+        "single_occurrence",
+        "sustained_contact"
+      ]
+    },
+    {
+      "pair": [
+        "arm_circles",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "legs_carry_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_arm_active",
+        "sudden_fast_motion",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "run_on_the_spot",
+        "butt_kicks"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "knee_lifts_forward"
+      ],
+      "opposed_grounded": [
+        "knee_lifts_forward"
+      ],
+      "one_sided": [
+        "both_arms_symmetric"
+      ]
+    },
+    {
+      "pair": [
+        "yawn",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hands_above_head",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "shoot_with_gun",
+        "take_a_photo"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "distance_decreases",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "partner_raises_arms",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "put_object_into_bag",
+        "take_object_out_of_bag"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "downward_press",
+        "hand_retracts_to_body"
+      ],
+      "opposed_grounded": [
+        "hand_retracts_to_body"
+      ],
+      "one_sided": [
+        "hands_touch_each_other"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "cheers_and_drink"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "hands_meet_between"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward"
+      ],
+      "one_sided": [
+        "both_same_motion",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "sustained_contact",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "reading",
+        "play_magic_cube"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_move_apart",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_glasses",
+        "wipe_face"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_beside_head",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_move_apart",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_a_hat_cap",
+        "flick_hair"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "downward_press",
+        "fast_arm_swing",
+        "hand_on_head_top",
+        "hands_above_head",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "high-five"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_same_motion",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_low_in_front",
+        "hands_meet_between",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "sustained_contact"
+      ]
+    },
+    {
+      "pair": [
+        "reach_into_pocket",
+        "back_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_behind_torso",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_on_own_chest",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "single_arm_active",
+        "torso_bent_forward",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "reach_into_pocket",
+        "touch_pocket"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_own_hip",
+        "touches_partner_lower_body"
+      ],
+      "opposed_grounded": [
+        "hand_at_own_hip"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "hands_behind_torso",
+        "hands_meet_between",
+        "long_hold",
+        "one_hand_raised_front",
+        "repeated_short_strokes",
+        "sustained_contact",
+        "torso_bent_forward",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "rub_two_hands",
+        "open_bottle"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "long_hold",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "staggering",
+        "walking_towards"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats",
+        "unsteady_sway"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_decreases",
+        "distance_increases",
+        "hips_lower",
+        "legs_cycle_in_place",
+        "long_hold",
+        "on_one_leg",
+        "sustained_contact",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "pat_on_back",
+        "whisper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_decreases",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [
+        "distance_decreases"
+      ],
+      "one_sided": [
+        "distance_increases",
+        "fast_arm_swing",
+        "hand_at_mouth",
+        "many_steady_repeats",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "point_finger",
+        "shoot_with_gun"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "partner_raises_arms",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "fast_arm_swing",
+        "hands_touch_each_other",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "shaking_hands",
+        "cheers_and_drink"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "hand_at_mouth",
+        "hand_retracts_to_body",
+        "hands_low_in_front",
+        "head_tilted_back",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "walking_towards",
+        "step_on_foot"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion",
+        "walks_across_floor"
+      ],
+      "opposed_grounded": [
+        "walks_across_floor"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "distance_decreases",
+        "distance_increases",
+        "downward_press",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "on_one_leg",
+        "partner_recoils",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "touches_partner_lower_body",
+        "touches_partner_upper_body",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "walking_towards",
+        "carry_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_decreases",
+        "walk_same_direction"
+      ],
+      "opposed_grounded": [
+        "distance_decreases"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "hands_low_in_front",
+        "legs_carry_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "sustained_contact",
+        "torso_bent_forward",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "walking_apart",
+        "carry_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_increases",
+        "walk_same_direction"
+      ],
+      "opposed_grounded": [
+        "distance_increases"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hands_low_in_front",
+        "legs_carry_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "partner_recoils",
+        "torso_bent_forward",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "walking_apart",
+        "follow"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_increases",
+        "walk_same_direction"
+      ],
+      "opposed_grounded": [
+        "distance_increases"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "hands_low_in_front",
+        "partner_recoils",
+        "sustained_contact",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "cutting_nails",
+        "play_magic_cube"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hands_move_apart",
+        "hands_touch_each_other",
+        "long_hold",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "open_bottle",
+        "play_magic_cube"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "apply_cream_on_face",
+        "apply_cream_on_hand"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "hand_beside_head",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "one_side_then_other",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "put_object_into_bag",
+        "open_a_box"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "hands_down_to_feet",
+        "hands_move_apart",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "one_hand_raised_front",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "take_object_out_of_bag",
+        "open_a_box"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "hands_down_to_feet",
+        "hands_move_apart",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands",
+        "one_hand_raised_front",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "arm_circles",
+        "arm_swings"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_crosses_midline",
+        "torso_twists"
+      ],
+      "opposed_grounded": [
+        "hand_crosses_midline"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "hands_touch_each_other",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "wield_knife",
+        "shoot_with_gun"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "distance_increases",
+        "hands_above_head",
+        "many_steady_repeats",
+        "single_arm_active",
+        "single_occurrence",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "grab_stuff",
+        "exchange_things"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "one_side_then_other",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "tear_up_paper",
+        "open_a_box"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hands_together_at_chest",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric"
+      ],
+      "one_sided": [
+        "downward_press",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "phone_call",
+        "neck_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hands_behind_torso"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high"
+      ],
+      "one_sided": [
+        "hand_on_head_top",
+        "head_bowed_toward_hands",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "check_time_(from_watch)"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "hands_together_at_chest",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_low_in_front",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "single_arm_active",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "shaking_hands",
+        "exchange_things"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_low_in_front",
+        "one_side_then_other",
+        "partner_recoils",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "walking_towards",
+        "follow"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "beside_or_behind_partner",
+        "distance_decreases",
+        "walk_same_direction"
+      ],
+      "opposed_grounded": [
+        "distance_decreases"
+      ],
+      "one_sided": [
+        "hands_low_in_front",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "open_bottle",
+        "open_a_box"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "continuous_small_hand_motion",
+        "hands_come_together",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "high-five",
+        "rock-paper-scissors"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head",
+        "hands_meet_between",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_upright",
+        "hands_low_in_front",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "eat_meal",
+        "brush_teeth"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "hands_low_in_front",
+        "long_hold",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_retracts_to_body",
+        "head_carries_motion",
+        "head_tilted_back",
+        "raise_hold_lower",
+        "seated",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "reading",
+        "writing"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hands_together_at_chest"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric"
+      ],
+      "one_sided": [
+        "hands_low_in_front",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "seated",
+        "single_arm_active",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "pushing",
+        "walking_apart"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "both_same_motion",
+        "partner_recoils",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "legs_carry_motion",
+        "many_steady_repeats",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "torso_bent_forward",
+        "walk_same_direction",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "pat_on_back",
+        "touch_pocket"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "repeated_short_strokes",
+        "single_occurrence",
+        "touches_partner_lower_body",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "distance_decreases",
+        "fast_arm_swing",
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "hands_meet_between",
+        "many_steady_repeats",
+        "partner_recoils",
+        "sudden_fast_motion",
+        "sustained_contact"
+      ]
+    },
+    {
+      "pair": [
+        "giving_object",
+        "shaking_hands"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_low_in_front",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "staple_book",
+        "counting_money"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "hands_together_at_chest",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "downward_press",
+        "hands_come_together",
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "hugging",
+        "whisper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "single_arm_active",
+        "sustained_contact",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "long_hold",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "sit_down",
+        "stand_up"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "hips_lower",
+        "hips_rise"
+      ],
+      "opposed_grounded": [
+        "hips_lower",
+        "hips_rise"
+      ],
+      "one_sided": [
+        "airborne",
+        "fast_arm_swing",
+        "hands_down_to_feet",
+        "knee_lifts_forward",
+        "sudden_fast_motion",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_glasses",
+        "take_off_glasses"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "hands_come_together",
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "walking_towards",
+        "walking_apart"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "distance_decreases",
+        "distance_increases"
+      ],
+      "opposed_grounded": [
+        "distance_decreases",
+        "distance_increases"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "partner_recoils",
+        "sustained_contact",
+        "touches_partner_upper_body",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_headphone",
+        "take_off_headphone"
+      ],
+      "relations": [
+        "opposite"
+      ],
+      "opposed": [
+        "hands_come_together",
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "head_carries_motion",
+        "raise_hold_lower",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "eat_meal",
+        "sneeze_cough"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hand_retracts_to_body",
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "seated",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "brush_teeth",
+        "wipe_face"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "long_hold"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_come_together",
+        "hands_low_in_front",
+        "head_carries_motion",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_arm_active",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "brush_hair",
+        "headache"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_behind_torso",
+        "head_bowed_toward_hands",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "drop",
+        "toss_a_coin"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_tilted_back",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "head_tilted_back",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "take_off_a_shoe"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "on_one_leg",
+        "seated"
+      ],
+      "opposed_grounded": [
+        "on_one_leg",
+        "seated"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hips_lower",
+        "hips_rise",
+        "knee_lifts_forward",
+        "legs_cycle_in_place",
+        "long_hold",
+        "many_steady_repeats",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "nod_head_bow"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_down_to_feet",
+        "hips_lower"
+      ],
+      "opposed_grounded": [
+        "hands_down_to_feet",
+        "hips_lower"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "hand_on_own_chest",
+        "hand_retracts_to_body",
+        "head_bowed_toward_hands",
+        "head_carries_motion",
+        "hips_rise",
+        "on_one_leg",
+        "seated",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "falling_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hips_rise",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "hips_rise",
+        "long_hold"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_retracts_to_body",
+        "head_bowed_toward_hands",
+        "legs_carry_motion",
+        "on_one_leg",
+        "sudden_fast_motion",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "put_object_into_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_retracts_to_body",
+        "hands_down_to_feet"
+      ],
+      "opposed_grounded": [
+        "hand_retracts_to_body",
+        "hands_down_to_feet"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "downward_press",
+        "hand_at_own_hip",
+        "hands_come_together",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "long_hold",
+        "on_one_leg",
+        "one_hand_raised_front",
+        "seated",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "move_heavy_objects"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "long_hold"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "hand_retracts_to_body",
+        "on_one_leg",
+        "seated",
+        "single_occurrence",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "sit_down",
+        "squat_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hips_rise",
+        "seated"
+      ],
+      "opposed_grounded": [
+        "hips_rise",
+        "seated"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "hands_down_to_feet",
+        "knee_lifts_forward",
+        "long_hold",
+        "on_one_leg",
+        "single_occurrence",
+        "unsteady_sway",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "stand_up",
+        "jump_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "airborne",
+        "fast_arm_swing"
+      ],
+      "opposed_grounded": [
+        "airborne",
+        "fast_arm_swing"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_down_to_feet",
+        "hips_lower",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "on_one_leg",
+        "seated",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "tear_up_paper",
+        "ball_up_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hands_move_apart"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_move_apart"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_low_in_front",
+        "long_hold",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_jacket",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hand_crosses_midline",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "long_hold",
+        "one_side_then_other",
+        "raise_hold_lower",
+        "single_arm_active",
+        "sudden_fast_motion",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_shoe",
+        "squat_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "on_one_leg",
+        "seated"
+      ],
+      "opposed_grounded": [
+        "on_one_leg",
+        "seated"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "head_bowed_toward_hands",
+        "hips_lower",
+        "hips_rise",
+        "knee_lifts_forward",
+        "legs_carry_motion",
+        "single_arm_active",
+        "sudden_fast_motion",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_a_shoe",
+        "cross_toe_touch"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "on_one_leg"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "on_one_leg"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "one_side_then_other",
+        "seated",
+        "single_arm_active",
+        "single_occurrence",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_a_hat_cap",
+        "throw_up_cap_hat"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "fast_arm_swing",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "fast_arm_swing",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "head_tilted_back"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "throw_up_cap_hat"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "hand_on_head_top",
+        "head_tilted_back",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "shake_fist"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arms_out_to_sides",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "arms_out_to_sides",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hand_upright",
+        "long_hold",
+        "one_hand_raised_front"
+      ]
+    },
+    {
+      "pair": [
+        "reach_into_pocket",
+        "bounce_ball"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "single_occurrence",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "single_occurrence",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "downward_press",
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_behind_torso",
+        "hands_low_in_front",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "jump_up",
+        "shoot_at_basket"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "airborne",
+        "fast_arm_swing"
+      ],
+      "opposed_grounded": [
+        "airborne",
+        "fast_arm_swing"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "hands_above_head",
+        "hands_together_at_chest",
+        "knee_lifts_forward",
+        "legs_carry_motion",
+        "on_one_leg",
+        "raise_hold_lower",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "phone_call",
+        "headache"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "elbow_raised_high",
+        "head_bowed_toward_hands"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high",
+        "head_bowed_toward_hands"
+      ],
+      "one_sided": [
+        "hand_at_mouth",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "point_to_something",
+        "taking_a_selfie"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands",
+        "long_hold"
+      ]
+    },
+    {
+      "pair": [
+        "check_time_(from_watch)",
+        "cross_hands_in_front"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hand_crosses_midline",
+        "hand_on_own_chest",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "one_hand_raised_front"
+      ]
+    },
+    {
+      "pair": [
+        "wipe_face",
+        "headache"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_behind_torso",
+        "hands_come_together",
+        "head_bowed_toward_hands",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "wipe_face",
+        "flick_hair"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hands_come_together",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "put_palms_together",
+        "cross_arms"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_crosses_midline",
+        "hands_touch_each_other"
+      ],
+      "opposed_grounded": [
+        "hand_crosses_midline",
+        "hands_touch_each_other"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "continuous_small_hand_motion",
+        "hand_upright",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "sneeze_cough",
+        "nausea_vomiting"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_bowed_toward_hands",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "head_bowed_toward_hands",
+        "long_hold"
+      ],
+      "one_sided": [
+        "hand_on_own_chest",
+        "head_tilted_back",
+        "raise_hold_lower",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "sneeze_cough",
+        "hush"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_hands_at_face",
+        "hand_upright",
+        "head_bowed_toward_hands",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "sneeze_cough",
+        "yawn"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_tilted_back",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "head_tilted_back",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "long_hold",
+        "single_occurrence",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "falling_down",
+        "squat_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hips_rise",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "hips_rise",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "on_one_leg",
+        "single_occurrence",
+        "unsteady_sway"
+      ]
+    },
+    {
+      "pair": [
+        "fan_self",
+        "snap_fingers"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "hand_at_mouth",
+        "hands_above_head",
+        "long_hold",
+        "repeated_short_strokes",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "pushing",
+        "hit_with_object"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "distance_decreases",
+        "distance_increases",
+        "elbow_raised_high",
+        "hands_above_head",
+        "many_steady_repeats",
+        "partner_raises_arms",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "thumb_up",
+        "snap_fingers"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "hand_beside_head",
+        "hand_upright",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "cutting_nails",
+        "cutting_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_come_together",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "squat_down",
+        "move_heavy_objects"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "walks_across_floor"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward",
+        "walks_across_floor"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "head_bowed_toward_hands",
+        "legs_carry_motion",
+        "on_one_leg",
+        "seated",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_bag",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "one_side_then_other",
+        "raise_hold_lower",
+        "sudden_fast_motion",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "cross_toe_touch",
+        "stretch_oneself"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_beside_head",
+        "hand_crosses_midline",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_touch_each_other",
+        "head_tilted_back",
+        "long_hold",
+        "many_steady_repeats",
+        "on_one_leg",
+        "one_side_then_other",
+        "raise_hold_lower",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "high-five",
+        "cheers_and_drink"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_retracts_to_body",
+        "hand_upright",
+        "hands_low_in_front",
+        "head_tilted_back",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "brush_hair",
+        "take_off_a_hat_cap"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "hands_above_head",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "downward_press",
+        "fast_arm_swing",
+        "long_hold",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "sit_down",
+        "falling_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "seated",
+        "sudden_fast_motion",
+        "unsteady_sway"
+      ],
+      "opposed_grounded": [
+        "seated",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "hands_down_to_feet",
+        "knee_lifts_forward",
+        "long_hold",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "reading",
+        "check_time_(from_watch)"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hands_together_at_chest",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "long_hold"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "writing",
+        "type_on_a_keyboard"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "reach_into_pocket",
+        "take_object_out_of_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_own_hip",
+        "one_hand_raised_front",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "hand_at_own_hip",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "downward_press",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "long_hold",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "hopping",
+        "side_kick"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "airborne",
+        "legs_cycle_in_place",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "airborne",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "one_side_then_other",
+        "sudden_fast_motion",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "play_with_phone_tablet",
+        "taking_a_selfie"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head",
+        "hands_together_at_chest",
+        "head_bowed_toward_hands"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "head_bowed_toward_hands"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "both_hands_at_face",
+        "continuous_small_hand_motion",
+        "hands_low_in_front",
+        "raise_hold_lower",
+        "single_arm_active",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "taking_a_selfie",
+        "take_a_photo"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "hands_together_at_chest",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_same_motion",
+        "distance_decreases",
+        "hands_above_head",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "chest_pain",
+        "back_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_own_hip",
+        "hand_on_own_chest",
+        "hands_behind_torso"
+      ],
+      "opposed_grounded": [
+        "hand_at_own_hip",
+        "hand_on_own_chest"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_crosses_midline",
+        "hands_above_head",
+        "head_bowed_toward_hands",
+        "single_arm_active",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "punch_slap",
+        "wield_knife"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "distance_increases",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "distance_increases",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hand_retracts_to_body",
+        "long_hold",
+        "many_steady_repeats",
+        "sustained_contact",
+        "torso_twists",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "point_finger",
+        "wield_knife"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "partner_raises_arms",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "distance_increases",
+        "fast_arm_swing",
+        "hands_above_head",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "butt_kicks",
+        "side_kick"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "knee_lifts_forward",
+        "legs_cycle_in_place",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "knee_lifts_forward",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "airborne",
+        "many_steady_repeats",
+        "one_side_then_other",
+        "sudden_fast_motion",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "type_on_a_keyboard",
+        "counting_money"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "hands_together_at_chest",
+        "hands_touch_each_other"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_touch_each_other"
+      ],
+      "one_sided": [
+        "hands_low_in_front",
+        "repeated_short_strokes",
+        "seated",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "punch_slap",
+        "point_finger"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "fast_arm_swing",
+        "partner_raises_arms",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ],
+      "opposed_grounded": [
+        "fast_arm_swing",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "both_arms_symmetric",
+        "distance_increases",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_touch_each_other",
+        "long_hold",
+        "partner_recoils",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sustained_contact",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "reading",
+        "counting_money"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "hands_touch_each_other",
+        "long_hold",
+        "single_occurrence",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "pushing",
+        "hugging"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "both_same_motion",
+        "distance_decreases",
+        "partner_recoils",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward",
+        "distance_decreases"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "fast_arm_swing",
+        "long_hold",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "pat_on_back",
+        "hugging"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "beside_or_behind_partner",
+        "both_same_motion",
+        "distance_decreases",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "distance_decreases",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "distance_increases",
+        "fast_arm_swing",
+        "long_hold",
+        "many_steady_repeats",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact",
+        "touches_partner_lower_body",
+        "walk_same_direction"
+      ]
+    },
+    {
+      "pair": [
+        "shaking_hands",
+        "grab_stuff"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_same_motion",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "single_occurrence",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "hands_low_in_front",
+        "partner_recoils"
+      ]
+    },
+    {
+      "pair": [
+        "shaking_hands",
+        "high-five"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head",
+        "hands_low_in_front",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sustained_contact"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_at_mouth",
+        "hand_upright",
+        "partner_recoils",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "sniff_smell"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "head_tilted_back"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "head_tilted_back"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "hands_meet_between",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "brush_hair",
+        "flick_hair"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "drop",
+        "pick_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_down_to_feet",
+        "hips_lower",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "hands_down_to_feet",
+        "hips_lower",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hand_retracts_to_body",
+        "hands_low_in_front",
+        "head_tilted_back",
+        "hips_rise",
+        "long_hold",
+        "on_one_leg",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "seated",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "stand_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_down_to_feet",
+        "hips_lower",
+        "seated"
+      ],
+      "opposed_grounded": [
+        "hands_down_to_feet",
+        "hips_lower",
+        "seated"
+      ],
+      "one_sided": [
+        "airborne",
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hand_retracts_to_body",
+        "head_bowed_toward_hands",
+        "legs_carry_motion",
+        "long_hold",
+        "on_one_leg"
+      ]
+    },
+    {
+      "pair": [
+        "pick_up",
+        "put_on_a_shoe"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "long_hold",
+        "on_one_leg",
+        "seated"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "on_one_leg",
+        "seated"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_retracts_to_body",
+        "hips_lower",
+        "hips_rise",
+        "knee_lifts_forward",
+        "single_arm_active",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "throw",
+        "shoot_at_basket"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "airborne",
+        "elbow_raised_high",
+        "hands_above_head",
+        "hands_behind_torso",
+        "hands_together_at_chest",
+        "hips_rise",
+        "many_steady_repeats",
+        "partner_recoils",
+        "raise_hold_lower",
+        "sudden_fast_motion",
+        "torso_twists",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_glasses",
+        "put_on_headphone"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "elbow_raised_high",
+        "head_carries_motion",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "take_off_glasses",
+        "take_off_headphone"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_above_head"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "long_hold"
+      ]
+    },
+    {
+      "pair": [
+        "hopping",
+        "jump_up"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats",
+        "on_one_leg",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats",
+        "on_one_leg",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "hips_rise",
+        "knee_lifts_forward",
+        "legs_cycle_in_place",
+        "one_side_then_other",
+        "sudden_fast_motion",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "nod_head_bow",
+        "nausea_vomiting"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth",
+        "hand_on_own_chest",
+        "long_hold"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth",
+        "hand_on_own_chest",
+        "long_hold"
+      ],
+      "one_sided": [
+        "hands_down_to_feet",
+        "head_bowed_toward_hands",
+        "head_carries_motion",
+        "hips_lower",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "wipe_face",
+        "blow_nose"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_come_together",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hand_at_mouth",
+        "hands_touch_each_other",
+        "head_bowed_toward_hands",
+        "head_tilted_back",
+        "long_hold",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "sneeze_cough",
+        "blow_nose"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "long_hold",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "staggering",
+        "falling_down"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hips_lower",
+        "long_hold",
+        "walks_across_floor"
+      ],
+      "opposed_grounded": [
+        "hips_lower",
+        "long_hold",
+        "walks_across_floor"
+      ],
+      "one_sided": [
+        "airborne",
+        "arms_out_to_sides",
+        "hands_down_to_feet",
+        "hips_rise",
+        "legs_cycle_in_place",
+        "many_steady_repeats",
+        "on_one_leg",
+        "seated",
+        "single_occurrence",
+        "sudden_fast_motion",
+        "torso_bent_forward"
+      ]
+    },
+    {
+      "pair": [
+        "point_finger",
+        "take_a_photo"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arm_extends_forward",
+        "hands_touch_each_other",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "arm_extends_forward",
+        "hands_touch_each_other",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "both_hands_at_face",
+        "distance_decreases",
+        "fast_arm_swing",
+        "hands_together_at_chest",
+        "partner_raises_arms",
+        "sudden_fast_motion",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "shoot_at_basket",
+        "throw_up_cap_hat"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "airborne",
+        "arm_extends_forward",
+        "hand_on_head_top",
+        "hands_together_at_chest",
+        "head_tilted_back",
+        "hips_rise",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "tennis_bat_swing",
+        "arm_swings"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "downward_press",
+        "hands_above_head",
+        "hands_behind_torso",
+        "hands_touch_each_other",
+        "legs_carry_motion",
+        "long_hold",
+        "single_arm_active",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "hit_with_object",
+        "wield_knife"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_above_head",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "beside_or_behind_partner",
+        "distance_increases",
+        "elbow_raised_high",
+        "fast_arm_swing",
+        "long_hold",
+        "repeated_short_strokes",
+        "sustained_contact",
+        "touches_partner_upper_body"
+      ]
+    },
+    {
+      "pair": [
+        "brush_hair",
+        "neck_pain"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "hand_on_head_top",
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "opposed_grounded": [
+        "hand_on_head_top",
+        "long_hold",
+        "raise_hold_lower"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_above_head",
+        "hands_behind_torso",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "put_on_glasses",
+        "apply_cream_on_face"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hands_come_together",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hand_on_head_top",
+        "hands_above_head",
+        "hands_move_apart",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "long_hold"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "salute"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "hands_above_head",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_above_head",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hand_on_head_top",
+        "hand_upright",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "make_OK_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "elbow_raised_high",
+        "hand_beside_head",
+        "hands_above_head",
+        "long_hold",
+        "one_hand_raised_front"
+      ]
+    },
+    {
+      "pair": [
+        "hand_waving",
+        "make_victory_sign"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "elbow_raised_high",
+        "hand_beside_head",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high",
+        "raise_hold_lower",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arms_out_to_sides",
+        "hands_above_head",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ]
+    },
+    {
+      "pair": [
+        "reach_into_pocket",
+        "put_object_into_bag"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "one_hand_raised_front",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "hand_at_own_hip",
+        "hand_retracts_to_body",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "downward_press",
+        "hands_behind_torso",
+        "hands_come_together",
+        "hands_down_to_feet",
+        "hands_low_in_front",
+        "hands_touch_each_other",
+        "long_hold",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "neck_pain",
+        "flick_hair"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "hand_beside_head",
+        "long_hold",
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "raise_hold_lower",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "both_hands_at_face",
+        "hand_on_head_top",
+        "hands_behind_torso",
+        "many_steady_repeats",
+        "single_occurrence"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "brush_teeth"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "elbow_raised_high",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "elbow_raised_high",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_hands_at_face",
+        "hand_beside_head",
+        "hands_low_in_front",
+        "hands_meet_between",
+        "head_bowed_toward_hands",
+        "head_carries_motion",
+        "head_tilted_back",
+        "long_hold",
+        "raise_hold_lower",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "clapping",
+        "put_palms_together"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "hand_crosses_midline",
+        "hand_upright",
+        "hands_above_head",
+        "hands_meet_between",
+        "hands_move_apart",
+        "raise_hold_lower",
+        "single_arm_active"
+      ]
+    },
+    {
+      "pair": [
+        "type_on_a_keyboard",
+        "staple_book"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "continuous_small_hand_motion",
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "downward_press",
+        "hands_come_together",
+        "head_bowed_toward_hands",
+        "repeated_short_strokes",
+        "seated",
+        "single_arm_active",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "rub_two_hands",
+        "put_palms_together"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "long_hold",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "long_hold",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "asymmetric_hand_roles",
+        "both_arms_symmetric",
+        "hand_crosses_midline",
+        "hand_upright",
+        "hands_come_together",
+        "hands_move_apart",
+        "raise_hold_lower",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "juggle_table_tennis_ball",
+        "toss_a_coin"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "repeated_short_strokes",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "downward_press",
+        "fast_arm_swing",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "head_tilted_back",
+        "long_hold",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "punch_slap",
+        "pat_on_back"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "beside_or_behind_partner",
+        "fast_arm_swing",
+        "partner_recoils",
+        "repeated_short_strokes",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ],
+      "opposed_grounded": [
+        "fast_arm_swing",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "both_arms_symmetric",
+        "distance_decreases",
+        "distance_increases",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "many_steady_repeats",
+        "partner_raises_arms",
+        "sustained_contact",
+        "torso_twists",
+        "touches_partner_lower_body"
+      ]
+    },
+    {
+      "pair": [
+        "cutting_paper",
+        "fold_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_low_in_front",
+        "repeated_short_strokes",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "staple_book",
+        "cutting_paper"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "continuous_small_hand_motion",
+        "downward_press",
+        "hands_come_together",
+        "hands_together_at_chest",
+        "hands_touch_each_other",
+        "many_steady_repeats",
+        "repeated_short_strokes"
+      ],
+      "opposed_grounded": [
+        "hands_come_together",
+        "hands_touch_each_other",
+        "many_steady_repeats"
+      ],
+      "one_sided": [
+        "hands_low_in_front",
+        "head_bowed_toward_hands",
+        "sudden_fast_motion",
+        "torso_bent_forward",
+        "wrist_hand_dominant"
+      ]
+    },
+    {
+      "pair": [
+        "punch_slap",
+        "pushing"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "distance_increases",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "distance_increases",
+        "fast_arm_swing",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "beside_or_behind_partner",
+        "distance_decreases",
+        "hand_retracts_to_body",
+        "hands_above_head",
+        "partner_raises_arms",
+        "repeated_short_strokes",
+        "torso_bent_forward",
+        "torso_twists"
+      ]
+    },
+    {
+      "pair": [
+        "cheer_up",
+        "shake_fist"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "repeated_short_strokes",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "arms_out_to_sides",
+        "both_arms_symmetric",
+        "hands_above_head",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "many_steady_repeats",
+        "one_hand_raised_front",
+        "raise_hold_lower",
+        "single_occurrence",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "drink_water",
+        "eat_meal"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "head_tilted_back",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_occurrence",
+        "torso_bent_forward"
+      ],
+      "opposed_grounded": [
+        "head_tilted_back",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_occurrence",
+        "torso_bent_forward"
+      ],
+      "one_sided": [
+        "arm_extends_forward",
+        "elbow_raised_high",
+        "hand_retracts_to_body",
+        "hands_low_in_front",
+        "hands_meet_between",
+        "head_bowed_toward_hands",
+        "long_hold",
+        "seated",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "jump_up",
+        "run_on_the_spot"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "on_one_leg",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "knee_lifts_forward",
+        "many_steady_repeats",
+        "on_one_leg",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "airborne",
+        "fast_arm_swing",
+        "hips_rise",
+        "legs_cycle_in_place",
+        "one_side_then_other",
+        "sudden_fast_motion",
+        "walks_across_floor"
+      ]
+    },
+    {
+      "pair": [
+        "yawn",
+        "blow_nose"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_hands_at_face",
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "head_tilted_back",
+        "single_arm_active"
+      ],
+      "opposed_grounded": [
+        "both_hands_at_face",
+        "hand_at_mouth",
+        "head_bowed_toward_hands",
+        "head_tilted_back",
+        "single_arm_active"
+      ],
+      "one_sided": [
+        "both_arms_symmetric",
+        "hands_come_together",
+        "hands_touch_each_other",
+        "sudden_fast_motion"
+      ]
+    },
+    {
+      "pair": [
+        "brush_hair",
+        "put_on_a_hat_cap"
+      ],
+      "relations": [
+        "similar"
+      ],
+      "opposed": [
+        "both_arms_symmetric",
+        "hand_beside_head",
+        "hands_above_head",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "repeated_short_strokes",
+        "single_arm_active",
+        "single_occurrence"
+      ],
+      "opposed_grounded": [
+        "both_arms_symmetric",
+        "hands_above_head",
+        "many_steady_repeats",
+        "raise_hold_lower",
+        "single_arm_active",
+        "single_occurrence"
+      ],
+      "one_sided": [
+        "long_hold",
+        "sudden_fast_motion"
+      ]
+    }
+  ],
+  "summary": {
+    "pairs": 280,
+    "no_opposed": 46,
+    "no_grounded_opposed": 85
+  }
+}
