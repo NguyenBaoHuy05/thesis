@@ -24,7 +24,7 @@
 | `model/pair_metrics.py` (PCR, per-pair, K5-pair) | xong; test *chờ* Colab |
 | `train_concept_logic.py`: `head: cl \| graph \| reason`, chỉ số cặp cho mọi head và cho K0 | xong |
 | `config/concept_graph/e1{b,c,d,e}.yaml` | xong (E1a = `config/concept/cl_v2.yaml`) |
-| R-GCN, nhánh action (`model/rgcn.py`, `return_tokens`) | để P3 |
+| R-GCN theo tầng, nhánh action, head đầy đủ (`model/rgcn.py`, `model/concept_action_graph.py`, `return_tokens`) | xong 2026-10-20; test `tests/test_concept_action_graph.py` *chờ* Colab |
 
 Đồ thị v1 trên v2.4 (`python tools/build_concept_graph.py`):
 
@@ -109,6 +109,24 @@ Chỉ khi cột "sweep ceiling" của e1a_s4 ≥ 87.93 mới chạy tiếp:
 !python train_concept_logic.py --config config/concept_graph/e2_s4.yaml --cache-dir $J --work-dir $W/e2_s4
 !python tools/summarize_runs.py $W e1a_s4 e2_s4
 ```
+
+**Ô 7b: mô hình đầy đủ (P3, code 2026-10-20)**
+
+Hai nhánh decoder, đồ thị, R-GCN theo tầng, bộ thực thi logic mờ; logits = log s / τ + λ z
+(`model/concept_action_graph.py`, config `config/concept_graph/e3.yaml`). Log in thêm `head_sym` (chỉ đường logic,
+λ = 0), `head_neural` (chỉ R-GCN), `head_aux` (head riêng của nhánh action), và các loss aux / kl / margin theo epoch.
+```
+!python -m pytest tests/test_concept_action_graph.py -q
+!python train_concept_logic.py --config config/concept_graph/e3.yaml --cache-dir $J --work-dir $W/e3
+!python tools/summarize_runs.py $W e1a e1c e3
+```
+Trên cache S = 4 (cần ô 6 trước):
+```
+!python train_concept_logic.py --config config/concept_graph/e3_s4.yaml --cache-dir $J --work-dir $W/e3_s4
+!python tools/summarize_runs.py $W e1a_s4 e3_s4
+```
+Ablation (sửa trong một bản chép của `e3.yaml`): `use_rgcn: False`, `freeze_node_emb: True`, `rgcn_args.use_r6: False`,
+`graph.nots: False`, `graph.cfg.or_groups: []`.
 
 **Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
 ```
@@ -244,6 +262,13 @@ Lệnh: **ô 5** (S = 1), **ô 6** (tạo cache S = 4), **ô 7** (S = 4).
 | E2−OR | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
 | E1a-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
 | E2-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+
+## P3: mô hình đầy đủ (code 2026-10-20, lệnh: ô 7b)
+
+| | Top1 / Top5 | Top1 sym / neural / aux | PCR | fusion Top1 | mức trần fusion | K5 | train top1 |
+|---|---|---|---|---|---|---|---|
+| E3 (S = 1) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E3-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
 
 Quy tắc (chốt trước): đồ thị **có ích cho độ chính xác** nếu fusion của E2 (hoặc E2-S4) vượt K0 ≥ 0.3 Top1
 **và** vượt fusion của E1a (hoặc E1a-S4, cùng S) ≥ 0.2. Không đạt thì đồ thị không thêm gì so với AND phẳng.

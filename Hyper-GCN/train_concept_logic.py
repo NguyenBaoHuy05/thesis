@@ -7,7 +7,10 @@ config `head`:
 - cl     (default): flat soft AND over M, model/concept_logic.py (CL v1 / v2);
 - graph: concept-graph head, model/concept_graph_head.py, on the graph of config `graph`
          (kind full | flat | random, nots, seed; model/concept_graph.py), plan KG_RETRIEVAL_PLAN/CONCEPT_GRAPH;
-- reason: REASON's logic layers on our concept decoder (model/reason_logic.py, baseline E1b).
+- reason: REASON's logic layers on our concept decoder (model/reason_logic.py, baseline E1b);
+- full:   the whole proposed model (model/concept_action_graph.py): concept + action decoders, graph, stratified
+          R-GCN + fuzzy executor, logits = log s / tau + lam z; also reports the symbolic path alone (head_sym,
+          lam = 0), the R-GCN path alone (head_neural) and the action decoder's auxiliary head (head_aux).
 
 Reads <cache_dir>/<cache_name>_{train,test}_feat.npy + .npz (tools/cache_joint_features.py).
 No validation split: the recipe is fixed in the config, test is scored once.
@@ -36,6 +39,7 @@ import torch
 import yaml
 
 from model.concept_graph import build_graph, confusable_pairs, flat_graph, random_pair_graph, read_matrix
+from model.concept_action_graph import ConceptActionGraphHead
 from model.concept_graph_head import ConceptGraphHead
 from model.concept_logic import ConceptLogicHead, concept_joint_mask, concept_loss, load_concepts
 from model.concept_schema import NTU_ACTION_NAMES
@@ -101,14 +105,18 @@ def concept_auc(c, target):
 
 @torch.no_grad()
 def predict(head, feat, valid, device):
+    """-> c [N, K], logits [N, A], {extra output: [N, A]} (head.forward_outputs(), e.g. logits_sym, z)."""
     head.eval()
-    cs, logits = [], []
+    names = head.forward_outputs() if hasattr(head, 'forward_outputs') else ()
+    cs, logits, extra = [], [], {k: [] for k in names}
     for i in range(0, len(valid), EVAL_BATCH):
         idx = torch.arange(i, min(i + EVAL_BATCH, len(valid)))
         out = head(batches(feat, idx, device), valid[idx].to(device))
         cs.append(out['c'].cpu())
         logits.append(out['logits'].cpu())
-    return torch.cat(cs), torch.cat(logits)
+        for k in names:
+            extra[k].append(out[k].float().cpu())
+    return torch.cat(cs), torch.cat(logits), {k: torch.cat(v) for k, v in extra.items()}
 
 
 def fusion_metrics(fc_logits, head_logits, labels, pairs, actions, lam=1.0):
@@ -211,6 +219,15 @@ if __name__ == '__main__':
         head = ConceptGraphHead(C, graph, joint_mask, decoder_args=decoder_args, **head_args)
         if not torch.equal(head.M, M):
             raise ValueError('graph rows differ from the concept matrix')
+    elif kind == 'full':
+        graph = make_graph(config['matrix'], config.get('graph', {}))
+        graph.save(os.path.join(config['work_dir'], 'graph.json'))
+        print(f'graph: {graph.summary()}')
+        action_args = head_args.pop('action_decoder_args', {})
+        head = ConceptActionGraphHead(C, graph, joint_mask, decoder_args=decoder_args,
+                                      action_decoder_args=action_args, **head_args)
+        if not torch.equal(head.M, M):
+            raise ValueError('graph rows differ from the concept matrix')
     elif kind == 'reason':
         head = ReasonLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args)
     else:
@@ -245,6 +262,10 @@ if __name__ == '__main__':
             loss, terms = concept_loss(out, y_train_dev[idx], M_dev, beta=config['loss']['beta'])
             if hasattr(head, 'regularizer'):
                 loss = loss + head.regularizer()
+            if hasattr(head, 'extra_loss'):
+                extra_loss, extra_terms = head.extra_loss(out, y_train_dev[idx])
+                loss = loss + extra_loss
+                terms.update(extra_terms)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             if hasattr(head, 'clip_grads'):
@@ -255,17 +276,18 @@ if __name__ == '__main__':
                 head.after_step()
             sums['loss'] += loss.item() * len(idx)
             for key, value in terms.items():
-                sums[key] += value * len(idx)
+                sums[key] = sums.get(key, 0.0) + value * len(idx)
             correct += (out['logits'].argmax(1) == y_train_dev[idx]).sum().item()
         row = dict(epoch=epoch + 1, **{k: v / N for k, v in sums.items()}, train_top1=correct / N,
                    tau=head.tau.item())
         history.append(row)
         print(f"epoch {epoch + 1}/{config['epochs']}: loss {row['loss']:.4f} (ce {row['ce']:.4f}, "
-              f"bce {row['bce']:.4f}), train top1 {100 * row['train_top1']:.2f}%, tau {row['tau']:.4f}")
+              f"bce {row['bce']:.4f}" + ''.join(f", {k} {row[k]:.4f}" for k in sums if k not in ('loss', 'ce', 'bce'))
+              + f"), train top1 {100 * row['train_top1']:.2f}%, tau {row['tau']:.4f}")
 
     if not args.eval_only:
         torch.save(head.state_dict(), head_path)                # before evaluation: a crash there keeps the model
-    c_test, logits = predict(head, feat_test, valid_test, device)
+    c_test, logits, extra = predict(head, feat_test, valid_test, device)
     pred, k0 = logits.argmax(1), fc_test.argmax(1)
     actions, _, rows = read_matrix(config['matrix'])
     pairs = confusable_pairs(actions, rows)                 # evaluation pairs: always the real ones (plan §2)
@@ -294,6 +316,11 @@ if __name__ == '__main__':
         graph=graph.summary() if graph is not None else None,
         tau=head.tau.item(),
     )
+    for key, name in (('logits_sym', 'head_sym'), ('z', 'head_neural'), ('aux', 'head_aux')):
+        if key in extra:
+            metrics[name] = topk_metrics(extra[key], y_test, ks=(1, 5))
+            metrics[f'pairs_{name}'] = {k: v for k, v in pair_metrics(extra[key].argmax(1), y_test, pairs, actions).items()
+                                        if k != 'per_pair'}
     np.save(os.path.join(config['work_dir'], 'test_concepts.npy'), c_test.numpy().astype(np.float16))
     np.save(os.path.join(config['work_dir'], 'test_logits.npy'), logits.numpy().astype(np.float32))
     if history:
@@ -302,8 +329,10 @@ if __name__ == '__main__':
     with open(os.path.join(config['work_dir'], 'kg_metrics.json'), 'w', encoding='utf-8') as handle:
         json.dump(metrics, handle, indent=2)
 
-    for key in ('head', 'k0_fc_logits'):
-        print(f'{key:>13}: ' + ', '.join(f'{k} {100 * v:.2f}%' for k, v in metrics[key].items()))
+    for key in ('head', 'head_sym', 'head_neural', 'head_aux', 'k0_fc_logits'):
+        if key in metrics:
+            extra_pcr = f", PCR {100 * metrics['pairs_' + key]['pcr']:.2f}%" if 'pairs_' + key in metrics else ''
+            print(f'{key:>13}: ' + ', '.join(f'{k} {100 * v:.2f}%' for k, v in metrics[key].items()) + extra_pcr)
     print(f"fixed / broken vs K0: {metrics['vs_k0']['fixed']} / {metrics['vs_k0']['broken']}")
     print(f"concept AUC {auc_own:.3f}; by group: "
           + ', '.join(f'{g} {a:.3f}' for g, a in metrics['concept_auc_by_group'].items()))

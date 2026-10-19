@@ -1,0 +1,52 @@
+# P3 E3-S4: full model on the S = 4 cache.
+# Whole proposed model (model/concept_action_graph.py, drawio/architecture_concept_graph.drawio):
+# concept + action decoders -> logic graph (motifs, posture OR, NOT(j|i)) -> stratified R-GCN + fuzzy executor,
+# logits = log s / tau + lam z. Weights chosen before running (plan §6.3), not tuned on test.
+work_dir: ./work_dir/concept_graph/e3_s4
+
+cache_dir: ./kg_cache
+cache_name: ntu120_xsub_joint_s4               # tools/cache_joint_features.py --segments 4
+
+matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+head: full
+graph:
+  kind: full
+  nots: True
+head_args:
+  omega: 1.0                         # closed-world NOT over absent concepts
+  nu: 1.0                            # NOT(j|i) literals
+  learn_alpha: True                  # edge weights a = softplus(theta), init 1
+  eta: 1.0e-4                        # sum |a - 1|
+  tau: 0.1
+  learn_tau: True
+  lam: 0.5                           # logits = log s / tau + lam z
+  gamma: 0.5                         # KL(softmax z || softmax(log s / tau))
+  mu: 0.5                            # margin on the NOT(j|y) partners
+  margin: 0.1
+  aux_weight: 0.1                    # CE of the action decoder's own head
+  token_drop: 0.3                    # whole action-token dropout before the R-GCN
+  use_rgcn: True
+  freeze_node_emb: False             # ablation "random E": True
+  rgcn_args:
+    bases: 4
+    use_r6: True                     # ablation: False
+    dropout: 0.1
+  decoder_args:                      # concept decoder (as CL v2)
+    d_model: 256
+    heads: 4
+    layers: 2
+    dropout: 0.1
+  action_decoder_args:               # light action decoder: the rest as decoder_args
+    layers: 1
+
+loss:
+  beta: 0.5                          # BCE of the concepts against the class row of the matrix
+
+epochs: 30
+batch_size: 256
+lr: 0.001
+weight_decay: 0.0
+seed: 0
+feature_noise: 1.0
+fusion_lambda: 1.0

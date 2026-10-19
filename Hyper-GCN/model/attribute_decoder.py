@@ -66,9 +66,10 @@ class AttributeDecoder(nn.Module):
         self.attribute_embeddings = F.normalize(attribute_embeddings.float(), dim=-1).to(device)
         self.joint_mask = joint_mask.bool().to(device)
 
-    def forward(self, features, valid):
+    def forward(self, features, valid, return_tokens=False):
         """features [N, M, C, T, V] (backbone output before pooling), valid [N, M] real actors.
-        Returns a [N, A] in (0, 1)."""
+        Returns a [N, A] in (0, 1); with return_tokens also the query states after the last layer and the
+        final LayerNorm, [N, A, d] (the concept / action tokens of model/concept_action_graph.py)."""
         N, M, C, T, V = features.shape
         if T > len(self.time_emb):
             raise ValueError(f'{T} frames, decoder built for max_frames={len(self.time_emb)}')
@@ -86,4 +87,6 @@ class AttributeDecoder(nn.Module):
         q = self.query(self.attribute_embeddings).unsqueeze(0).expand(N, -1, -1)
         for layer in self.layers:
             q = layer(q, tokens, blocked)
-        return torch.sigmoid(self.out(self.norm(q)).squeeze(-1))
+        q = self.norm(q)
+        a = torch.sigmoid(self.out(q).squeeze(-1))
+        return (a, q) if return_tokens else a
