@@ -27,7 +27,6 @@ from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
 from model.checkpoint import load_model_weights
-from model.kg_retrieval import a1_loss
 from model.training import configure_trainable_parameters, set_training_mode
 
 # from torchlight import DictAction
@@ -204,12 +203,8 @@ def get_parser():
         help='keep the epoch with the best test Top1 (the original behavior). False: report the '
              'last epoch, so no choice is made on the test split')
     parser.add_argument(
-        '--kg-loss', action=DictAction, default=dict(),
-        help='A1 loss weights for model.hypergcn_kg.Model: alpha, beta, gamma '
-             '(model/kg_retrieval.py: a1_loss)')
-    parser.add_argument(
         '--lr-scale', action=DictAction, default=dict(),
-        help='learning-rate multiplier per parameter-name prefix, e.g. {kg.decoder.: 10} for a '
+        help='learning-rate multiplier per parameter-name prefix, e.g. {head.decoder.: 10} for a '
              'module trained from scratch next to a fine-tuned backbone')
     parser.add_argument(
         '--ignore-weights',
@@ -466,26 +461,16 @@ class Processor():
             timer['dataloader'] += self.split_time()
 
             # forward
-            model_ref = self.model.module if hasattr(self.model, 'module') else self.model
-            if hasattr(model_ref, 'kg'):
-                # KG head (model/hypergcn_kg.py): labels force the ground truth into the candidates;
-                # the A1 loss replaces the label-smoothed CE, the hypergraph divergence loss stays.
-                logits, hyper_outputs, kg_out = self.model(data, label)
-                ce_loss, _ = a1_loss(kg_out, label, model_ref.kg, **self.arg.kg_loss)
-                h_loss = self.h_loss(hyper_outputs)
+            output = self.model(data)
+            if isinstance(output, tuple):
+                ce_loss = self.loss(output[0], label)
+                h_loss = self.h_loss(output[1])
                 loss = ce_loss + h_loss
-                output = logits
+                output = output[0]
             else:
-                output = self.model(data)
-                if isinstance(output, tuple):
-                    ce_loss = self.loss(output[0], label)
-                    h_loss = self.h_loss(output[1])
-                    loss = ce_loss + h_loss
-                    output = output[0]
-                else:
-                    ce_loss = self.loss(output, label)
-                    h_loss = data.new_zeros(())
-                    loss = ce_loss
+                ce_loss = self.loss(output, label)
+                h_loss = data.new_zeros(())
+                loss = ce_loss
 
             # backward
             self.optimizer.zero_grad()

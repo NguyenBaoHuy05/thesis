@@ -1,0 +1,34 @@
+# P1 E1d: as E1c with omega = 0: targeted NOT(j|i) instead of the closed-world NOT over all absent concepts.
+work_dir: ./work_dir/concept_graph/e1d
+
+cache_dir: ./kg_cache
+cache_name: ntu120_xsub_joint        # tools/cache_joint_features.py --segments 1
+
+matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+head: graph
+graph:
+  kind: flat
+  nots: True
+  seed: 0                            # only used by kind: random
+head_args:
+  omega: 0.0                         # closed-world NOT over absent concepts (CL v2: 1)
+  nu: 1.0                            # weight of the NOT(j|i) literals
+  learn_alpha: False                 # P1: edge weights fixed to 1, so E1c differs from CL v2 only by NOT(j|i)
+  tau: 0.1
+  learn_tau: True
+  decoder_args:
+    d_model: 256
+    heads: 4
+    layers: 2
+    dropout: 0.1
+
+loss:
+  beta: 0.5                          # BCE of the concepts against the class row of the matrix
+
+epochs: 30
+batch_size: 256
+lr: 0.001
+weight_decay: 0.0
+seed: 0
+feature_noise: 1.0                   # as CL v2

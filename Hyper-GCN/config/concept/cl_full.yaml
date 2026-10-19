@@ -1,7 +1,6 @@
 # Concept-logic classifier on cached l9 joint features (model/concept_logic.py, train_concept_logic.py).
 # Class = soft AND over the 102 concepts of annotations/concepts/ntu_action_concept_v2_4.csv
 # (copied from SkateFormer/concepts, v2.4): has -> c, absent -> NOT c with weight omega.
-# K2: --matrix annotations/concepts/shuffled/ntu_action_concept_v2_4_shuffle_s0.csv
 work_dir: ./work_dir/concept/cl_full
 
 cache_dir: ./kg_cache

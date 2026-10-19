@@ -3,7 +3,6 @@ import unittest
 import torch
 
 from model.attribute_decoder import AttributeDecoder
-from model.kg import NTU_BODY_PARTS, attribute_joint_mask
 
 N, M, C, T, V, A = 3, 2, 8, 4, 25, 3
 
@@ -73,35 +72,6 @@ class AttributeDecoderTests(unittest.TestCase):
             AttributeDecoder(C, torch.randn(A, 6), mask, d_model=8, heads=2)
         with self.assertRaises(ValueError):
             self.decoder(torch.randn(N, M, C, T + 1, V), self.valid)
-
-
-class JointMaskTests(unittest.TestCase):
-    KG = {'attributes': {
-        'hand_at_mouth': {'body_parts': ['hand_R', 'head']},
-        'no_parts': {},
-        'walks': {'body_parts': ['feet']},
-    }}
-
-    def test_parts_map_to_joints_and_mirror(self):
-        mask = attribute_joint_mask(self.KG)
-        expected = set(NTU_BODY_PARTS['hand_R'] + NTU_BODY_PARTS['hand_L'] + NTU_BODY_PARTS['head'])
-        self.assertEqual(set(mask[0].nonzero().flatten().tolist()), expected)
-        self.assertTrue(mask[1].all())
-        self.assertEqual(set(mask[2].nonzero().flatten().tolist()), set(NTU_BODY_PARTS['feet']))
-
-    def test_no_mirror_keeps_one_side(self):
-        mask = attribute_joint_mask(self.KG, mirror=False)
-        self.assertFalse(mask[0, list(NTU_BODY_PARTS['hand_L'][1:])].any())   # 6 is also arm_L
-        self.assertTrue(mask[0, list(NTU_BODY_PARTS['hand_R'])].all())
-
-    def test_unknown_part_raises(self):
-        with self.assertRaises(ValueError):
-            attribute_joint_mask({'attributes': {'x': {'body_parts': ['tail']}}})
-
-    def test_real_kg_parts_are_all_known(self):
-        from model.kg import load_kg
-        mask = attribute_joint_mask(load_kg('annotations/action_kg.json'))
-        self.assertTrue(mask.any(1).all())
 
 
 if __name__ == '__main__':

@@ -15,8 +15,7 @@ It is dense and was designed so that every class has its own row, so a 0 is read
 balance=True averages the has and the NOT literals separately (logic_scores), so that the ~10 concepts a
 class has are not drowned by its ~92 NOT literals.
 
-Loss: CE(logit, y) + beta BCE(c, M[y]) (class-level concept targets). Ablations: K2 = a shuffled M
-(tools/shuffle_concepts.py, every row and column keeps its number of ones); K5 = flip a concept
+Loss: CE(logit, y) + beta BCE(c, M[y]) (class-level concept targets). Ablation K5: flip a concept
 (c_j <- 1 - c_j) at test time and count predictions that change.
 
 The decoder is model/attribute_decoder.py with one-hot query inputs (a learned vector per concept,

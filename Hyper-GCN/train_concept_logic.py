@@ -1,19 +1,24 @@
-"""Train / evaluate the concept-logic head (model/concept_logic.py) on cached l9 joint features.
+"""Train / evaluate a concept head on cached l9 joint features.
 
   python train_concept_logic.py --config config/concept/cl_full.yaml [--cache-dir <folder>]
       [--work-dir <folder>] [--matrix <csv>] [--seed 0] [--device cuda]
 
-Reads <cache_dir>/<cache_name>_{train,test}_feat.npy + .npz (tools/cache_joint_features.py). K2 = the
-same config with --matrix annotations/concepts/shuffled/ntu_action_concept_v2_4_shuffle_s<seed>.csv.
-No validation split (as train_kg_head.py): the recipe is fixed in the config, test is scored once.
+config `head`:
+- cl     (default): flat soft AND over M, model/concept_logic.py (CL v1 / v2);
+- graph: concept-graph head, model/concept_graph_head.py, on the graph of config `graph`
+         (kind full | flat | random, nots, seed; model/concept_graph.py), plan KG_RETRIEVAL_PLAN/CONCEPT_GRAPH;
+- reason: REASON's logic layers on our concept decoder (model/reason_logic.py, baseline E1b).
+
+Reads <cache_dir>/<cache_name>_{train,test}_feat.npy + .npz (tools/cache_joint_features.py).
+No validation split: the recipe is fixed in the config, test is scored once.
 
 Reported (kg_metrics.json in work_dir):
 - head Top1/Top5 against K0 (cached fc_logits), samples fixed / broken against K0;
-- concept AUC (macro over concepts) of c against the class row of the matrix used for training and
-  against the real matrix (--real-matrix, default the config's): a shuffled matrix that still reaches a
-  high AUC against itself but ~0.5 against the real one is fitting a code, not the concepts;
+- concept AUC (macro over concepts) of c against the class row of the matrix;
 - K5 on the test split: zero the concept that supports the predicted class most (has, largest c) and
-  count changed predictions, against zeroing a random concept the predicted class does not have.
+  count changed predictions, against zeroing a random concept the predicted class does not have;
+- confusable pairs (model/pair_metrics.py, for every head and for K0): PCR, per-pair rate, Top1 inside /
+  outside the pairs, K5-pair (switch on M_j minus M_i, count predictions that move to j).
 """
 
 import argparse
@@ -25,11 +30,21 @@ import numpy as np
 import torch
 import yaml
 
+from model.concept_graph import build_graph, confusable_pairs, flat_graph, random_pair_graph, read_matrix
+from model.concept_graph_head import ConceptGraphHead
 from model.concept_logic import ConceptLogicHead, concept_joint_mask, concept_loss, load_concepts
 from model.concept_schema import NTU_ACTION_NAMES
-from model.kg_retrieval import topk_metrics
+from model.pair_metrics import k5_pair, pair_metrics
+from model.reason_logic import ReasonLogicHead
 
 EVAL_BATCH = 512
+
+
+def topk_metrics(scores, labels, ks=(1, 5)):
+    """Fraction of samples whose label is in the top-k scores (recall@1 = Top1)."""
+    ranked = scores.topk(max(ks), dim=1).indices
+    hit = ranked == labels.unsqueeze(1)
+    return {f'recall@{k}': hit[:, :k].any(1).float().mean().item() for k in ks}
 
 
 def load_split(cache_dir, name, split, device=None, chunk=4096):
@@ -90,6 +105,24 @@ def predict(head, feat, valid, device):
     return torch.cat(cs), torch.cat(logits)
 
 
+def make_graph(matrix, spec):
+    """Concept graph of config `graph`: kind full (plan §5) | flat (no motif / OR) | random (E1e: NOT nodes on
+    random pairs, built from the flat graph); nots False drops the NOT(j|i) nodes."""
+    actions, concepts, rows = read_matrix(matrix)
+    kind = spec.get('kind', 'full')
+    if kind == 'full':
+        graph = build_graph(actions, concepts, rows, spec.get('cfg'))
+    elif kind in ('flat', 'random'):
+        graph = flat_graph(actions, concepts, rows)
+        if kind == 'random':
+            graph = random_pair_graph(graph, seed=spec.get('seed', 0))
+    else:
+        raise ValueError(f'unknown graph kind {kind}')
+    if not spec.get('nots', True):
+        graph.nots = []
+    return graph
+
+
 @torch.no_grad()
 def intervention(head, c, generator):
     """K5: change rate of the prediction when the strongest supporting concept of the predicted class
@@ -114,8 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--config', required=True)
     parser.add_argument('--cache-dir')
     parser.add_argument('--work-dir')
-    parser.add_argument('--matrix', help='overrides matrix (K2: a shuffled matrix)')
-    parser.add_argument('--real-matrix', help='matrix the concept AUC is also reported against (default: config matrix)')
+    parser.add_argument('--matrix', help='overrides matrix')
     parser.add_argument('--seed', type=int)
     parser.add_argument('--feature-noise', type=float, help='overrides feature_noise')
     parser.add_argument('--device', default='cuda')
@@ -123,7 +155,6 @@ if __name__ == '__main__':
 
     with open(args.config, encoding='utf-8') as handle:
         config = yaml.safe_load(handle)
-    real_matrix = args.real_matrix or config['matrix']
     for key in ('cache_dir', 'work_dir', 'matrix', 'seed', 'feature_noise'):
         if getattr(args, key) is not None:
             config[key] = getattr(args, key)
@@ -134,9 +165,6 @@ if __name__ == '__main__':
     device = torch.device(args.device)
 
     M, names, meta = load_concepts(config['matrix'], config['metadata'], NTU_ACTION_NAMES)
-    M_real, real_names, _ = load_concepts(real_matrix, config['metadata'], NTU_ACTION_NAMES)
-    if real_names != names:
-        raise ValueError('real and training matrices have different concept columns')
     joint_mask = concept_joint_mask(names, meta)
 
     feat_train, valid_train, _, y_train = load_split(config['cache_dir'], config['cache_name'], 'train', device)
@@ -147,13 +175,28 @@ if __name__ == '__main__':
 
     head_args = dict(config.get('head_args', {}))
     decoder_args = dict(dict(num_person=n_person, max_frames=S), **head_args.pop('decoder_args', {}))
-    head = ConceptLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args).to(device)
+    kind = config.get('head', 'cl')
+    graph = None
+    if kind == 'cl':
+        head = ConceptLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args)
+    elif kind == 'graph':
+        graph = make_graph(config['matrix'], config.get('graph', {}))
+        graph.save(os.path.join(config['work_dir'], 'graph.json'))
+        print(f'graph: {graph.summary()}')
+        head = ConceptGraphHead(C, graph, joint_mask, decoder_args=decoder_args, **head_args)
+        if not torch.equal(head.M, M):
+            raise ValueError('graph rows differ from the concept matrix')
+    elif kind == 'reason':
+        head = ReasonLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args)
+    else:
+        raise ValueError(f'unknown head {kind}')
+    head = head.to(device)
     optimizer = torch.optim.Adam(head.parameters(), lr=config['lr'], weight_decay=config.get('weight_decay', 0.0))
     steps = config['epochs'] * ((N + config['batch_size'] - 1) // config['batch_size'])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=steps)
     M_dev, y_train_dev, valid_train_dev = head.M, y_train.to(device), valid_train.to(device)
-    # Gaussian noise on the train features, in units of each channel's std (train only, as feature_noise
-    # in train_kg_head.py): the head reaches 100% train top1 on clean cached features.
+    # Gaussian noise on the train features, in units of each channel's std (train only): the head
+    # reaches 100% train top1 on clean cached features.
     noise = config.get('feature_noise', 0.0)
     std = channel_std(feat_train, valid_train_dev)[None, None, :, None, None] if noise else None
 
@@ -169,10 +212,14 @@ if __name__ == '__main__':
                 x = x + noise * std * torch.randn_like(x)
             out = head(x, valid_train_dev[idx])
             loss, terms = concept_loss(out, y_train_dev[idx], M_dev, beta=config['loss']['beta'])
+            if hasattr(head, 'regularizer'):
+                loss = loss + head.regularizer()
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
             scheduler.step()
+            if hasattr(head, 'after_step'):
+                head.after_step()
             sums['loss'] += loss.item() * len(idx)
             for key, value in terms.items():
                 sums[key] += value * len(idx)
@@ -185,20 +232,30 @@ if __name__ == '__main__':
 
     c_test, logits = predict(head, feat_test, valid_test, device)
     pred, k0 = logits.argmax(1), fc_test.argmax(1)
+    actions, _, rows = read_matrix(config['matrix'])
+    pairs = confusable_pairs(actions, rows)                 # evaluation pairs: always the real ones (plan §2)
+
+    @torch.no_grad()
+    def logits_fn(c):
+        head.eval()
+        return head.logits(c.to(device)).cpu()
     auc_own, aucs_own = concept_auc(c_test, M[y_test])
-    auc_real, _ = concept_auc(c_test, M_real[y_test])
     groups = {}
     for name, a in zip(names, aucs_own):
         groups.setdefault(meta[name]['group'], []).append(a)
     metrics = dict(
-        config=config, real_matrix=real_matrix,
+        config=config,
         head=topk_metrics(logits, y_test, ks=(1, 5)), k0_fc_logits=topk_metrics(fc_test, y_test, ks=(1, 5)),
         vs_k0=dict(fixed=int(((pred == y_test) & (k0 != y_test)).sum()),
                    broken=int(((pred != y_test) & (k0 == y_test)).sum())),
-        concept_auc=auc_own, concept_auc_vs_real=auc_real,
+        concept_auc=auc_own,
         concept_auc_by_group={g: float(np.mean(v)) for g, v in groups.items()},
         concepts_auc_below_0_6=[n for n, a in zip(names, aucs_own) if a < 0.6],
         k5=intervention(head, c_test, torch.Generator().manual_seed(config['seed'])),
+        pairs=pair_metrics(pred, y_test, pairs, actions),
+        pairs_k0=pair_metrics(k0, y_test, pairs, actions),
+        k5_pair=k5_pair(logits_fn, c_test, M.cpu(), pairs),
+        graph=graph.summary() if graph is not None else None,
         tau=head.tau.item(),
     )
     torch.save(head.state_dict(), os.path.join(config['work_dir'], 'head.pt'))
@@ -211,10 +268,18 @@ if __name__ == '__main__':
     for key in ('head', 'k0_fc_logits'):
         print(f'{key:>13}: ' + ', '.join(f'{k} {100 * v:.2f}%' for k, v in metrics[key].items()))
     print(f"fixed / broken vs K0: {metrics['vs_k0']['fixed']} / {metrics['vs_k0']['broken']}")
-    print(f"concept AUC vs training matrix {auc_own:.3f}, vs real matrix {auc_real:.3f}; by group: "
+    print(f"concept AUC {auc_own:.3f}; by group: "
           + ', '.join(f'{g} {a:.3f}' for g, a in metrics['concept_auc_by_group'].items()))
     print(f"{len(metrics['concepts_auc_below_0_6'])} concepts with AUC < 0.6: "
           + ', '.join(metrics['concepts_auc_below_0_6']))
     print(f"K5: prediction changes when the strongest supporting concept is zeroed "
           f"{100 * metrics['k5']['drop_support']:.2f}%, a random absent concept "
           f"{100 * metrics['k5']['drop_random_absent']:.2f}%")
+    for key in ('pairs', 'pairs_k0'):
+        pm = metrics[key]
+        print(f"{key:>8}: PCR {100 * pm['pcr']:.2f}% on {pm['pcr_samples']} samples, top1 in pairs "
+              f"{100 * pm['top1_in_pairs']:.2f}%, outside {100 * pm['top1_outside_pairs']:.2f}%")
+    print('most confused pairs: ' + '; '.join(f"{a}/{b} {100 * r['rate']:.1f}%"
+                                              for r in metrics['pairs']['per_pair'][:8] for a, b in [r['pair']]))
+    print(f"K5-pair: {100 * metrics['k5_pair']['moved_to_partner']:.2f}% move to the partner "
+          f"({metrics['k5_pair']['samples']} samples)")

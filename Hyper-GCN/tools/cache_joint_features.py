@@ -7,16 +7,20 @@
 Writes per split
     <name>_<split>_feat.npy   [N, M, C, S, V] float16, l9 output averaged inside S equal time segments
                               (written through a memmap: the NTU120 train array already takes ~11 GB of RAM)
-    <name>_<split>.npz        valid [N, M] bool (real actors, model/hypergcn_kg.py: valid_actor_mask),
-                              fc_logits [N, classes], label [N], index [N] as tools/cache_features.py
+    <name>_<split>.npz        valid [N, M] bool (real actors, model/actors.py: valid_actor_mask),
+                              fc_logits [N, classes], label [N], index [N] (dataset position of each
+                              row, as main.py's *_right.txt / *_wrong.txt)
 One pass per split. The train split uses train_feeder_args (random_rot) once, seed 0: the head sees
-one augmented view, unlike the 5 views of the z cache. Size: N x 2 x 512 x S x 25 x 2 bytes, about
+one augmented view. fc_logits is recomputed from the same features() pass (no second forward), so its
+Top1 must match the checkpoint (K0). Size: N x 2 x 512 x S x 25 x 2 bytes, about
 3.2 GB (train) and 2.6 GB (test) for S = 1.
 """
 
 import argparse
 import json
 import os
+import pickle
+import random
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -24,11 +28,46 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 import yaml
 
-from model.hypergcn_kg import valid_actor_mask
-from tools.cache_features import build_loader, fc_logits_from_features, import_class, load_frozen_model
+from model.actors import valid_actor_mask
+from model.checkpoint import load_model_weights
+
+
+def import_class(name):
+    mod_str, _sep, class_str = name.rpartition('.')
+    __import__(mod_str)
+    return getattr(sys.modules[mod_str], class_str)
+
+
+def fc_logits_from_features(model, features):
+    """Replicate `Model.forward`'s pooling (mean over flattened T*V, then over actors) + `fc`,
+    so this equals `model(x)[0]` (up to float summation order) without a second backbone pass."""
+    pooled = features.flatten(3).mean(3).mean(1)
+    return model.fc(model.drop_out(pooled))
+
+
+def load_frozen_model(config, weights_path, device):
+    Model = import_class(config['model'])
+    model = Model(**config['model_args']).to(device).eval()
+    if weights_path.endswith('.pkl'):
+        with open(weights_path, 'rb') as handle:
+            weights = pickle.load(handle)
+    else:
+        weights = torch.load(weights_path, map_location='cpu')
+    report = load_model_weights(model, weights)
+    return model, report
+
+
+def build_loader(dataset, batch_size, num_worker, seed):
+    # Workers draw their torch/numpy/random seeds from the main torch RNG at iteration start.
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=False,
+                      num_workers=num_worker, drop_last=False)
 
 
 def segment_mean(features, segments):

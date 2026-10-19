@@ -1,7 +1,6 @@
-"""model/concept_logic.py, tools/shuffle_concepts.py on the real concept files and toy inputs."""
+"""model/concept_logic.py on the real concept files and toy inputs."""
 
 import os
-import random
 import unittest
 
 import torch
@@ -9,7 +8,6 @@ import torch
 from model.concept_logic import (ConceptLogicHead, concept_joint_mask, concept_loss, load_concepts,
                                  logic_scores)
 from model.concept_schema import NTU_ACTION_NAMES
-from tools.shuffle_concepts import read, shuffle
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MATRIX = os.path.join(ROOT, 'annotations', 'concepts', 'ntu_action_concept_v2_4.csv')
@@ -68,14 +66,6 @@ class ConceptLogicTests(unittest.TestCase):
         loss.backward()
         self.assertIsNotNone(head.decoder.out.weight.grad)
         self.assertEqual(set(terms), {'ce', 'bce'})
-
-    def test_shuffle_keeps_degrees_and_distinct_rows(self):
-        _, _, M = read(MATRIX)
-        S = shuffle(M, random.Random(0), 2000)
-        self.assertEqual([sum(r) for r in S], [sum(r) for r in M])
-        self.assertEqual([sum(c) for c in zip(*S)], [sum(c) for c in zip(*M)])
-        self.assertEqual(len({tuple(r) for r in S}), len(S))
-        self.assertNotEqual(S, M)
 
 
 if __name__ == '__main__':

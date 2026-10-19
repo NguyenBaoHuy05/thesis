@@ -3,7 +3,8 @@ import unittest
 import torch
 
 from model.hypergcn_large import Model
-from tools.cache_features import fc_logits_from_features, pooled_z, run_pass, valid_actor_mask
+from model.actors import valid_actor_mask
+from tools.cache_joint_features import fc_logits_from_features, segment_mean
 
 MODEL_ARGS = dict(num_class=120, num_point=25, num_person=2, hyper_joints=3,
                   graph='graph.ntu_rgb_d.Graph', graph_args=dict(labeling_mode='virtual_ensemble'))
@@ -43,44 +44,14 @@ class ValidActorMaskTests(unittest.TestCase):
         self.assertEqual(valid.tolist(), [[True, False], [True, True]])
 
 
-class PooledZTests(unittest.TestCase):
-    def test_channelwise_max_over_valid_actors_only(self):
-        # [N=1, M=2, C=2, T=1, V=1]: actor 0 wins channel 0, actor 1 wins channel 1.
-        features = torch.tensor([[[[[1.0]], [[5.0]]], [[[9.0]], [[2.0]]]]])
-        valid = torch.tensor([[True, True]])
-        z = pooled_z(features, valid)
-        self.assertEqual(z.tolist(), [[9.0, 5.0]])
+class SegmentMeanTests(unittest.TestCase):
+    def test_one_segment_is_the_time_mean(self):
+        features = torch.randn(2, 2, 4, 12, 25)
+        torch.testing.assert_close(segment_mean(features, 1)[:, :, :, 0], features.mean(3))
 
-    def test_invalid_actor_is_ignored_even_if_larger(self):
-        features = torch.tensor([[[[[1.0]], [[5.0]]], [[[99.0]], [[99.0]]]]])
-        valid = torch.tensor([[True, False]])
-        z = pooled_z(features, valid)
-        self.assertEqual(z.tolist(), [[1.0, 5.0]])
-
-    def test_no_valid_actor_raises(self):
-        features = torch.zeros(1, 2, 2, 1, 1)
-        valid = torch.tensor([[False, False]])
-        with self.assertRaises(ValueError):
-            pooled_z(features, valid)
-
-
-class EarlierLayerTests(unittest.TestCase):
-    def test_hooked_layer_equals_a_pass_stopped_at_that_layer(self):
-        torch.manual_seed(0)
-        model = Model(**MODEL_ARGS).eval()
-        x = torch.randn(3, 3, 64, 25, 2)
-        loader = [(x, torch.tensor([0, 1, 2]), torch.tensor([10, 11, 12]))]
-        zs, fc_logits, labels, names = run_pass(model, loader, 'cpu', layers=('l6', 'l9'))
-        valid = valid_actor_mask(x)
-        with torch.no_grad():
-            expected_l6 = pooled_z(model.features(x, until='l6')[0], valid)
-            expected_l9 = pooled_z(model.features(x, until='l9')[0], valid)
-        self.assertEqual(zs['l6'].shape, (3, 256))
-        torch.testing.assert_close(torch.from_numpy(zs['l6']), expected_l6)
-        torch.testing.assert_close(torch.from_numpy(zs['l9']), expected_l9)
-        self.assertEqual(names, [10, 11, 12])
-        # Hooks are removed after the pass.
-        self.assertFalse(model.l6._forward_hooks)
+    def test_equal_segments(self):
+        features = torch.arange(6.).view(1, 1, 1, 6, 1)
+        self.assertEqual(segment_mean(features, 3).flatten().tolist(), [0.5, 2.5, 4.5])
 
 
 if __name__ == '__main__':

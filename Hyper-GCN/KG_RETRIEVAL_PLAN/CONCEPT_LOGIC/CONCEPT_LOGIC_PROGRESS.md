@@ -4,6 +4,11 @@
 > [A1G_PROGRESS.md](../A1G_GRAPH_RETRIEVAL_PLAN/A1G_PROGRESS.md)), chuyển sang **lớp = logic trên concept**.
 > Số liệu chép từ log chạy thật; ô chưa có số ghi *chờ*.
 > Cập nhật lần cuối: 2026-10-19
+>
+> **2026-10-19 (cuối ngày): bỏ toàn bộ đối chứng xáo (K2).** Đã xoá `annotations/concepts/shuffled/`,
+> `tools/shuffle_concepts.py`, cờ `--real-matrix`. Số K2 bên dưới giữ làm lịch sử. Hướng tiếp theo: hai nhánh
+> decoder (action + concept) → đồ thị logic concept / cổng AND-OR / action / NOT-action học bằng R-GCN
+> (sơ đồ: `drawio/architecture_concept_graph.drawio`).
 
 ## Kiến trúc (đã chốt với người dùng)
 
@@ -21,8 +26,7 @@ skeleton → Hyper-GCN (đóng băng, l9) → map [M, C, T, V] → trung bình t
   Ma trận dày và thiết kế để tách lớp → ô 0 đọc là **không có** (closed world), trọng số ω.
 - Không có tham số riêng theo lớp: lớp chỉ được quyết định qua concept.
 - Loss: CE + β BCE(c, M[y]) (β = 0.5).
-- Code: `model/concept_logic.py`, `tools/cache_joint_features.py`, `tools/shuffle_concepts.py`,
-  `train_concept_logic.py`, `config/concept/cl_full.yaml`, test `tests/test_concept_logic.py` (cần torch, chạy Colab).
+- Code: `model/concept_logic.py`, `tools/cache_joint_features.py`, `train_concept_logic.py`, `config/concept/cl_full.yaml`, test `tests/test_concept_logic.py` (cần torch, chạy Colab).
 - Bước 1 chạy trên cache (S = 1, vài phút / run). Fine-tune qua `main.py` chỉ làm nếu bước 1 đạt.
 
 ## Rủi ro đã biết
@@ -52,7 +56,6 @@ cp /content/jcache/ntu120_xsub_joint_* /content/drive/MyDrive/BaoHuy/kg_cache/
 %env J=/content/jcache
 %env W=/content/drive/MyDrive/BaoHuy/work_dir/concept
 python train_concept_logic.py --config config/concept/cl_full.yaml --cache-dir $J --work-dir $W/cl_full
-python train_concept_logic.py --config config/concept/cl_full.yaml --cache-dir $J --work-dir $W/cl_k2_s0 --matrix annotations/concepts/shuffled/ntu_action_concept_v2_4_shuffle_s0.csv
 ```
 
 ## Kết quả
@@ -74,31 +77,6 @@ Theo lý thuyết ECOC, mã cách xa nhau → dễ chọn đúng hạng 1 (Top1 
 xếp hạng không liên quan nhau (Top5 ↓). Vì vậy K2 này **lẫn hai yếu tố** (ngữ nghĩa và độ tách mã), và cả Top1 lẫn
 Top5 của nó đều không đo sạch đóng góp của ngữ nghĩa.
 
-### K2-hoán vị hàng (đối chứng sạch, 2026-10-19)
-
-`tools/shuffle_concepts.py --mode rows`: mỗi lớp nhận hàng concept của một lớp khác (hoán vị không điểm bất động).
-Tập mã và mọi khoảng cách giữa các mã giữ **y hệt** ma trận thật, chỉ đổi lớp nào mang mã nào.
-File: `annotations/concepts/shuffled/ntu_action_concept_v2_4_rowperm_s{0,1,2}.csv`.
-
-Dự đoán ghi trước khi chạy:
-- Nếu ngữ nghĩa concept có ích: Full > K2-perm ở **cả** Top1 và Top5.
-- Quy tắc (chốt trước): ngữ nghĩa có đóng góp nếu Full − TB(K2-perm, 3 seed) ≥ 0.5 Top1 **hoặc** ≥ 1.0 Top5,
-  và cả 3 seed K2-perm đều thấp hơn Full.
-- Dự đoán của mình: Top1 chênh nhỏ (≤ 0.5), Top5 Full hơn 1–3 điểm.
-
-```
-for s in 0 1 2; do
-  python train_concept_logic.py --config config/concept/cl_full.yaml --cache-dir $J --work-dir $W/cl_perm_s$s \
-      --matrix annotations/concepts/shuffled/ntu_action_concept_v2_4_rowperm_s$s.csv --seed $s
-done
-```
-
-| | Top1 / Top5 | AUC concept (train / thật) | K5 |
-|---|---|---|---|
-| K2-perm s0 | *chờ* | *chờ* | *chờ* |
-| K2-perm s1 | *chờ* | *chờ* | *chờ* |
-| K2-perm s2 | *chờ* | *chờ* | *chờ* |
-
 Lần 1 (2026-10-19, seed 0, S = 1): train top1 100% ở cả hai.
 
 - **Theo quy tắc chốt trước: không đạt.** Full − K2 = −0.18 Top1 (cần ≥ +1.0). Đúng dự đoán ECOC: decoder học
@@ -112,7 +90,7 @@ Lần 1 (2026-10-19, seed 0, S = 1): train top1 100% ở cả hai.
   một concept hiếm khi đổi quyết định.
 - Top1 thấp hơn K0 3.5 điểm (fixed / broken 770 / 2570): head quá khớp train (1 view, 100%).
 
-## v2: nâng cấp + đối chứng hoán vị hàng chạy cùng lúc (2026-10-19, chốt trước khi chạy)
+## v2: nâng cấp (2026-10-19, chốt trước khi chạy)
 
 Hai nâng cấp nhắm vào hai điểm yếu đo được ở lần 1 (`config/concept/cl_v2.yaml`):
 
@@ -121,23 +99,15 @@ Hai nâng cấp nhắm vào hai điểm yếu đo được ở lần 1 (`config/
 | Logic cân bằng (`balance: True`) | K5 chỉ 6.6%: ~92 literal NOT nhấn chìm ~10 literal has | `score = (mean_has log c + ω mean_not log(1 − c)) / (1 + ω)`: mỗi literal has nặng ~1/10 |
 | Nhiễu đặc trưng (`feature_noise: 1.0`) | Train top1 100%, test thấp hơn K0 3.5 | Nhiễu Gauss theo std từng kênh, chỉ khi train |
 
-Mức nhiễu 1.0 chốt trước, không quét theo test. Đối chứng hoán vị hàng dùng **đúng cấu hình v2**.
+Mức nhiễu 1.0 chốt trước, không quét theo test.
 
 Dự đoán:
 - Full v2: Top1 ≥ Full v1 (84.09); K5 tắt concept hỗ trợ > 20% (v1: 6.6%).
-- Quy tắc ngữ nghĩa (như trên): Full v2 − TB(K2-perm v2, 3 seed) ≥ 0.5 Top1 hoặc ≥ 1.0 Top5, cả 3 seed thấp hơn Full.
 
 ```
 python train_concept_logic.py --config config/concept/cl_v2.yaml --cache-dir $J --work-dir $W/cl_v2
-for s in 0 1 2; do
-  python train_concept_logic.py --config config/concept/cl_v2.yaml --cache-dir $J --work-dir $W/cl_v2_perm_s$s \
-      --matrix annotations/concepts/shuffled/ntu_action_concept_v2_4_rowperm_s$s.csv --seed $s
-done
 ```
 
-| | Top1 / Top5 | sửa / phá vs K0 | AUC concept (train / thật) | K5: tắt hỗ trợ / ngẫu nhiên | train top1 cuối |
+| | Top1 / Top5 | sửa / phá vs K0 | AUC concept | K5: tắt hỗ trợ / ngẫu nhiên | train top1 cuối |
 |---|---|---|---|---|---|
 | Full v2 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
-| K2-perm v2 s0 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
-| K2-perm v2 s1 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
-| K2-perm v2 s2 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
