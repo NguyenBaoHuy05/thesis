@@ -393,8 +393,14 @@ def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logit
         headroom=verify_headroom(torch.cat(cand_all), torch.cat(s_c_all), torch.cat(v_all),
                                  head.lam.item(), labels, head.W.cpu(), ev_all),
     )
+    # Errors whose prediction is the KG `opposite` partner of the true class (put_on / take_off, ...):
+    # the confusions the THEN attributes target.
+    S_opp = kg.S_opp.cpu()
+    metrics['opposite_pair_errors'] = dict(head=int(S_opp[labels, pred].sum()),
+                                           retrieval=int(S_opp[labels, s_all.argmax(1)].sum()))
     if fc_logits is not None:
         metrics['vs_k0'] = fixed_broken(pred, fc_logits.cpu().argmax(1), labels)
+        metrics['opposite_pair_errors']['k0'] = int(S_opp[labels, fc_logits.cpu().argmax(1)].sum())
     if reliability is not None:
         columns, R = reliability
         metrics['gated_pair'] = gated_pair_check(torch.cat(cand_all), torch.cat(s_c_all), a_all, labels,
@@ -566,6 +572,8 @@ if __name__ == '__main__':
                   f"wrong {100 * h['wrong']:.1f}%, tie {100 * h['tie']:.1f}% "
                   f"(no opposed predicate in KG {100 * h.get('tie_no_opposed', float('nan')):.1f}%); "
                   f"median s gap {h['gap_s']:.2f}, median |lambda dv| {h['lam_dv']:.3f}")
+        print('errors inside KG opposite pairs: ' + ', '.join(
+            f'{name} {count}' for name, count in metrics['opposite_pair_errors'].items()))
         for name, h in metrics.get('gated_pair', {}).items():
             print(f"pair-gated v true vs rival, retrieval {name:>7} (n {h['n']}): covered {100 * h['covered']:.1f}%, "
                   f"right {100 * h['right']:.1f}%, wrong {100 * h['wrong']:.1f}% (of covered)")

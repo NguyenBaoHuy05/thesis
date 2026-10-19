@@ -224,6 +224,56 @@ SINGLE = {
 }
 
 
+# ---- temporal order: events per frame and THEN(A, B) -------------------------------------------------
+# An event is a per-frame series f -> [N, T], higher = "happening now". THEN(A, B) asks whether A happens
+# and B happens after it: with each series smoothed and min-max normalized per sample (so only the shape
+# over time counts, not the scale),
+#     THEN(A, B) = max_t min( max_{t' <= t} A(t'), max_{t'' > t} B(t'') )      in [0, 1].
+# It is 1 when the peak of A comes before the peak of B, and drops as B only peaks before A. Order is what
+# the has / lacks attributes above cannot express (put_on / take_off pairs share their static attributes).
+
+EVENTS = {
+    'hand_at_head': lambda f: -np.min([f.dist(f.joint(h), f.joint(HEAD)) for h in HAND], 0),
+    'above_head': lambda f: np.max([f.height(f.joint(h) - f.joint(HEAD)) for h in HAND], 0),
+    'behind': lambda f: np.max([-f.fwd(f.joint(h) - f.joint(SPINE_MID)) for h in HAND], 0),
+    'chest': lambda f: -np.min([f.dist(f.joint(h), _chest(f)) for h in HAND], 0),
+    'low': lambda f: -f.height(f.active_hand()),
+}
+
+# THEN attributes of the KG (tools/add_then_attributes.py): name -> (event A, event B).
+THEN = {
+    'then_hand_at_head_to_above_head': ('hand_at_head', 'above_head'),
+    'then_above_head_to_hand_at_head': ('above_head', 'hand_at_head'),
+    'then_behind_to_chest': ('behind', 'chest'),
+    'then_chest_to_behind': ('chest', 'behind'),
+    'then_low_to_chest': ('low', 'chest'),
+    'then_chest_to_low': ('chest', 'low'),
+}
+
+
+def normalized_event(series, smooth=5):
+    """Moving average over `smooth` frames, then min-max to [0, 1] per row; a flat row -> 0."""
+    kernel = np.ones(smooth) / smooth
+    pad = np.pad(series, ((0, 0), (smooth // 2, smooth - 1 - smooth // 2)), mode='edge')
+    s = np.stack([np.convolve(row, kernel, mode='valid') for row in pad])
+    low, span = s.min(1, keepdims=True), np.ptp(s, axis=1, keepdims=True)
+    return np.where(span > EPS, (s - low) / np.maximum(span, EPS), 0.0)
+
+
+def then(a, b):
+    """THEN of two [N, T] series in [0, 1]: max_t min(prefix max of a up to t, suffix max of b after t)."""
+    before = np.maximum.accumulate(a, axis=1)[:, :-1]
+    after = np.maximum.accumulate(b[:, ::-1], axis=1)[:, ::-1][:, 1:]
+    return np.minimum(before, after).max(1)
+
+
+def _then_predicate(first, second):
+    return lambda f: then(normalized_event(EVENTS[first](f)), normalized_event(EVENTS[second](f)))
+
+
+SINGLE.update({name: _then_predicate(*events) for name, events in THEN.items()})
+
+
 # ---- two-person predicates: (f0, f1) -> phi [N] --------------------------------------------------
 
 def _between(f0, f1):

@@ -113,6 +113,30 @@ class PredicateTests(unittest.TestCase):
         self.assertEqual(values.shape, (1, len(pr.PREDICATES)))
         self.assertTrue(np.isfinite(values).all() and valid.all())
 
+    def test_then_follows_peak_order(self):
+        s = np.linspace(0, 1, T)
+        early, late = np.exp(-((s - .2) / .1) ** 2)[None], np.exp(-((s - .8) / .1) ** 2)[None]
+        self.assertGreater(pr.then(early, late)[0], 0.99)
+        self.assertLess(pr.then(late, early)[0], 0.1)
+        flat = pr.normalized_event(np.ones((1, T)))
+        np.testing.assert_array_equal(flat, 0.0)
+
+    def test_then_hat_on_versus_off(self):
+        """Put on: hand above the head, then down onto it. Take off: hand on the head, then up and away."""
+        top, above = (0, .78, 0), (0, 1.05, 0)
+
+        def path(first, second):
+            def edit(seq, t, s):                      # right hand: rest, first, second, rest
+                if .1 <= s <= .8:
+                    seq[t, 11] = first if s < .45 else second
+            return edit
+        on = feeder(sequence(path(above, top)))
+        off = feeder(sequence(path(top, above)))
+        self.assertGreater(phi(on, 'then_above_head_to_hand_at_head')[0],
+                           phi(on, 'then_hand_at_head_to_above_head')[0])
+        self.assertGreater(phi(off, 'then_hand_at_head_to_above_head')[0],
+                           phi(off, 'then_above_head_to_hand_at_head')[0])
+
     def test_unknown_predicate_is_rejected(self):
         with self.assertRaises(ValueError):
             pr.compute(feeder(sequence()), ('not_an_attribute',))

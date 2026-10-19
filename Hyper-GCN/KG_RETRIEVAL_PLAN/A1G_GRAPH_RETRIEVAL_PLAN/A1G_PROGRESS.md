@@ -4,7 +4,7 @@
 > Số liệu A1 dùng làm mốc: [A1_PROGRESS.md](../A1_RETRIEVE_VERIFY_FUSE_PLAN/A1_PROGRESS.md).
 > Số liệu chép từ log chạy thật; ô chưa có số ghi *chờ*, không ước lượng.
 
-Cập nhật lần cuối: **2026-10-18**
+Cập nhật lần cuối: **2026-10-19**
 
 ## Tổng quan
 
@@ -13,8 +13,8 @@ Cập nhật lần cuối: **2026-10-18**
 | G0 | Code + test | **Đã viết**. Test numpy (vị từ) 10/10 pass trên máy local; test torch chưa chạy (máy local không nạp được torch) | `python -m pytest tests -q` trên Colab |
 | G1 | Retrieval đồ thị (G1, G1-0, G1-K2) | G1, G1-0 seed 0 xong: G1 ≈ G1-0 | G1-K2; thêm seed nếu cần |
 | G2 | Full-z, K2-z (chẩn đoán) | Chưa chạy | |
-| G3 | Cặp khó, mở rộng KG, kiểm tra vị từ | `hard_pairs.py` đã chạy trên KG thật (dưới); vị từ chưa cache | `cache_predicates.py`, duyệt KG |
-| G4 | Full-pred, K2-pred | Chưa chạy (cần G3) | |
+| G3 | Cặp khó, mở rộng KG, kiểm tra vị từ | Vị từ đã cache; lọc theo cặp KG xong; `hard_pairs.py --predicates-from` | Mở rộng KG / vị từ cho cặp khó (xem Bàn giao) |
+| G4 | Full-pred, K2-pred | Lần 1–4 xong (seed 0): grounding rõ (Full > K2), **Top1 không tăng** | Hướng sửa: xem Bàn giao |
 | G5 | K5 can thiệp | Chưa bắt đầu | |
 | G6 | Fine-tune (tùy chọn) | Chỉ khi G4 đạt | |
 
@@ -306,3 +306,137 @@ Lọc theo cặp KG: giữ 29 vị từ (bỏ 8), phân biệt được 68 / 280
   đối lập, kể cả cặp nó không phân biệt được trên train.
 - Tiếp: đo trần của VERIFY có cổng theo cặp (`gated_pair_check`): chỉ dùng vị từ phân biệt đúng cặp
   (lớp đúng, đối thủ) trên train (AUC ≥ 0.75, mọi cặp lớp, không chỉ cặp KG).
+
+`gated_pair_check` (cổng theo cặp, AUC theo cặp trên train ≥ 0.75, mọi cặp lớp):
+
+| | Full-pair | K2-pair |
+|---|---|---|
+| cặp lớp có ≥ 1 vị từ đáng tin | 1914 | 1133 |
+| lỗi: phủ / đúng / sai | 12.0% / 49.4 / 49.0 | 5.8% / 52.2 / 47.0 |
+| đúng: phủ / đúng / sai | 22.8% / 67.1 / 32.1 | 8.3% / 61.2 / 37.1 |
+
+- **Kể cả vị từ tách đúng cặp đó trên train (AUC ≥ 0.75), trên các mẫu retrieval sai ở test nó vẫn ngẫu nhiên**
+  (~720 mẫu, 49.4 / 49.0). Trên mẫu retrieval đúng thì tốt (67 / 32).
+- Giải thích: lỗi tương quan. Mẫu mà backbone nhầm là mẫu có chuyển động giống lớp đối thủ, nên số đo hình học
+  của nó cũng giống lớp đối thủ. Vị từ là hàm của cùng skeleton mà backbone đã nhìn, nên không thêm thông tin
+  độc lập đúng ở chỗ backbone sai.
+- Hệ quả: VERIFY hậu kiểm bằng vị từ skeleton không thể nâng Top1 trên K0 với bộ vị từ hiện tại. Nó vẫn có giá trị
+  grounding / giải thích (AUC 0.70 vs 0.52, λ 1.69 vs 0.70).
+- K2 với cổng cũng đạt 61 / 37 trên mẫu đúng: cổng chọn chiều theo dữ liệu train, nên đo khả năng tổng quát của vị từ
+  hơn là tính đúng của KG; khi dùng cổng phải so K2 cẩn thận.
+
+## THEN: thuộc tính thứ tự thời gian (2026-10-19, code xong, chờ chạy)
+
+Mục tiêu: bằng chứng **độc lập** với backbone ở đúng chỗ nó sai (hướng B của Bàn giao). Sơ đồ: drawio trang
+"A1-G Logic (AND / NOT)", panel THEN.
+
+| Thành phần | File |
+|---|---|
+| 5 sự kiện theo frame (`hand_at_head`, `above_head`, `behind`, `chest`, `low`) + `THEN(A, B) = max_t min(max_{t'≤t} A, max_{t''>t} B)` trên chuỗi làm mượt, min-max theo mẫu; 6 vị từ `then_*` (tổng 45 vị từ) | `model/predicates.py` (`EVENTS`, `THEN`), test `tests/test_predicates.py` (12/12 pass local) |
+| KG + 6 thuộc tính THEN, 22 cạnh (w = 2) đọc từ trường `phases` của KG; `lacks` chỉ cho cặp đảo chiều mà phases nói rõ thứ tự ngược | `tools/add_then_attributes.py` → `annotations/action_kg_then.json` (validate: 0 lỗi) |
+| Đối chứng: K2 (`annotations/kg_then_shuffled/`, 3 seed, validate 0 lỗi) và **KG đảo THEN** (has ↔ lacks của cạnh THEN, phần còn lại giữ nguyên) | `annotations/action_kg_then_reversed.json` |
+| Kiểm tra trần trước khi train (numpy, chỉ cần cache) | `tools/then_check.py` |
+| Chẩn đoán mới: số lỗi rơi vào cặp `opposite` của KG (K0 / retrieval / head) | `train_kg_head.py` (`opposite_pair_errors`) |
+
+Cặp được phủ: put_on / take_off a_hat_cap, headphone, jacket, bag; put_object_into_bag / take_object_out_of_bag.
+put_on / take_off a_shoe: phases không cho thứ tự phân biệt → không có cạnh.
+
+Dự đoán ghi **trước khi chạy**:
+
+- `then_check`: lỗi K0 trong 5 cặp nhỏ (trần Top1 ≤ +0.3); binary accuracy K0 trong cặp ≥ 95%.
+- Quy tắc đi tiếp (chốt trước): vote THEN đúng **≥ 60%** trên lỗi K0 trong cặp (và hơn vote vị từ tĩnh) → chạy
+  các mô hình. Dưới 60% → dừng, ghi kết luận "lỗi tương quan cả ở chiều thời gian".
+- Nếu đi tiếp: Top1 Full-THEN − Full-pair ≤ +0.1 (chỉ 10 lớp); `opposite_pair_errors` của head giảm so với
+  Full-pair; KG đảo THEN có nhiều lỗi trong cặp hơn Full-THEN; K2 ≈ Full-pair.
+
+Lệnh (Colab):
+
+```
+%env C=/content/drive/MyDrive/BaoHuy/kg_cache
+%env W=/content/drive/MyDrive/BaoHuy/work_dir/kg
+python -m pytest tests -q
+python tools/cache_predicates.py --out-dir $C --name ntu120_xsub_pred_then --kg annotations/action_kg_then.json
+python tools/then_check.py --cache-dir $C
+# chỉ chạy tiếp nếu qua quy tắc 60%
+python train_kg_head.py --config config/kg/g_full_pred.yaml --cache-dir $C --work-dir $W/g_full_pair_n4_v2 --predicate-select pair --feature-noise 4
+python train_kg_head.py --config config/kg/g_then_pred.yaml --cache-dir $C --work-dir $W/g_then_n4
+python train_kg_head.py --config config/kg/g_then_pred.yaml --cache-dir $C --work-dir $W/g_then_k2_n4  --kg annotations/kg_then_shuffled/action_kg_shuffle_s0.json --predicates-from $W/g_then_n4/kg_metrics.json
+python train_kg_head.py --config config/kg/g_then_pred.yaml --cache-dir $C --work-dir $W/g_then_rev_n4 --kg annotations/action_kg_then_reversed.json --predicates-from $W/g_then_n4/kg_metrics.json
+```
+
+`then_check`:
+
+| Cặp | n test | lỗi K0 trong cặp | binary K0 | vote THEN: test / trên lỗi K0 | vote tĩnh: test / trên lỗi K0 |
+|---|---|---|---|---|---|
+| (5 cặp) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+
+| | Top1 head / retrieval | λ | lỗi trong cặp opposite (head / retrieval / K0) | sửa / phá vs retrieval |
+|---|---|---|---|---|
+| Full-pair (chạy lại, baseline) | *chờ* | *chờ* | *chờ* | *chờ* |
+| Full-THEN | *chờ* | *chờ* | *chờ* | *chờ* |
+| K2-THEN | *chờ* | *chờ* | *chờ* | *chờ* |
+| THEN đảo | *chờ* | *chờ* | *chờ* | *chờ* |
+
+## Bàn giao (2026-10-19, cuối session)
+
+### Quyết định
+
+- **Giữ kiến trúc A1-G cũ: RETRIEVE (graph) → Contrastive VERIFY bằng vị từ hình học.** Trong session đã cân
+  nhắc bỏ vị từ và chuyển sang "v2: KG làm cấu trúc bộ phân loại" (ghép vector lớp từ hàng KG, kiểu ML-GCN +
+  ALE). Đánh giá tính mới: v2 thấp–trung bình (gần ML-GCN, CVPR 2019), A1-G cũ cao hơn → **bỏ v2, quay lại A1-G**.
+  Trang drawio v2 đã xóa.
+- Không zero-shot. Đánh giá: Top1 so với K0 (87.63), đối chứng K2 (KG xáo trộn), K5 (can thiệp `p ← 1 − p`).
+- Một seed (0) khi phát triển.
+
+### Cấu hình hiện tại (lệnh chuẩn)
+
+```
+%env C=/content/drive/MyDrive/BaoHuy/kg_cache
+%env W=/content/drive/MyDrive/BaoHuy/work_dir/kg
+# Full: lọc vị từ theo cặp KG (29 vị từ), nhiễu 4
+python train_kg_head.py --config config/kg/g_full_pred.yaml --cache-dir $C --work-dir $W/g_full_pair_n4 --predicate-select pair --feature-noise 4
+# K2: cùng tập vị từ
+python train_kg_head.py --config config/kg/g_full_pred.yaml --cache-dir $C --work-dir $W/g_k2_pair_n4     --kg annotations/kg_shuffled/action_kg_shuffle_s0.json --predicates-from $W/g_full_pair_n4/kg_metrics.json --feature-noise 4
+```
+
+Cờ mới trong `train_kg_head.py` (session này): `--feature-noise`, `--predicates-from`, `--min-train-auc`
+(`none` = giữ hết), `--predicate-select global|pair`. Chẩn đoán in ra: `v true vs rival` (`verify_headroom`,
+có tách hòa do `no opposed predicate in KG`) và `pair-gated v true vs rival` (`gated_pair_check`, trần của VERIFY
+có cổng theo cặp, `pair_reliability` tính trên train). `tools/hard_pairs.py --predicates-from`.
+Code đã push (commit của người dùng); file này và drawio chưa commit.
+
+### Kết quả chính (seed 0)
+
+| | Top1 | λ | AUC thuộc tính | lỗi: `v` đúng / sai / hòa | lỗi, có cổng: phủ / đúng / sai |
+|---|---|---|---|---|---|
+| K0 | 87.63 | | | | |
+| Full, 11 vị từ (lọc toàn cục), nhiễu 4 | 87.10 | 1.42 | 0.847 | 17.3 / 16.7 / 66.0 | |
+| K2, cùng 11 vị từ | 87.07 | 0.59 | 0.532 | 27.9 / 30.0 / 42.1 | |
+| Full, 29 vị từ (lọc theo cặp), nhiễu 4 | 87.06 | 1.69 | 0.695 | 50.9 / 47.9 / 1.3 | 12.0% / 49.4 / 49.0 |
+| K2, cùng 29 vị từ | 87.06 | 0.70 | 0.523 | 51.9 / 47.9 / 0.3 | 5.8% / 52.2 / 47.0 |
+
+1. **Grounding đạt**: vị từ khớp KG thật (AUC 0.70–0.85) chứ không khớp KG xáo trộn (~0.52); λ tăng với KG thật,
+   giảm với KG xáo trộn. Đây là kết quả K2 dương duy nhất hiện có.
+2. **Top1 không tăng**: head ≈ retrieval ≈ 87.06–87.10 < K0. Retrieval đồ thị G1 ≈ G1-0 (R-GCN không giúp).
+3. **Nút thắt**: trên các mẫu retrieval sai ở test, bằng chứng vị từ ngẫu nhiên, **kể cả** khi chỉ dùng vị từ tách
+   đúng cặp (lớp đúng, đối thủ) trên train (49.4 / 49.0, ~720 mẫu). Trên mẫu retrieval đúng thì tốt (67 / 32).
+   Giải thích: lỗi tương quan — mẫu backbone nhầm có chuyển động giống lớp đối thủ, vị từ đo trên cùng skeleton.
+   Không phải do λ, chuẩn hóa, k, hay độ phủ (độ phủ đã giải quyết: hòa 66% → 1.3%).
+4. Nhiễu `z` khi train: N = 4 chọn theo quy tắc chốt trước (train top1 ≤ 92%); làm retrieval tốt hơn
+   (Recall@10 98.80 > K0 98.72) và cho λ tín hiệu học.
+
+### Việc tiếp theo (chưa chốt, cần người dùng chọn)
+
+Muốn VERIFY nâng Top1 thì bằng chứng phải mang thông tin **độc lập** với backbone đúng ở chỗ nó sai:
+
+| Hướng | Nội dung | Ghi chú |
+|---|---|---|
+| B. Vị từ thứ tự thời gian (THEN) | "A rồi B" (put_on / take_off, ...): pool theo thời gian của backbone có thể làm mất thứ tự | Kiểm tra trần trước: chạy `gated_pair_check` chỉ trên lỗi nhóm put_on / take_off với vị từ mới |
+| B'. Khái niệm từ `D:/Thesis/REASON/concepts/ntu_rgbd_60_120.csv` | 120 × 74 khái niệm nhị phân, khớp tên 120/120; nhóm `temporal_direction_*`, `temporal_sequence_*` tách được các cặp put_on / take_off | Chỉ lấy ô 1 → `has` (0 = chưa biết, không phải `lacks`); chỉ khái niệm đo được; ghi nguồn; `writing` = `cutting_nails` (trùng hàng) |
+| Node logic AND / OR / NOT / THEN | Lớp = công thức trên literal; AND/NOT chỉ là has/lacks viết lại, thông tin mới chỉ ở THEN (và OR trái/phải) | Cần đường cong vị từ theo frame trong cache (~160 MB fp16) |
+| A1-dec (đã có code, chưa chạy) | Decoder thuộc tính trên map l9 trước pool (`config/kg_ft/ft_a1_dec*.yaml`, `main.py`) | Rủi ro học tắt ra lớp + lỗi tương quan; vài giờ GPU/run |
+| Cổng theo cặp trong mô hình | Dùng `R[c, c', j]` trong VERIFY | Trần đã đo = ngẫu nhiên trên lỗi → không đáng làm với vị từ hiện tại |
+| k nhỏ (`--head-arg k=3`) | | Dự đoán ghi trước: Top1 87.0–87.1, sửa ≈ phá, Full ≈ K2 (trần cặp đã ngẫu nhiên) |
+
+Nếu không hướng nào nâng được Top1: viết A1-G như nghiên cứu phân tích (grounding đạt, K2 tách; hậu kiểm bằng vị từ
+không sửa được lỗi vì lỗi tương quan), K5 vẫn đo được.
