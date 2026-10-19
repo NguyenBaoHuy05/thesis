@@ -284,3 +284,25 @@ K2-pred, nhiễu 4 (cùng 11 vị từ):
 (`similar`/`opposite`) mà nó là thuộc tính đối lập (chỉ mẫu của hai lớp đó, target = lớp có thuộc tính). Cặp lấy
 từ KG, không từ nhầm lẫn ở test. Nhiễu 4 (đã chọn ở lần 3). K2 dùng đúng tập vị từ của Full. Thêm một run Full
 giữ đủ 37 vị từ (`--min-train-auc none`) để so.
+
+### Lần 4: kết quả (2026-10-19, seed 0, nhiễu 4)
+
+Lọc theo cặp KG: giữ 29 vị từ (bỏ 8), phân biệt được 68 / 280 cặp KG (AUC theo cặp ≥ 0.75).
+`hard_pairs.py`: top-25 cặp nhầm của K0 có thuộc tính đối lập gắn vị từ: 12 / 25 (trước là 0 / 25).
+
+| | Full-pair (29) | K2-pair (29) | Full-all (37) |
+|---|---|---|---|
+| Top1 head / retrieval | 87.06 / 87.08 | 87.06 / 87.06 | 87.05 / 87.06 |
+| λ cuối | 1.685 | 0.701 | 1.775 |
+| AUC thuộc tính (test) | 0.695 | 0.523 | 0.699 |
+| đổi khi bỏ `λv` | 0.81% | 0.29% | 0.75% |
+| sửa / phá vs retrieval | 124 / 130 | 52 / 51 | 117 / 124 |
+| lỗi: `v` đúng / sai / hòa | 50.9 / 47.9 / 1.3 | 51.9 / 47.9 / 0.3 | 50.7 / 49.1 / 0.2 |
+| đúng: `v` đúng / sai / hòa | 57.3 / 41.0 / 1.7 | 51.2 / 48.7 / 0.1 | 57.9 / 41.7 / 0.4 |
+
+- **Độ phủ đã giải quyết** (hòa trên lỗi 66% → 1.3%), nhưng trên lỗi `v` của Full ≈ ngẫu nhiên và ≈ K2.
+- `v` chỉ có thông tin trên cặp dễ (57 / 41 so với K2 51 / 49).
+- Nguyên nhân: vị từ được giữ vì phân biệt *một vài* cặp, nhưng VERIFY dùng nó trên *mọi* cặp có thuộc tính
+  đối lập, kể cả cặp nó không phân biệt được trên train.
+- Tiếp: đo trần của VERIFY có cổng theo cặp (`gated_pair_check`): chỉ dùng vị từ phân biệt đúng cặp
+  (lớp đúng, đối thủ) trên train (AUC ≥ 0.75, mọi cặp lớp, không chỉ cặp KG).

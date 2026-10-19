@@ -51,6 +51,7 @@ from model.kg_retrieval import KGRetrievalHead, RetrievalScorer, a1_loss, topk_m
 from model.kg_retrieval import masked_bce as kg_masked_bce
 
 RECALL_TARGET = ('recall@10', 0.98)  # P2 pass criterion, on the retrieval scores s
+PAIR_AUC = 0.75                      # train AUC for a predicate to count as telling a class pair apart
 EVAL_BATCH = 1024                    # FUSE builds [N, C + A, d_model] node tensors
 
 
@@ -121,6 +122,30 @@ def predicate_pair_auc(phi, valid, labels, kg, columns):
                 aucs[(a, b)] = auc
         out.append(aucs)
     return out
+
+
+def pair_reliability(phi, valid, labels, kg, columns, min_auc):
+    """R [C, C, P] bool: predicate j tells class c from class c' on the train split (AUC >= min_auc
+    on the samples of the two classes, target = the class whose KG row has the attribute), for every
+    class pair the KG puts on opposite sides of attribute columns[j] (not only similar / opposite
+    pairs). phi is a fixed function of the coordinates, so the train AUC is not inflated by the
+    backbone having seen the train split."""
+    C = kg.W.shape[0]
+    R = torch.zeros(C, C, len(columns), dtype=torch.bool)
+    by_class = [labels == c for c in range(C)]
+    for j, column in enumerate(columns):
+        w = kg.W[:, column]
+        pos, neg = (w > 0).nonzero().flatten().tolist(), (w < 0).nonzero().flatten().tolist()
+        values = {c: phi[by_class[c] & valid[:, j], j] for c in pos + neg}
+        for a in pos:
+            for b in neg:
+                x, y = values[a], values[b]
+                if len(x) == 0 or len(y) == 0:
+                    continue
+                target = torch.cat([torch.ones(len(x)), torch.zeros(len(y))])
+                if binary_auc(torch.cat([x, y]), target) >= min_auc:
+                    R[a, b, j] = R[b, a, j] = True
+    return R
 
 
 def predicate_stats(phi, valid):
@@ -292,8 +317,36 @@ def verify_headroom(cand, s_c, v, lam, labels, W=None, evidence=None):
     return out
 
 
+def gated_pair_check(cand, s_c, a, labels, W, columns, R):
+    """Ceiling of a pair-gated VERIFY: true class vs rival (as in verify_headroom), using only the
+    predicates that tell exactly this pair apart on the train split (R). covered: share of samples
+    with at least one such predicate; right / wrong among the covered: sign of
+    sum_j sign(W[true, col_j]) (2 a_col_j - 1). Right well above wrong on errors, and above the
+    shuffled KG, means gating VERIFY per pair would fix more than it breaks."""
+    in_cand = cand == labels.unsqueeze(1)
+    true_pos = in_cand.float().argmax(1)
+    top2 = s_c.topk(2, dim=1).indices
+    found = in_cand.any(1)
+    retrieval_right = (top2[:, 0] == true_pos) & found
+    rows = torch.arange(len(cand))
+    rival_cls = cand[rows, torch.where(retrieval_right, top2[:, 1], top2[:, 0])]
+    true_cls = cand[rows, true_pos]
+    columns = torch.as_tensor(columns)
+    gate = R[true_cls, rival_cls]                                                  # [N, P]
+    vote = (torch.sign(W[true_cls][:, columns]) * (2 * a[:, columns] - 1) * gate).sum(1)
+    covered = gate.any(1)
+    out = {}
+    for name, mask in (('errors', found & ~retrieval_right), ('correct', retrieval_right)):
+        c = mask & covered
+        n_c = max(int(c.sum()), 1)
+        out[name] = dict(n=int(mask.sum()), covered=int(c.sum()) / max(int(mask.sum()), 1),
+                         right=int((c & (vote > 1e-8)).sum()) / n_c,
+                         wrong=int((c & (vote < -1e-8)).sum()) / n_c)
+    return out
+
+
 @torch.no_grad()
-def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logits=None):
+def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logits=None, reliability=None):
     """Logits plus what the plan's S5 asks for: lambda, size of each logit term on the
     candidates (mean |.| and spread across candidates, which is what can change a decision),
     how often dropping lambda v or f changes the prediction, and the attribute AUC. A1-G (S6) adds
@@ -342,6 +395,10 @@ def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logit
     )
     if fc_logits is not None:
         metrics['vs_k0'] = fixed_broken(pred, fc_logits.cpu().argmax(1), labels)
+    if reliability is not None:
+        columns, R = reliability
+        metrics['gated_pair'] = gated_pair_check(torch.cat(cand_all), torch.cat(s_c_all), a_all, labels,
+                                                 head.W.cpu(), columns, R)
     return logits, metrics
 
 
@@ -457,6 +514,9 @@ if __name__ == '__main__':
         extra_test = dict(phi=phi_test.to(device), phi_valid=valid_test.to(device))
         print(f'{len(names)} predicates from {spec["cache_name"]} (train AUC): '
               + ', '.join(f'{n} {a:.2f}' for n, a in zip(names, aucs)))
+        R = pair_reliability(phi_train, valid_train, y_train, kg, columns, PAIR_AUC)
+        reliable_pairs = int(torch.triu(R.any(-1).int(), diagonal=1).sum())
+        print(f'class pairs told apart by >= 1 predicate (train pair AUC >= {PAIR_AUC}): {reliable_pairs}')
 
     kg = kg.to(device)
     head = build_head(config, z_train.shape[-1], class_embeddings, attribute_embeddings, kg,
@@ -466,7 +526,8 @@ if __name__ == '__main__':
 
     if config['head'] == 'a1':
         test_scores, metrics = evaluate_a1(head, z_test[0].to(device), y_test, kg, extra=extra_test,
-                                           fc_logits=fc_test[0])
+                                           fc_logits=fc_test[0],
+                                           reliability=(columns, R) if predicate_args is not None else None)
         _, train_metrics = evaluate_a1(head, z_train[0], y_train, kg, extra=extra_train)
         metrics['head_train_view0'] = train_metrics['head']
         if predicate_args is not None:
@@ -505,6 +566,9 @@ if __name__ == '__main__':
                   f"wrong {100 * h['wrong']:.1f}%, tie {100 * h['tie']:.1f}% "
                   f"(no opposed predicate in KG {100 * h.get('tie_no_opposed', float('nan')):.1f}%); "
                   f"median s gap {h['gap_s']:.2f}, median |lambda dv| {h['lam_dv']:.3f}")
+        for name, h in metrics.get('gated_pair', {}).items():
+            print(f"pair-gated v true vs rival, retrieval {name:>7} (n {h['n']}): covered {100 * h['covered']:.1f}%, "
+                  f"right {100 * h['right']:.1f}%, wrong {100 * h['wrong']:.1f}% (of covered)")
     key, target = RECALL_TARGET
     retrieval = metrics['retrieval'] or metrics['head']
     verdict = 'pass' if retrieval[key] >= target else 'below target'
