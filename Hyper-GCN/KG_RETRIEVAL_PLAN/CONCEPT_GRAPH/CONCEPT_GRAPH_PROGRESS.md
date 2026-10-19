@@ -37,45 +37,89 @@
 
 Ví dụ: ¬(take_off_a_shoe | put_on_a_shoe) = 1 − ∧(motion_upward, seq_hands_first, lower_then_raise).
 
-## Lệnh Colab
+## Script chạy (Colab), chạy theo thứ tự từng ô
 
-Cache S = 1 đã có trên Drive (`kg_cache/ntu120_xsub_joint_*`). Chép về ổ local trước (memmap trên Drive chậm).
+Một ô = một khối code. Ô nào đã chạy xong ở phiên trước thì bỏ qua, trừ ô 1–3 (mỗi phiên Colab mới đều phải chạy).
+Mọi kết quả ghi vào `$W/<tên>/` trên Drive: `kg_metrics.json`, `head.pt`, `history.json`, `test_concepts.npy`.
+`git pull` không đụng tới các thư mục này.
 
+**Ô 1: Drive + code (mỗi phiên)**
 ```
+from google.colab import drive
+drive.mount('/content/drive')
 %cd /content/Hyper-GCN
+!git status --short
 !git pull
+!git log --oneline -1
+```
+Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trước rồi pull lại.
+`git log` phải là commit mới nhất trên GitHub.
+
+**Ô 2: test (mỗi phiên, khoảng 1 phút)**
+```
 !pip -q install pytest
 !python -m pytest tests -q
-!python tools/build_concept_graph.py --out /content/graph_v1.json | head -40
+!python tools/build_concept_graph.py --out /content/graph_v1.json | head -5
+```
 
-!mkdir -p /content/jcache && cp /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_* /content/jcache/
+**Ô 3: cache S = 1 + biến môi trường (mỗi phiên)**
+```
+!mkdir -p /content/jcache
+!cp -n /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_* /content/jcache/
+!ls -lh /content/jcache
 %env J=/content/jcache
 %env W=/content/drive/MyDrive/BaoHuy/work_dir/concept_graph
 ```
 
-E1b lần 2 (sau khi sửa công thức train; E1a, c, d, e đã có số):
-
+**Ô 4: fusion cho các head P1 (không train lại, mỗi lệnh 1–2 phút)**
 ```
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b
+!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a    --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c    --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d    --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e    --eval-only
+!python tools/summarize_runs.py $W e1a e1b_v2 e1c e1d e1e
+```
+Nếu E1b lần 2 đã được ghi vào `$W/e1b` (không phải `e1b_v2`) thì đổi tên trong hai dòng tương ứng.
+
+**Ô 5: P2 trên cache S = 1 (train, mỗi lệnh vài phút)**
+```
+!python train_concept_logic.py --config config/concept_graph/e2.yaml       --cache-dir $J --work-dir $W/e2
+!python train_concept_logic.py --config config/concept_graph/e2_alpha.yaml --cache-dir $J --work-dir $W/e2_alpha
+!python train_concept_logic.py --config config/concept_graph/e2_noor.yaml  --cache-dir $J --work-dir $W/e2_noor
+!python tools/summarize_runs.py $W e1a e1c e2 e2_alpha e2_noor
 ```
 
-P1 (seed 0; mỗi lệnh vài phút, chạy lần lượt):
-
+**Ô 6: tạo cache S = 4 (một lần, khoảng 23 GB trên ổ local Colab, lâu nhất trong script)**
 ```
-!python train_concept_logic.py --config config/concept/cl_v2.yaml        --cache-dir $J --work-dir $W/e1a
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml    --cache-dir $J --work-dir $W/e1b
-!python train_concept_logic.py --config config/concept_graph/e1c.yaml    --cache-dir $J --work-dir $W/e1c
-!python train_concept_logic.py --config config/concept_graph/e1d.yaml    --cache-dir $J --work-dir $W/e1d
-!python train_concept_logic.py --config config/concept_graph/e1e.yaml    --cache-dir $J --work-dir $W/e1e
+!df -h /content
+!python tools/cache_joint_features.py --weights /content/large/ntu120/xsub/joint/runs-122-120048.pt \
+    --out-dir /content/jcache --name ntu120_xsub_joint_s4 --segments 4 --num-worker 2
+!ls -lh /content/jcache
+```
+Cache này nằm trên ổ local, nên mất khi phiên Colab tắt. Phiên sau phải chạy lại ô 6, hoặc chép lên Drive
+(`!cp /content/jcache/ntu120_xsub_joint_s4_* /content/drive/MyDrive/BaoHuy/kg_cache/`) rồi chép về như ô 3.
+
+**Ô 7: P2 trên cache S = 4**
+```
+!python train_concept_logic.py --config config/concept_graph/e1a_s4.yaml --cache-dir $J --work-dir $W/e1a_s4
+!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml  --cache-dir $J --work-dir $W/e2_s4
+!python tools/summarize_runs.py $W e1a e2 e1a_s4 e2_s4
 ```
 
-`head.pt` được lưu ngay sau khi train. Nếu bước đánh giá lỗi, chạy lại đúng lệnh đó với `--eval-only` (không train lại).
-2026-10-19: E1b lần 1 train bị sụp (train top1 4.45%: dùng một lr 1e-3, không clip). Đã sửa theo công thức
-REASON: lr logic 1e-4, clip norm gradient 1.0 cho decoder / 0.5 cho logic.
-2026-10-19: E1b bị OOM ở K5 (logits REASON trên cả tập test một lần, khoảng 12.4 GiB). Đã sửa: tính theo batch.
+**Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
+```
+!python tools/summarize_runs.py $W
+```
 
-Mỗi lần chạy in ra Top1 / Top5, PCR (head và K0), Top1 trong / ngoài cặp, 8 cặp nhầm nhiều nhất, K5, K5-pair.
-Đầy đủ ở `$W/<e>/kg_metrics.json` (`pairs.per_pair` có 58 dòng).
+Ghi chú lỗi đã gặp:
+- `head.pt` được lưu ngay sau khi train. Nếu bước đánh giá lỗi, chạy lại đúng lệnh đó với `--eval-only`.
+- E1b lần 1 train bị sụp (train top1 4.45%: một lr 1e-3, không clip, lớp ra của decoder khởi tạo 0).
+  Đã sửa theo công thức REASON: lr logic 1e-4, clip 1.0 / 0.5, init mặc định.
+- E1b bị OOM ở K5 (logits REASON trên cả tập test một lần, khoảng 12.4 GiB). Đã sửa: tính theo batch.
+
+Mỗi lần chạy in ra: Top1 / Top5; PCR (head và K0); Top1 trong / ngoài cặp; 8 cặp nhầm nhiều nhất; K5; K5-pair;
+fusion K0 + head. Đầy đủ ở `$W/<tên>/kg_metrics.json` (`pairs.per_pair` có 58 dòng).
 
 ## P1: kết quả
 
@@ -136,15 +180,8 @@ Vì vậy làm tiếp P2 dù P1 không đạt theo quy tắc cũ. Dự đoán gh
 
 ## Fusion cho các head P1 (không train lại)
 
-```
-!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e --eval-only
-```
+Lệnh: **ô 4** của script.
 
-(Nếu E1b lần 2 được ghi vào `$W/e1b` thì đổi `e1b_v2` thành `e1b`.)
 
 | | fusion Top1 / Top5 | sửa / phá vs K0 | PCR fusion |
 |---|---|---|---|
@@ -170,16 +207,7 @@ Config ở `config/concept_graph/`:
 Cache S = 4: khoảng 12.9 GB train + 10.4 GB test (fp16), ghi vào ổ local của Colab (không cần chép lên Drive).
 Train feat được nạp hết lên GPU (khoảng 13 GB trên L4 22 GB).
 
-```
-!python train_concept_logic.py --config config/concept_graph/e2.yaml       --cache-dir $J --work-dir $W/e2
-!python train_concept_logic.py --config config/concept_graph/e2_alpha.yaml --cache-dir $J --work-dir $W/e2_alpha
-!python train_concept_logic.py --config config/concept_graph/e2_noor.yaml  --cache-dir $J --work-dir $W/e2_noor
-
-!python tools/cache_joint_features.py --weights /content/large/ntu120/xsub/joint/runs-122-120048.pt \
-    --out-dir /content/jcache --name ntu120_xsub_joint_s4 --segments 4 --num-worker 2
-!python train_concept_logic.py --config config/concept_graph/e1a_s4.yaml --cache-dir $J --work-dir $W/e1a_s4
-!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml  --cache-dir $J --work-dir $W/e2_s4
-```
+Lệnh: **ô 5** (S = 1), **ô 6** (tạo cache S = 4), **ô 7** (S = 4).
 
 | | Top1 / Top5 | PCR | fusion Top1 | fusion sửa / phá | K5 | train top1 |
 |---|---|---|---|---|---|---|
