@@ -33,7 +33,7 @@ class RGCNTests(unittest.TestCase):
     def test_adjacency_rows_are_normalized(self):
         for r, A in relation_adjacency(self.graph).items():
             sums = A.sum(1)
-            self.assertTrue(torch.all((sums - 1).abs() < 1e-5) | (sums == 0), r)
+            self.assertTrue(torch.all(((sums - 1).abs() < 1e-5) | (sums == 0)), r)
 
     def test_gates_do_not_read_actions(self):
         torch.manual_seed(0)

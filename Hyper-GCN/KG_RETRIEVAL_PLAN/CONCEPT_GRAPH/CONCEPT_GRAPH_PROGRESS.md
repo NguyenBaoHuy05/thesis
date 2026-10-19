@@ -39,6 +39,9 @@ Ví dụ: ¬(take_off_a_shoe | put_on_a_shoe) = 1 − ∧(motion_upward, seq_han
 
 ## Script chạy (Colab), chạy theo thứ tự từng ô
 
+Ô 3 dùng `rsync --size-only`: chép lại file nào khác kích thước với bản trên Drive. `cp -n` từng giữ lại một file
+chép dở (lỗi `mmap length is greater than file size`, 2026-10-20). Hai cột kích thước ở `ls -l` phải bằng nhau.
+
 Một ô = một khối code. Ô nào đã chạy xong ở phiên trước thì bỏ qua, trừ ô 1–3 (mỗi phiên Colab mới đều phải chạy).
 Mọi kết quả ghi vào `$W/<tên>/` trên Drive: `kg_metrics.json`, `head.pt`, `history.json`, `test_concepts.npy`.
 `git pull` không đụng tới các thư mục này.
@@ -65,8 +68,9 @@ Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trư
 **Ô 3: cache S = 1 + biến môi trường (mỗi phiên)**
 ```
 !mkdir -p /content/jcache
-!cp -n /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_* /content/jcache/
-!ls -lh /content/jcache
+!rsync -ah --size-only /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_[tsu]* /content/jcache/
+!ls -l /content/jcache /content/drive/MyDrive/BaoHuy/kg_cache | grep joint
+!df -h /content
 %env J=/content/jcache
 %env W=/content/drive/MyDrive/BaoHuy/work_dir/concept_graph
 ```

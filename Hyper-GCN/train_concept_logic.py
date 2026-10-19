@@ -59,7 +59,12 @@ def topk_metrics(scores, labels, ks=(1, 5)):
 
 def load_split(cache_dir, name, split, device=None, chunk=4096):
     """feat [N, M, C, S, V] float16 (on `device` if given, else a CPU memmap), valid, fc_logits, label."""
-    feat = np.load(os.path.join(cache_dir, f'{name}_{split}_feat.npy'), mmap_mode='r')
+    path = os.path.join(cache_dir, f'{name}_{split}_feat.npy')
+    try:
+        feat = np.load(path, mmap_mode='r')
+    except ValueError as error:                              # "mmap length is greater than file size"
+        raise ValueError(f'{path} is truncated ({os.path.getsize(path) / 2 ** 30:.2f} GiB on disk): an interrupted '
+                         'copy or a full disk. Copy it again (without cp -n) and check df -h.') from error
     with np.load(os.path.join(cache_dir, f'{name}_{split}.npz')) as data:
         rest = {key: torch.from_numpy(data[key]) for key in ('valid', 'fc_logits', 'label')}
     if device is not None:
