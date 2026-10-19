@@ -124,11 +124,19 @@ def make_graph(matrix, spec):
 
 
 @torch.no_grad()
+def batched_logits(head, c, batch=EVAL_BATCH):
+    """head.logits on CPU c [N, K] in batches (REASON's logic layers hold [n, 512, 128] per batch) -> CPU."""
+    head.eval()
+    device = head.M.device
+    return torch.cat([head.logits(c[i:i + batch].to(device)).cpu() for i in range(0, len(c), batch)])
+
+
+@torch.no_grad()
 def intervention(head, c, generator):
     """K5: change rate of the prediction when the strongest supporting concept of the predicted class
     is set to 0, against setting a random concept outside its has-set to 0."""
     M = head.M.cpu()
-    pred = head.logits(c.to(head.M.device)).argmax(1).cpu()
+    pred = batched_logits(head, c).argmax(1)
     rows = torch.arange(len(c))
     has = M[pred].bool()
     support = torch.where(has, c, torch.full_like(c, -1)).argmax(1)
@@ -138,7 +146,7 @@ def intervention(head, c, generator):
     for name, j in (('drop_support', support), ('drop_random_absent', other)):
         c2 = c.clone()
         c2[rows, j] = 0.0
-        out[name] = (head.logits(c2.to(head.M.device)).argmax(1).cpu() != pred).float().mean().item()
+        out[name] = (batched_logits(head, c2).argmax(1) != pred).float().mean().item()
     return out
 
 
@@ -151,6 +159,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int)
     parser.add_argument('--feature-noise', type=float, help='overrides feature_noise')
     parser.add_argument('--device', default='cuda')
+    parser.add_argument('--eval-only', action='store_true', help='load <work_dir>/head.pt, skip training')
     args = parser.parse_args()
 
     with open(args.config, encoding='utf-8') as handle:
@@ -201,7 +210,11 @@ if __name__ == '__main__':
     std = channel_std(feat_train, valid_train_dev)[None, None, :, None, None] if noise else None
 
     history = []
-    for epoch in range(config['epochs']):
+    head_path = os.path.join(config['work_dir'], 'head.pt')
+    if args.eval_only:
+        head.load_state_dict(torch.load(head_path, map_location=device))
+        print(f'loaded {head_path}, no training')
+    for epoch in range(0 if args.eval_only else config['epochs']):
         head.train()
         order = torch.randperm(N, device=device)
         sums, correct = dict(loss=0.0, ce=0.0, bce=0.0), 0
@@ -230,15 +243,15 @@ if __name__ == '__main__':
         print(f"epoch {epoch + 1}/{config['epochs']}: loss {row['loss']:.4f} (ce {row['ce']:.4f}, "
               f"bce {row['bce']:.4f}), train top1 {100 * row['train_top1']:.2f}%, tau {row['tau']:.4f}")
 
+    if not args.eval_only:
+        torch.save(head.state_dict(), head_path)                # before evaluation: a crash there keeps the model
     c_test, logits = predict(head, feat_test, valid_test, device)
     pred, k0 = logits.argmax(1), fc_test.argmax(1)
     actions, _, rows = read_matrix(config['matrix'])
     pairs = confusable_pairs(actions, rows)                 # evaluation pairs: always the real ones (plan §2)
 
-    @torch.no_grad()
     def logits_fn(c):
-        head.eval()
-        return head.logits(c.to(device)).cpu()
+        return batched_logits(head, c)
     auc_own, aucs_own = concept_auc(c_test, M[y_test])
     groups = {}
     for name, a in zip(names, aucs_own):
@@ -258,10 +271,10 @@ if __name__ == '__main__':
         graph=graph.summary() if graph is not None else None,
         tau=head.tau.item(),
     )
-    torch.save(head.state_dict(), os.path.join(config['work_dir'], 'head.pt'))
     np.save(os.path.join(config['work_dir'], 'test_concepts.npy'), c_test.numpy().astype(np.float16))
-    with open(os.path.join(config['work_dir'], 'history.json'), 'w', encoding='utf-8') as handle:
-        json.dump(history, handle, indent=2)
+    if history:
+        with open(os.path.join(config['work_dir'], 'history.json'), 'w', encoding='utf-8') as handle:
+            json.dump(history, handle, indent=2)
     with open(os.path.join(config['work_dir'], 'kg_metrics.json'), 'w', encoding='utf-8') as handle:
         json.dump(metrics, handle, indent=2)
 

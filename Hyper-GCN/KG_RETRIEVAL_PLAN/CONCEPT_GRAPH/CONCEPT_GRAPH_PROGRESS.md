@@ -63,6 +63,9 @@ P1 (seed 0; mỗi lệnh vài phút, chạy lần lượt):
 !python train_concept_logic.py --config config/concept_graph/e1e.yaml    --cache-dir $J --work-dir $W/e1e
 ```
 
+`head.pt` được lưu ngay sau khi train. Nếu bước đánh giá lỗi, chạy lại đúng lệnh đó với `--eval-only` (không train lại).
+2026-10-19: E1b bị OOM ở K5 (logits REASON trên cả tập test một lần, khoảng 12.4 GiB). Đã sửa: tính theo batch.
+
 Mỗi lần chạy in ra Top1 / Top5, PCR (head và K0), Top1 trong / ngoài cặp, 8 cặp nhầm nhiều nhất, K5, K5-pair.
 Đầy đủ ở `$W/<e>/kg_metrics.json` (`pairs.per_pair` có 58 dòng).
 
