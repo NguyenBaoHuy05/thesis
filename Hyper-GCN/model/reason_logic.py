@@ -7,7 +7,9 @@ with learned switchboards, gradient grafting between the binarized and the conti
 input is logit(c) of our decoder (REASON feeds its concept logits), RMSNorm is a short local version.
 
 As in REASON's main.py: weights of the logic layers are clipped to [0, 1] after every optimizer step
-(after_step) and an L2 penalty (l2_weight) is added to the loss (regularizer).
+(after_step), an L2 penalty (l2_weight) is added to the loss (regularizer), the logic layers have their own
+learning rate (logic_lr, REASON 1e-4) and gradient norms are clipped per group (decoder 1.0, logic 0.5).
+Without this recipe (one lr 1e-3, no clipping) training collapsed: train top1 ~4% after 30 epochs (E1b, 2026-10-19).
 """
 
 import torch
@@ -170,10 +172,12 @@ class ConceptLogicLayers(nn.Module):
 
 
 class ReasonLogicHead(nn.Module):
-    def __init__(self, in_channels, M, joint_mask, decoder_args=None, logic_args=None, l2_weight=1e-6):
+    def __init__(self, in_channels, M, joint_mask, decoder_args=None, logic_args=None, l2_weight=1e-6,
+                 logic_lr=1e-4, clip_decoder=1.0, clip_logic=0.5):
         super().__init__()
         self.register_buffer('M', M.float())
-        self.l2_weight = float(l2_weight)
+        self.l2_weight, self.logic_lr = float(l2_weight), float(logic_lr)
+        self.clip_decoder, self.clip_logic = float(clip_decoder), float(clip_logic)
         self.decoder = AttributeDecoder(in_channels, torch.eye(M.shape[1]), joint_mask, **(decoder_args or {}))
         self.logic = ConceptLogicLayers(M.shape[1], M.shape[0], **(logic_args or {}))
 
@@ -187,6 +191,14 @@ class ReasonLogicHead(nn.Module):
 
     def regularizer(self):
         return self.l2_weight * self.logic.l2_penalty()
+
+    def param_groups(self, lr, weight_decay=0.0):
+        return [dict(params=list(self.decoder.parameters()), lr=lr, weight_decay=weight_decay),
+                dict(params=list(self.logic.parameters()), lr=self.logic_lr, weight_decay=0.0)]
+
+    def clip_grads(self):
+        torch.nn.utils.clip_grad_norm_(self.decoder.parameters(), max_norm=self.clip_decoder)
+        torch.nn.utils.clip_grad_norm_(self.logic.parameters(), max_norm=self.clip_logic)
 
     def after_step(self):
         self.logic.clip_weights()

@@ -110,4 +110,7 @@ python train_concept_logic.py --config config/concept/cl_v2.yaml --cache-dir $J 
 
 | | Top1 / Top5 | sửa / phá vs K0 | AUC concept | K5: tắt hỗ trợ / ngẫu nhiên | train top1 cuối |
 |---|---|---|---|---|---|
-| Full v2 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| Full v2 | 85.60 / 94.98 | 804 / 1836 | 0.987 | 14.49% / 0.00% | 99.80% |
+
+v2 (2026-10-19, seed 0, chạy là E1a trong CONCEPT_GRAPH): Top1 tăng 1.5 so với v1 (đạt dự đoán ≥ 84.09).
+K5 14.5%, chưa tới 20% như dự đoán. Chỉ số cặp ở [CONCEPT_GRAPH_PROGRESS.md](../CONCEPT_GRAPH/CONCEPT_GRAPH_PROGRESS.md).

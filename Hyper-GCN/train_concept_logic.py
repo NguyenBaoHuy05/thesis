@@ -200,7 +200,9 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'unknown head {kind}')
     head = head.to(device)
-    optimizer = torch.optim.Adam(head.parameters(), lr=config['lr'], weight_decay=config.get('weight_decay', 0.0))
+    wd = config.get('weight_decay', 0.0)
+    groups = head.param_groups(config['lr'], wd) if hasattr(head, 'param_groups') else head.parameters()
+    optimizer = torch.optim.Adam(groups, lr=config['lr'], weight_decay=wd)
     steps = config['epochs'] * ((N + config['batch_size'] - 1) // config['batch_size'])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=steps)
     M_dev, y_train_dev, valid_train_dev = head.M, y_train.to(device), valid_train.to(device)
@@ -229,6 +231,8 @@ if __name__ == '__main__':
                 loss = loss + head.regularizer()
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
+            if hasattr(head, 'clip_grads'):
+                head.clip_grads()
             optimizer.step()
             scheduler.step()
             if hasattr(head, 'after_step'):

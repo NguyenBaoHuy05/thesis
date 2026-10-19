@@ -1,5 +1,6 @@
 # P1 E1b: CL v2 concept decoder + REASON's logic layers (model/reason_logic.py, 128/128, NOT, skip, linear head).
-# Logic layers use the same lr as the decoder (REASON's own schedule is for 110 epochs end-to-end).
+# REASON's recipe for the logic layers: lr 1e-4, grad-norm clip 0.5 (decoder: config lr, clip 1.0).
+# Run 1 (one lr 1e-3, no clip) collapsed: train top1 4.45%.
 work_dir: ./work_dir/concept_graph/e1b
 
 cache_dir: ./kg_cache
@@ -10,6 +11,9 @@ metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
 head: reason
 head_args:
   l2_weight: 1.0e-6                  # REASON config_skeleton_crl.yaml
+  logic_lr: 1.0e-4                   # REASON main.py: logic_layers_lr
+  clip_decoder: 1.0                  # REASON main.py: clip_grad_norm_ heads 1.0, logic 0.5
+  clip_logic: 0.5
   logic_args:
     l1_dim: 128
     l2_dim: 128
