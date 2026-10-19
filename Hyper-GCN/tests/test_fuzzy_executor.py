@@ -101,8 +101,7 @@ class HeadTests(unittest.TestCase):
         head = ReasonLogicHead(8, M, self.mask, decoder_args=self.args, logic_args=dict(l1_dim=8, l2_dim=8))
         out = head(self.feats, self.valid)
         self.assertEqual(tuple(out['logits'].shape), (5, 2))
-        torch.nn.init.normal_(head.decoder.out.weight)
-        out = head(self.feats, self.valid)
+        self.assertGreater(head.decoder.out.weight.abs().sum().item(), 0.0)      # not the zero init
         (out['logits'].sum() + head.regularizer()).backward()
         self.assertIsNotNone(head.logic.union1.con_layer.W.grad)
         head.logic.union1.con_layer.W.data += 2

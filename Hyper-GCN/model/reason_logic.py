@@ -9,7 +9,7 @@ input is logit(c) of our decoder (REASON feeds its concept logits), RMSNorm is a
 As in REASON's main.py: weights of the logic layers are clipped to [0, 1] after every optimizer step
 (after_step), an L2 penalty (l2_weight) is added to the loss (regularizer), the logic layers have their own
 learning rate (logic_lr, REASON 1e-4) and gradient norms are clipped per group (decoder 1.0, logic 0.5).
-Without this recipe (one lr 1e-3, no clipping) training collapsed: train top1 ~4% after 30 epochs (E1b, 2026-10-19).
+Run 1 without this recipe and with the decoder output at zero collapsed: train top1 ~4% (E1b, 2026-10-19).
 """
 
 import torch
@@ -179,6 +179,10 @@ class ReasonLogicHead(nn.Module):
         self.l2_weight, self.logic_lr = float(l2_weight), float(logic_lr)
         self.clip_decoder, self.clip_logic = float(clip_decoder), float(clip_logic)
         self.decoder = AttributeDecoder(in_channels, torch.eye(M.shape[1]), joint_mask, **(decoder_args or {}))
+        # AttributeDecoder starts its output layer at zero (c = 0.5, logit 0). RMSNorm of an all-zero logit
+        # vector divides by sqrt(eps) and blows the first gradients up (~3000x); REASON's concept fc has the
+        # default init, so use it here too.
+        self.decoder.out.reset_parameters()
         self.logic = ConceptLogicLayers(M.shape[1], M.shape[0], **(logic_args or {}))
 
     @property
