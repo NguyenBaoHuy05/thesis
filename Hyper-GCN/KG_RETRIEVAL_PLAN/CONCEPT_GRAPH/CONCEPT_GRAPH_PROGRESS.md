@@ -71,16 +71,23 @@ Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trư
 %env W=/content/drive/MyDrive/BaoHuy/work_dir/concept_graph
 ```
 
-**Ô 4: fusion cho các head P1 (không train lại, mỗi lệnh 1–2 phút)**
+**Ô 4: train lại các head P1, kèm fusion K0 + head (mỗi lệnh vài phút)**
+
+Checkpoint của các lần chạy P1 trước đã mất (2026-10-19), nên train lại. Cùng config và seed 0, nên Top1 / PCR phải gần
+như trùng bảng P1; thêm vào là phần fusion.
 ```
-!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a    --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c    --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d    --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e    --eval-only
-!python tools/summarize_runs.py $W e1a e1b_v2 e1c e1d e1e
+!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a
+!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c
+!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b
+!python tools/summarize_runs.py $W e1a e1c e1b
 ```
-Nếu E1b lần 2 đã được ghi vào `$W/e1b` (không phải `e1b_v2`) thì đổi tên trong hai dòng tương ứng.
+Không bắt buộc (đối chứng, chạy nếu còn thời gian):
+```
+!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d
+!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e
+!python tools/summarize_runs.py $W e1a e1b e1c e1d e1e
+```
+Từ giờ checkpoint nằm ở `$W/<tên>/head.pt` trên Drive. Kiểm tra sau mỗi lần chạy: `!ls -lh $W/e1a`.
 
 **Ô 5: P2 trên cache S = 1 (train, mỗi lệnh vài phút)**
 ```
