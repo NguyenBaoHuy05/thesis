@@ -83,21 +83,44 @@ def load_predicates(cache_dir, name, split, kg_json, wanted='all'):
             torch.from_numpy(label).long(), names, [attributes.index(n) for n in names])
 
 
+def binary_auc(score, target):
+    """AUC of score for target 1 vs 0 (Mann-Whitney, ties broken by order); nan if one side is empty."""
+    n_pos = target.sum().item()
+    n_neg = len(target) - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return float('nan')
+    ranks = score.argsort().argsort().double() + 1
+    return ((ranks[target == 1].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)).item()
+
+
 def predicate_train_auc(phi, valid, labels, kg, columns):
     """AUC of each predicate against has (1) / lacks (0) of the sample's class, on valid cells the
     KG knows, train split only (the selection never sees the test split). nan if one side is empty."""
     aucs = []
     for j, column in enumerate(columns):
         mask = valid[:, j] & kg.known[labels, column].bool()
-        target, score = (kg.W[labels[mask], column] > 0).float(), phi[mask, j]
-        n_pos = target.sum().item()
-        n_neg = len(target) - n_pos
-        if n_pos == 0 or n_neg == 0:
-            aucs.append(float('nan'))
-            continue
-        ranks = score.argsort().argsort().double() + 1
-        aucs.append(((ranks[target == 1].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)).item())
+        aucs.append(binary_auc(phi[mask, j], (kg.W[labels[mask], column] > 0).float()))
     return aucs
+
+
+def predicate_pair_auc(phi, valid, labels, kg, columns):
+    """Per predicate, its train AUC inside each KG pair (similar / opposite) on which it is opposed
+    (one class has it, the other lacks it): samples of the two classes only, target = has. This is
+    the job VERIFY gives the predicate (tell a hard pair apart), not separating all 120 classes.
+    Returns [{(a, b): auc}] per predicate."""
+    pairs = torch.triu(kg.S_sim | kg.S_opp, diagonal=1).nonzero().tolist()
+    out = []
+    for j, column in enumerate(columns):
+        aucs = {}
+        for a, b in pairs:
+            if kg.W[a, column] * kg.W[b, column] >= 0:
+                continue
+            mask = valid[:, j] & ((labels == a) | (labels == b))
+            auc = binary_auc(phi[mask, j], (kg.W[labels[mask], column] > 0).float())
+            if auc == auc:
+                aucs[(a, b)] = auc
+        out.append(aucs)
+    return out
 
 
 def predicate_stats(phi, valid):
@@ -232,6 +255,43 @@ def fixed_broken(pred, reference, labels):
     return dict(fixed=int((right & ~ref_right).sum()), broken=int((~right & ref_right).sum()))
 
 
+def verify_headroom(cand, s_c, v, lam, labels, W=None, evidence=None):
+    """Does v point the right way on the confusions retrieval actually makes? Per sample, the true
+    class against its rival among the candidates: the retrieval top-1 when retrieval is wrong (error,
+    true class still in Cand), the runner-up when it is right. right / wrong / tie: v_true > / < / =
+    v_rival. gap_s: median s margin (rival - true for errors, true - rival otherwise); lam_dv:
+    median |lam (v_true - v_rival)| where non-zero. v right on errors well above 0.5, and above the
+    shuffled KG, means the evidence knows the test confusions and only its scale is too small.
+    With W [C, A] and evidence [N, A]: tie_no_opposed = ties where the KG has no attribute with
+    evidence (a predicate) that one class of the pair has and the other lacks (fix the KG / add a
+    predicate), the rest of the ties have one but phi is invalid or d is 0."""
+    in_cand = cand == labels.unsqueeze(1)
+    true_pos = in_cand.float().argmax(1)
+    top2 = s_c.topk(2, dim=1).indices
+    found = in_cand.any(1)
+    retrieval_right = (top2[:, 0] == true_pos) & found
+    rival = torch.where(retrieval_right, top2[:, 1], top2[:, 0])
+    rows = torch.arange(len(cand))
+    dv = v[rows, true_pos] - v[rows, rival]
+    ds = s_c[rows, true_pos] - s_c[rows, rival]
+    opposed = None
+    if W is not None:
+        w_true, w_rival = W[cand[rows, true_pos]], W[cand[rows, rival]]
+        opposed = ((w_true * w_rival < 0) & evidence.bool()).any(1)
+    out = {}
+    for name, mask in (('errors', found & ~retrieval_right), ('correct', retrieval_right)):
+        d, g = dv[mask], ds[mask].abs()
+        n = max(int(mask.sum()), 1)
+        nonzero = d.abs() > 1e-8
+        out[name] = dict(n=int(mask.sum()), right=int((d > 1e-8).sum()) / n,
+                         wrong=int((d < -1e-8).sum()) / n, tie=int((~nonzero).sum()) / n,
+                         gap_s=g.median().item() if len(g) else float('nan'),
+                         lam_dv=(lam * d[nonzero].abs()).median().item() if nonzero.any() else 0.0)
+        if opposed is not None:
+            out[name]['tie_no_opposed'] = int((~nonzero & ~opposed[mask]).sum()) / n
+    return out
+
+
 @torch.no_grad()
 def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logits=None):
     """Logits plus what the plan's S5 asks for: lambda, size of each logit term on the
@@ -241,6 +301,7 @@ def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logit
     against the retrieval inside the head and against K0 (fc_logits, if given)."""
     head.eval()
     logits, s_all, a_all, ev_all = [], [], [], []
+    cand_all, s_c_all, v_all = [], [], []
     sums, n = defaultdict(float), 0
     for i in range(0, len(z), batch_size):
         batch_extra = {key: value[i:i + batch_size] for key, value in (extra or {}).items()}
@@ -259,6 +320,9 @@ def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logit
         s_all.append(out['s'].cpu())
         a_all.append(out['a'].cpu())
         ev_all.append(out['evidence'].cpu())
+        cand_all.append(out['cand'].cpu())
+        s_c_all.append(out['s_c'].cpu())
+        v_all.append(out['v'].cpu())
     logits, s_all, a_all, ev_all = torch.cat(logits), torch.cat(s_all), torch.cat(a_all), torch.cat(ev_all)
     labels = labels.cpu()
     terms = {key: value / n for key, value in sums.items()}
@@ -273,6 +337,8 @@ def evaluate_a1(head, z, labels, kg, batch_size=EVAL_BATCH, extra=None, fc_logit
         attribute_auc=auc,
         attribute_auc_count=auc_attrs,
         vs_retrieval=fixed_broken(pred, s_all.argmax(1), labels),
+        headroom=verify_headroom(torch.cat(cand_all), torch.cat(s_c_all), torch.cat(v_all),
+                                 head.lam.item(), labels, head.W.cpu(), ev_all),
     )
     if fc_logits is not None:
         metrics['vs_k0'] = fixed_broken(pred, fc_logits.cpu().argmax(1), labels)
@@ -294,6 +360,10 @@ if __name__ == '__main__':
     parser.add_argument('--predicates-from', metavar='KG_METRICS_JSON',
                         help='use exactly the predicates selected by an earlier run (its kg_metrics.json), '
                              'e.g. K2 with the set chosen on the real KG; disables min_train_auc')
+    parser.add_argument('--min-train-auc', help="overrides predicates.min_train_auc ('none' = keep all)")
+    parser.add_argument('--predicate-select', choices=('global', 'pair'),
+                        help='overrides predicates.select: AUC over all classes (global) or inside the '
+                             'KG pairs where the predicate is opposed (pair: keep it if one pair passes)')
     parser.add_argument('--head-arg', action='append', default=[], metavar='KEY=VALUE',
                         help='overrides head_args[KEY] (YAML value; dotted KEY for nested, e.g. '
                              'graph_args.layers=0); repeatable, for ablations')
@@ -304,6 +374,10 @@ if __name__ == '__main__':
     for key in ('cache_dir', 'cache_name', 'work_dir', 'kg', 'embeddings', 'seed', 'feature_noise'):
         if getattr(args, key) is not None:
             config[key] = getattr(args, key)
+    if args.min_train_auc is not None:
+        config['predicates']['min_train_auc'] = yaml.safe_load(args.min_train_auc.lower().replace('none', 'null'))
+    if args.predicate_select:
+        config['predicates']['select'] = args.predicate_select
     if args.predicates_from:
         with open(args.predicates_from, encoding='utf-8') as handle:
             chosen = json.load(handle)['predicates']['names']
@@ -353,12 +427,26 @@ if __name__ == '__main__':
         phi_test, valid_test = loaded['test'][0], loaded['test'][1]
         aucs = predicate_train_auc(phi_train, valid_train, y_train, kg, columns)
         min_auc = spec.get('min_train_auc')
-        if min_auc is not None:
+        select = spec.get('select', 'global')
+        if min_auc is not None and select == 'pair':
+            pair_aucs = predicate_pair_auc(phi_train, valid_train, y_train, kg, columns)
+            passing = [{p for p, auc in pa.items() if auc >= min_auc} for pa in pair_aucs]
+            keep = [j for j in range(len(names)) if passing[j]]
+            if not keep:
+                raise ValueError(f'no predicate reaches pair AUC {min_auc} on any KG pair')
+            covered = set().union(*(passing[j] for j in keep))
+            n_pairs = int(torch.triu(kg.S_sim | kg.S_opp, diagonal=1).sum())
+            dropped = [f'{names[j]} ({len(pair_aucs[j])} pairs)' for j in range(len(names)) if j not in keep]
+            print(f'min_train_auc {min_auc} per KG pair: dropped {len(dropped)}: {", ".join(dropped)}')
+            print(f'kept predicates separate {len(covered)} of {n_pairs} KG pairs (pair AUC >= {min_auc}); '
+                  + ', '.join(f'{names[j]} {len(passing[j])}/{len(pair_aucs[j])}' for j in keep))
+        elif min_auc is not None:
             keep = [j for j, auc in enumerate(aucs) if auc == auc and auc >= min_auc]
             if not keep:
                 raise ValueError(f'no predicate reaches train AUC {min_auc}')
             dropped = [f'{names[j]} {aucs[j]:.2f}' for j in range(len(names)) if j not in keep]
             print(f'min_train_auc {min_auc}: dropped {len(dropped)}: {", ".join(dropped)}')
+        if min_auc is not None:
             phi_train, valid_train = phi_train[:, keep], valid_train[:, keep]
             phi_test, valid_test = phi_test[:, keep], valid_test[:, keep]
             names, columns, aucs = [names[j] for j in keep], [columns[j] for j in keep], [aucs[j] for j in keep]
@@ -412,6 +500,11 @@ if __name__ == '__main__':
         print(f"VERIFY coverage (v != 0): {100 * t['verify_coverage']:.2f}%; fixed / broken vs retrieval "
               f"{metrics['vs_retrieval']['fixed']} / {metrics['vs_retrieval']['broken']}, vs K0 "
               f"{metrics['vs_k0']['fixed']} / {metrics['vs_k0']['broken']}")
+        for name, h in metrics['headroom'].items():
+            print(f"v true vs rival, retrieval {name:>7} (n {h['n']}): right {100 * h['right']:.1f}%, "
+                  f"wrong {100 * h['wrong']:.1f}%, tie {100 * h['tie']:.1f}% "
+                  f"(no opposed predicate in KG {100 * h.get('tie_no_opposed', float('nan')):.1f}%); "
+                  f"median s gap {h['gap_s']:.2f}, median |lambda dv| {h['lam_dv']:.3f}")
     key, target = RECALL_TARGET
     retrieval = metrics['retrieval'] or metrics['head']
     verdict = 'pass' if retrieval[key] >= target else 'below target'

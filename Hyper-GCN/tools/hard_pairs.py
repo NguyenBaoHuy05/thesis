@@ -1,7 +1,7 @@
 """Hard class pairs and what the KG can say about them (A1-G plan S4).
 
   python tools/hard_pairs.py [--kg annotations/action_kg.json] [--out annotations/kg_work/hard_pairs.json]
-      [--cache-dir <folder> --cache-name ntu120_xsub --top 25]
+      [--cache-dir <folder> --cache-name ntu120_xsub --top 25] [--predicates-from <kg_metrics.json>]
 
 Pairs come from the KG itself: every `similar` or `opposite` relation (made by the LLM from the
 action definitions, before any model error was seen). Choosing pairs from the test confusion of
@@ -15,6 +15,8 @@ Per pair:
   one_sided          attributes known for one class, unknown for the other: candidates for the
                      local closed-world fill (S4 step 2)
 Pairs with no grounded opposed attribute come first: they need a new attribute or a fill.
+--predicates-from counts as grounded only the predicates a train_kg_head.py run used (e.g. after
+min_train_auc), instead of every predicate of model/predicates.py.
 """
 
 import argparse
@@ -85,17 +87,23 @@ if __name__ == '__main__':
     parser.add_argument('--cache-dir', help='feature cache with K0 fc_logits: coverage check only')
     parser.add_argument('--cache-name', default='ntu120_xsub')
     parser.add_argument('--top', type=int, default=25)
+    parser.add_argument('--predicates-from', metavar='KG_METRICS_JSON',
+                        help='grounded = only the predicates of this train_kg_head.py run')
     args = parser.parse_args()
 
     kg_json = load_kg(args.kg)
     rows = signed_rows(kg_json)
     grounded = set(PREDICATES) & set(kg_json['attributes'])
+    if args.predicates_from:
+        with open(args.predicates_from, encoding='utf-8') as handle:
+            grounded &= set(json.load(handle)['predicates']['names'])
     pairs = []
     for (a, b), relations in kg_pairs(kg_json).items():
         pairs.append(dict(pair=[a, b], relations=sorted(relations), **describe(a, b, rows, grounded)))
     pairs.sort(key=lambda p: (len(p['opposed_grounded']), len(p['opposed']), 'opposite' not in p['relations']))
 
     out = dict(kg=args.kg, kg_hash=kg_json['hash'], source='kg similar/opposite relations',
+               predicates_from=args.predicates_from,
                grounded_attributes=sorted(grounded), pairs=pairs,
                summary=dict(pairs=len(pairs),
                             no_opposed=sum(not p['opposed'] for p in pairs),
