@@ -81,7 +81,7 @@ Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trư
 Dòng `fusion sweep (DIAGNOSTIC ...)` cho mức trần của fusion (λ chọn trên test, không dùng để claim).
 **Quyết định trước khi chạy P2:** nếu mức trần của cả 3 head đều < K0 + 0.3 (87.93) thì không chạy ô 5–7.
 
-**Ô 5: P2 trên cache S = 1 (train, mỗi lệnh vài phút)**
+**Ô 5: P2 trên cache S = 1: KHÔNG CHẠY** (fusion của head trên S = 1 không vượt K0, xem kết luận fusion)
 ```
 !python train_concept_logic.py --config config/concept_graph/e2.yaml       --cache-dir $J --work-dir $W/e2
 !python train_concept_logic.py --config config/concept_graph/e2_alpha.yaml --cache-dir $J --work-dir $W/e2_alpha
@@ -99,11 +99,15 @@ Dòng `fusion sweep (DIAGNOSTIC ...)` cho mức trần của fusion (λ chọn t
 Cache này nằm trên ổ local, nên mất khi phiên Colab tắt. Phiên sau phải chạy lại ô 6, hoặc chép lên Drive
 (`!cp /content/jcache/ntu120_xsub_joint_s4_* /content/drive/MyDrive/BaoHuy/kg_cache/`) rồi chép về như ô 3.
 
-**Ô 7: P2 trên cache S = 4**
+**Ô 7: E1a trên cache S = 4 (train vài chục phút)**
 ```
 !python train_concept_logic.py --config config/concept_graph/e1a_s4.yaml --cache-dir $J --work-dir $W/e1a_s4
-!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml  --cache-dir $J --work-dir $W/e2_s4
-!python tools/summarize_runs.py $W e1a e2 e1a_s4 e2_s4
+!python tools/summarize_runs.py $W e1a e1a_s4
+```
+Chỉ khi cột "sweep ceiling" của e1a_s4 ≥ 87.93 mới chạy tiếp:
+```
+!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml --cache-dir $J --work-dir $W/e2_s4
+!python tools/summarize_runs.py $W e1a_s4 e2_s4
 ```
 
 **Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
@@ -187,16 +191,34 @@ Lệnh: **ô 4** của script.
 | | fusion Top1 / Top5 | sửa / phá vs K0 | PCR fusion | mức trần quét λ (chẩn đoán) |
 |---|---|---|---|---|
 | K0 | **87.63 / 97.56** | | **3.58** | |
-| K0 + E1a | 86.24 / 95.84 | 745 / 1454 | 3.90 | *chờ* |
-| K0 + E1b | 86.64 / 96.52 | 625 / 1129 | 3.95 | *chờ* |
-| K0 + E1c | 86.57 / 94.87 | 705 / 1245 | 3.93 | *chờ* |
+| K0 + E1a | 86.24 / 95.84 | 745 / 1454 | 3.90 | 87.66 (λ 0.02) |
+| K0 + E1b | 86.64 / 96.52 | 625 / 1129 | 3.95 | 87.65 (λ 0.02) |
+| K0 + E1c | 86.57 / 94.87 | 705 / 1245 | 3.93 | 87.65 (λ 0.02) |
 | K0 + E1d | 86.39 / 94.61 | 668 / 1299 | 3.91 | |
 | K0 + E1e | 86.56 / 95.12 | 679 / 1224 | 3.89 | |
 
 **Với λ = 1, fusion thấp hơn K0 ở mọi head** (thấp hơn 1.0–1.4 Top1), và phá nhiều hơn sửa.
 Lý do có thể: head đạt ~100% trên train và τ khoảng 0.05–0.08, nên log-softmax của head rất nhọn và lấn át K0.
-Quét λ trên test (chẩn đoán) cho biết có λ nào vượt K0 không. Nếu mức trần < 87.93 thì concept gán theo lớp
-không giúp K0 kể cả khi làm nhánh hiệu chỉnh.
+Quét λ trên test (λ ∈ {0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1}, chẩn đoán):
+
+| λ | 0.02 | 0.05 | 0.1 | 0.2 | 0.3 | 0.5 | 1.0 |
+|---|---|---|---|---|---|---|---|
+| K0 + E1a | **87.66** | 87.61 | 87.44 | 87.15 | 86.91 | 86.62 | 86.24 |
+| K0 + E1b | **87.65** | 87.63 | 87.62 | 87.51 | 87.36 | 87.12 | 86.64 |
+| K0 + E1c | **87.65** | 87.54 | 87.44 | 87.20 | 87.07 | 86.89 | 86.57 |
+
+### Kết luận fusion (2026-10-19): **không đạt, kể cả ở mức trần**
+
+- Top1 **giảm đều theo λ**. Mức trần là 87.65–87.66 ở λ nhỏ nhất (0.02), tức gần như chỉ còn K0 (+0.02–0.03,
+  khoảng 15 mẫu, nằm trong nhiễu). Ngưỡng 87.93 không đạt với cả 3 head.
+- Nghĩa là các head concept **không có thông tin nào dùng được mà K0 không có**. Các mẫu head "sửa" được (600–800)
+  chỉ là do khác biệt ngẫu nhiên; mọi cách trộn đều phá nhiều hơn sửa.
+- Nguyên nhân hợp lý: head học trên **chính map l9 đóng băng** mà fc của K0 dùng. S = 1 trung bình mất thời gian, nên
+  head chỉ có thêm cấu trúc theo khớp và người; nhãn concept lại là nhãn lớp. Không có nguồn thông tin mới,
+  nên không vượt được K0. Giống kết luận của A1-G: cải thiện phải mang thông tin độc lập với backbone.
+- **Theo quyết định ghi trước: không chạy P2 trên S = 1 (ô 5).** Motif / ∨ chỉ gộp lại cùng vector c.
+- Còn lại một thử nghiệm có nguồn thông tin mới: **S = 4** (thứ tự thời gian trong token, thứ mà fc của K0 trung bình
+  mất). Chỉ chạy E1a-S4 trước. Chỉ chạy E2-S4 nếu mức trần fusion của E1a-S4 ≥ 87.93.
 
 ## P2: cấu trúc đồ thị + S = 4
 
