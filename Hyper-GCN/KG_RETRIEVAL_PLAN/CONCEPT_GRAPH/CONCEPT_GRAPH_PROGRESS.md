@@ -71,23 +71,15 @@ Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trư
 %env W=/content/drive/MyDrive/BaoHuy/work_dir/concept_graph
 ```
 
-**Ô 4: train lại các head P1, kèm fusion K0 + head (mỗi lệnh vài phút)**
-
-Checkpoint của các lần chạy P1 trước đã mất (2026-10-19), nên train lại. Cùng config và seed 0, nên Top1 / PCR phải gần
-như trùng bảng P1; thêm vào là phần fusion.
+**Ô 4: fusion + quét λ (chẩn đoán) cho các head P1, không train lại (mỗi lệnh 1–2 phút)**
 ```
-!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a
-!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b
-!python tools/summarize_runs.py $W e1a e1c e1b
+!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a    --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c    --eval-only
+!python tools/summarize_runs.py $W e1a e1b_v2 e1c
 ```
-Không bắt buộc (đối chứng, chạy nếu còn thời gian):
-```
-!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d
-!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e
-!python tools/summarize_runs.py $W e1a e1b e1c e1d e1e
-```
-Từ giờ checkpoint nằm ở `$W/<tên>/head.pt` trên Drive. Kiểm tra sau mỗi lần chạy: `!ls -lh $W/e1a`.
+Dòng `fusion sweep (DIAGNOSTIC ...)` cho mức trần của fusion (λ chọn trên test, không dùng để claim).
+**Quyết định trước khi chạy P2:** nếu mức trần của cả 3 head đều < K0 + 0.3 (87.93) thì không chạy ô 5–7.
 
 **Ô 5: P2 trên cache S = 1 (train, mỗi lệnh vài phút)**
 ```
@@ -190,14 +182,21 @@ Vì vậy làm tiếp P2 dù P1 không đạt theo quy tắc cũ. Dự đoán gh
 Lệnh: **ô 4** của script.
 
 
-| | fusion Top1 / Top5 | sửa / phá vs K0 | PCR fusion |
-|---|---|---|---|
-| K0 | 87.63 / 97.56 | | 3.58 |
-| K0 + E1a | *chờ* | *chờ* | *chờ* |
-| K0 + E1b | *chờ* | *chờ* | *chờ* |
-| K0 + E1c | *chờ* | *chờ* | *chờ* |
-| K0 + E1d | *chờ* | *chờ* | *chờ* |
-| K0 + E1e | *chờ* | *chờ* | *chờ* |
+λ = 1 (chốt trước), 2026-10-19:
+
+| | fusion Top1 / Top5 | sửa / phá vs K0 | PCR fusion | mức trần quét λ (chẩn đoán) |
+|---|---|---|---|---|
+| K0 | **87.63 / 97.56** | | **3.58** | |
+| K0 + E1a | 86.24 / 95.84 | 745 / 1454 | 3.90 | *chờ* |
+| K0 + E1b | 86.64 / 96.52 | 625 / 1129 | 3.95 | *chờ* |
+| K0 + E1c | 86.57 / 94.87 | 705 / 1245 | 3.93 | *chờ* |
+| K0 + E1d | 86.39 / 94.61 | 668 / 1299 | 3.91 | |
+| K0 + E1e | 86.56 / 95.12 | 679 / 1224 | 3.89 | |
+
+**Với λ = 1, fusion thấp hơn K0 ở mọi head** (thấp hơn 1.0–1.4 Top1), và phá nhiều hơn sửa.
+Lý do có thể: head đạt ~100% trên train và τ khoảng 0.05–0.08, nên log-softmax của head rất nhọn và lấn át K0.
+Quét λ trên test (chẩn đoán) cho biết có λ nào vượt K0 không. Nếu mức trần < 87.93 thì concept gán theo lớp
+không giúp K0 kể cả khi làm nhánh hiệu chỉnh.
 
 ## P2: cấu trúc đồ thị + S = 4
 

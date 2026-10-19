@@ -21,7 +21,9 @@ Reported (kg_metrics.json in work_dir):
   outside the pairs, K5-pair (switch on M_j minus M_i, count predictions that move to j);
 - late fusion with K0: log_softmax(fc_logits) + fusion_lambda * log_softmax(head logits), fusion_lambda fixed in
   the config (default 1, never tuned on test; train cannot tune it, the head reaches ~100% there): Top1 / Top5,
-  pairs, fixed / broken against K0. Answers whether the concept head corrects K0 more than it breaks it.
+  pairs, fixed / broken against K0. Answers whether the concept head corrects K0 more than it breaks it;
+- fusion_sweep: the same fusion for several lambda, chosen on test. DIAGNOSTIC ONLY (never a claimed number): its
+  best Top1 is the ceiling of late fusion with this head. Test logits of the head are saved (test_logits.npy).
 """
 
 import argparse
@@ -41,6 +43,7 @@ from model.pair_metrics import k5_pair, pair_metrics
 from model.reason_logic import ReasonLogicHead
 
 EVAL_BATCH = 512
+SWEEP = (0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0)          # fusion_sweep: diagnostic, lambda chosen on test
 
 
 def topk_metrics(scores, labels, ks=(1, 5)):
@@ -285,11 +288,14 @@ if __name__ == '__main__':
         pairs=pair_metrics(pred, y_test, pairs, actions),
         pairs_k0=pair_metrics(k0, y_test, pairs, actions),
         fusion=fusion_metrics(fc_test, logits, y_test, pairs, actions, config.get('fusion_lambda', 1.0)),
+        fusion_sweep={str(lam): fusion_metrics(fc_test, logits, y_test, pairs, actions, lam)['topk']['recall@1']
+                      for lam in SWEEP},
         k5_pair=k5_pair(logits_fn, c_test, M.cpu(), pairs),
         graph=graph.summary() if graph is not None else None,
         tau=head.tau.item(),
     )
     np.save(os.path.join(config['work_dir'], 'test_concepts.npy'), c_test.numpy().astype(np.float16))
+    np.save(os.path.join(config['work_dir'], 'test_logits.npy'), logits.numpy().astype(np.float32))
     if history:
         with open(os.path.join(config['work_dir'], 'history.json'), 'w', encoding='utf-8') as handle:
             json.dump(history, handle, indent=2)
@@ -309,6 +315,10 @@ if __name__ == '__main__':
     fu = metrics['fusion']
     print(f"fusion K0 + {fu['lam']} head: " + ', '.join(f'{k} {100 * v:.2f}%' for k, v in fu['topk'].items())
           + f", fixed / broken vs K0 {fu['vs_k0']['fixed']} / {fu['vs_k0']['broken']}, PCR {100 * fu['pairs']['pcr']:.2f}%")
+    best = max(metrics['fusion_sweep'], key=metrics['fusion_sweep'].get)
+    print('fusion sweep (DIAGNOSTIC, lambda chosen on test): '
+          + ', '.join(f'{lam}: {100 * v:.2f}%' for lam, v in metrics['fusion_sweep'].items())
+          + f' -> ceiling {100 * metrics["fusion_sweep"][best]:.2f}% at lambda {best} (K0 {100 * metrics["k0_fc_logits"]["recall@1"]:.2f}%)')
     for key in ('pairs', 'pairs_k0'):
         pm = metrics[key]
         print(f"{key:>8}: PCR {100 * pm['pcr']:.2f}% on {pm['pcr_samples']} samples, top1 in pairs "
