@@ -12,6 +12,8 @@ No geometric predicates and no class-specific weight: a class is decided only th
 M [classes, concepts] is the binary action-concept matrix (annotations/concepts/, rows in label order).
 It is dense and was designed so that every class has its own row, so a 0 is read as "absent"
 (closed world) and enters the AND as NOT c_j with weight omega (omega = 0: has-only AND).
+balance=True averages the has and the NOT literals separately (logic_scores), so that the ~10 concepts a
+class has are not drowned by its ~92 NOT literals.
 
 Loss: CE(logit, y) + beta BCE(c, M[y]) (class-level concept targets). Ablations: K2 = a shuffled M
 (tools/shuffle_concepts.py, every row and column keeps its number of ones); K5 = flip a concept
@@ -93,21 +95,27 @@ def concept_joint_mask(names, meta, num_point=25):
     return mask
 
 
-def logic_scores(c, M, omega):
-    """c [N, K] in (0, 1), M [C, K] binary -> [N, C] log weighted geometric mean of the literals."""
+def logic_scores(c, M, omega, balance=False):
+    """c [N, K] in (0, 1), M [C, K] binary -> [N, C] log weighted geometric mean of the literals.
+    balance=False: one mean over all literals (a class has ~10 has and ~92 NOT literals, so each has
+    literal weighs ~1/102). balance=True: mean over the has literals and mean over the NOT literals
+    separately, (mean_has log c + omega mean_not log(1 - c)) / (1 + omega): each has literal weighs
+    ~1/10, so turning off one concept a class needs can change the decision (K5)."""
     log_c, log_not = torch.log(c.clamp(EPS, 1 - EPS)), torch.log((1 - c).clamp(EPS, 1 - EPS))
-    num = log_c @ M.t() + omega * (log_not @ (1 - M).t())
-    den = M.sum(1) + omega * (1 - M).sum(1)
-    return num / den
+    pos, neg = log_c @ M.t(), log_not @ (1 - M).t()
+    if balance:
+        return (pos / M.sum(1).clamp_min(1) + omega * neg / (1 - M).sum(1).clamp_min(1)) / (1 + omega)
+    return (pos + omega * neg) / (M.sum(1) + omega * (1 - M).sum(1))
 
 
 class ConceptLogicHead(nn.Module):
-    def __init__(self, in_channels, M, joint_mask, decoder_args=None, omega=1.0, tau=0.1, learn_tau=True):
+    def __init__(self, in_channels, M, joint_mask, decoder_args=None, omega=1.0, balance=False, tau=0.1,
+                 learn_tau=True):
         super().__init__()
         if M.shape[1] != joint_mask.shape[0]:
             raise ValueError('one joint_mask row per concept')
         self.register_buffer('M', M.float())
-        self.omega = float(omega)
+        self.omega, self.balance = float(omega), bool(balance)
         self.decoder = AttributeDecoder(in_channels, torch.eye(M.shape[1]), joint_mask, **(decoder_args or {}))
         self.log_tau = nn.Parameter(torch.tensor(float(tau)).log(), requires_grad=learn_tau)
 
@@ -116,7 +124,7 @@ class ConceptLogicHead(nn.Module):
         return self.log_tau.exp().clamp(TAU_MIN, TAU_MAX)
 
     def logits(self, c):
-        return logic_scores(c, self.M, self.omega) / self.tau
+        return logic_scores(c, self.M, self.omega, self.balance) / self.tau
 
     def forward(self, features, valid):
         """features [N, M, C, S, V], valid [N, M] -> dict(c [N, K], logits [N, classes])."""

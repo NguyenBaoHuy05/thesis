@@ -37,6 +37,23 @@ class ConceptLogicTests(unittest.TestCase):
         both = logic_scores(torch.tensor([[.9, .9, .9]]), torch.tensor([[1., 0., 0.], [1., 1., 0.]]), omega=0.0)
         self.assertAlmostEqual(both[0, 0].item(), both[0, 1].item(), places=5)
 
+    def test_balanced_logic_weighs_has_literals_more(self):
+        M = torch.zeros(2, 20)
+        M[0, :2] = 1
+        M[1, 2:4] = 1
+        c = torch.full((1, 20), .1)
+        c[0, :2] = .9
+        c_off = c.clone()
+        c_off[0, 0] = .1                                   # turn off one concept class 0 needs
+        for balance, min_drop in ((False, 0.0), (True, 0.2)):
+            before = logic_scores(c, M, 1.0, balance)
+            after = logic_scores(c_off, M, 1.0, balance)
+            self.assertGreater(before[0, 0], before[0, 1])
+            self.assertGreater((before[0, 0] - after[0, 0]).item(), min_drop)
+        drop_plain = (logic_scores(c, M, 1.0) - logic_scores(c_off, M, 1.0))[0, 0]
+        drop_balanced = (logic_scores(c, M, 1.0, True) - logic_scores(c_off, M, 1.0, True))[0, 0]
+        self.assertGreater(drop_balanced, 3 * drop_plain)
+
     def test_head_starts_uniform_and_trains(self):
         M = torch.tensor([[1., 0., 1., 0.], [0., 1., 0., 1.], [1., 1., 0., 0.]])
         mask = torch.ones(4, 25, dtype=torch.bool)

@@ -40,14 +40,28 @@ def load_split(cache_dir, name, split, device=None, chunk=4096):
     if device is not None:
         out = torch.empty(feat.shape, dtype=torch.float16, device=device)
         for i in range(0, len(feat), chunk):
-            out[i:i + chunk] = torch.from_numpy(np.ascontiguousarray(feat[i:i + chunk])).to(device)
+            out[i:i + chunk] = torch.from_numpy(np.array(feat[i:i + chunk])).to(device)
         feat = out
     return feat, rest['valid'].bool(), rest['fc_logits'].float(), rest['label'].long()
 
 
 def batches(feat, idx, device):
-    block = feat[idx] if torch.is_tensor(feat) else torch.from_numpy(np.ascontiguousarray(feat[idx.numpy()]))
+    block = feat[idx] if torch.is_tensor(feat) else torch.from_numpy(np.array(feat[idx.numpy()]))
     return block.to(device).float()
+
+
+def channel_std(feat, valid, chunk=2048):
+    """Per-channel std of the train features over real actors, segments and joints: [C]."""
+    total = torch.zeros(feat.shape[2], dtype=torch.float64, device=feat.device)
+    total_sq, count = torch.zeros_like(total), 0
+    for i in range(0, len(feat), chunk):
+        x = feat[i:i + chunk].float()                                          # [n, M, C, S, V]
+        w = valid[i:i + chunk].to(x.device)[:, :, None, None, None].float()
+        total += (x * w).sum((0, 1, 3, 4)).double()
+        total_sq += (x * x * w).sum((0, 1, 3, 4)).double()
+        count += w.sum().item() * x.shape[3] * x.shape[4]
+    mean = total / count
+    return (total_sq / count - mean ** 2).clamp_min(0).sqrt().float()
 
 
 def concept_auc(c, target):
@@ -103,13 +117,14 @@ if __name__ == '__main__':
     parser.add_argument('--matrix', help='overrides matrix (K2: a shuffled matrix)')
     parser.add_argument('--real-matrix', help='matrix the concept AUC is also reported against (default: config matrix)')
     parser.add_argument('--seed', type=int)
+    parser.add_argument('--feature-noise', type=float, help='overrides feature_noise')
     parser.add_argument('--device', default='cuda')
     args = parser.parse_args()
 
     with open(args.config, encoding='utf-8') as handle:
         config = yaml.safe_load(handle)
     real_matrix = args.real_matrix or config['matrix']
-    for key in ('cache_dir', 'work_dir', 'matrix', 'seed'):
+    for key in ('cache_dir', 'work_dir', 'matrix', 'seed', 'feature_noise'):
         if getattr(args, key) is not None:
             config[key] = getattr(args, key)
     os.makedirs(config['work_dir'], exist_ok=True)
@@ -137,6 +152,10 @@ if __name__ == '__main__':
     steps = config['epochs'] * ((N + config['batch_size'] - 1) // config['batch_size'])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=steps)
     M_dev, y_train_dev, valid_train_dev = head.M, y_train.to(device), valid_train.to(device)
+    # Gaussian noise on the train features, in units of each channel's std (train only, as feature_noise
+    # in train_kg_head.py): the head reaches 100% train top1 on clean cached features.
+    noise = config.get('feature_noise', 0.0)
+    std = channel_std(feat_train, valid_train_dev)[None, None, :, None, None] if noise else None
 
     history = []
     for epoch in range(config['epochs']):
@@ -145,7 +164,10 @@ if __name__ == '__main__':
         sums, correct = dict(loss=0.0, ce=0.0, bce=0.0), 0
         for start in range(0, N, config['batch_size']):
             idx = order[start:start + config['batch_size']]
-            out = head(feat_train[idx].float(), valid_train_dev[idx])
+            x = feat_train[idx].float()
+            if noise:
+                x = x + noise * std * torch.randn_like(x)
+            out = head(x, valid_train_dev[idx])
             loss, terms = concept_loss(out, y_train_dev[idx], M_dev, beta=config['loss']['beta'])
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
