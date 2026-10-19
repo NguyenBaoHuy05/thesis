@@ -368,14 +368,47 @@ python train_kg_head.py --config config/kg/g_then_pred.yaml --cache-dir $C --wor
 
 | Cặp | n test | lỗi K0 trong cặp | binary K0 | vote THEN: test / trên lỗi K0 | vote tĩnh: test / trên lỗi K0 |
 |---|---|---|---|---|---|
-| (5 cặp) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| put_on / take_off_jacket | 551 | 3 | 99.1% | 58.4% / 2 of 3 | không có |
+| put_on / take_off_a_hat_cap | 545 | 0 | 99.4% | 67.0% / – | 60.9% / – |
+| put_on / take_off_headphone | 1127 | 16 | 97.3% | **86.7%** / 11 of 16 | 73.0% / 11 of 16 |
+| put_on / take_off_bag | 1151 | 1 | 99.7% | 64.7% / 1 of 1 | không có |
+| put_object_into / take_object_out_of_bag | 1151 | **85** | 91.5% | 42.7% / 42 of 85 | 45.4% / 51 of 85 |
+| **Tổng** | | **105** (trần +0.21) | | **56 / 105 = 53.3%** | 62 / 101 = 61.4% |
 
-| | Top1 head / retrieval | λ | lỗi trong cặp opposite (head / retrieval / K0) | sửa / phá vs retrieval |
-|---|---|---|---|---|
-| Full-pair (chạy lại, baseline) | *chờ* | *chờ* | *chờ* | *chờ* |
-| Full-THEN | *chờ* | *chờ* | *chờ* | *chờ* |
-| K2-THEN | *chờ* | *chờ* | *chờ* | *chờ* |
-| THEN đảo | *chờ* | *chờ* | *chờ* | *chờ* |
+Kết quả `then_check` (2026-10-19): **không qua quy tắc 60%** (THEN 53.3%, thấp hơn vote tĩnh 61.4%) →
+**dừng, không chạy các mô hình THEN** theo quy tắc đã chốt.
+
+- **Backbone không làm mất thứ tự**: binary accuracy của K0 trong 4/5 cặp đảo chiều là 97.3–99.7%. Giả thuyết
+  "mean pooling xóa thứ tự" sai với các cặp này. Lỗi trong cặp chỉ 105 mẫu, trần Top1 +0.21 kể cả khi THEN đúng hết.
+- 81% lỗi (85/105) nằm ở cặp put_object_into / take_object_out_of_bag. Ở cặp này vị từ THEN ngược dấu cả trên
+  train (AUC 0.47 / 0.53) và test (0.44 / 0.38). Có thể cả hai hành động đều có vòng chest → low → chest, nên phases
+  của KG (một chiều) mô tả sai. Không sửa định nghĩa sau khi đã xem test.
+- **Grounding của THEN tốt ở nơi KG đúng**: headphone AUC test 0.89 / 0.91 (vote 86.7% so với vị từ tĩnh 73.0%),
+  hat_cap 0.68 / 0.76. Vị từ thứ tự đo được đúng điều KG nói, nhưng ở đúng các mẫu backbone sai thì không hơn
+  vị từ tĩnh (11/16 = 11/16).
+- Kết luận cho luận văn: lỗi tương quan có cả ở chiều thời gian; backbone đã giữ thứ tự, bằng chứng THEN chỉ có giá
+  trị grounding / giải thích.
+- Phụ: `raise_hold_lower` AUC 0.37 (test) / 0.41 (train) → định nghĩa ngược dấu, cần sửa (theo train).
+
+Các run mô hình vẫn được chạy (2026-10-19, seed 0, nhiễu 4) để xác nhận quyết định dừng; không tinh chỉnh gì theo
+kết quả này.
+
+| | Top1 head / retrieval | λ | AUC thuộc tính (test) | lỗi trong cặp opposite (head / retrieval / K0) | sửa / phá vs retrieval |
+|---|---|---|---|---|---|
+| Full-pair (chạy lại, baseline, 29 vị từ) | 87.06 / 87.08 | 1.685 | 0.695 | 182 / 181 / 172 | 124 / 130 |
+| Full-THEN (31 vị từ) | 87.04 / 87.05 | 1.675 | 0.702 | 183 / 181 / 172 | 124 / 129 |
+| K2-THEN (cùng 31 vị từ) | 87.05 / 87.04 | 0.752 | 0.548 | (2 / 2 / 1: cặp opposite cũng bị xáo, không so được) | 58 / 54 |
+| THEN đảo (cùng 31 vị từ) | 87.07 / 87.07 | 1.673 | 0.664 | 182 / 181 / 172 | 124 / 123 |
+
+- Lọc theo cặp chỉ giữ 2/6 vị từ THEN (hat_cap / headphone); 4 vị từ jacket / bag / object bị loại (AUC theo cặp
+  trên train < 0.75).
+- Full-THEN ≈ THEN đảo ≈ Full-pair (chênh ≤ 0.03 Top1, lỗi trong cặp 182–183): **cạnh THEN không đổi quyết định nào**,
+  đúng với `then_check` (cặp hat_cap 0 lỗi K0, headphone 16).
+- Grounding của THEN vẫn thấy được: AUC thuộc tính 0.702 (THEN thật) > 0.664 (THEN đảo; hai vị từ THEN có AUC train
+  0.32 / 0.26 với KG đảo) > 0.548 (K2). λ: 1.68 thật so với 0.75 K2 (lặp lại kết quả lần 4).
+- Baseline chạy lại cho đúng 87.06 như lần 4: pipeline tất định với seed 0.
+- Head có nhiều lỗi trong cặp opposite hơn K0 (182 so với 172): retrieval đồ thị phân biệt các cặp đảo chiều kém
+  backbone + FC một chút.
 
 ## Bàn giao (2026-10-19, cuối session)
 
