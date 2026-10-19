@@ -83,6 +83,23 @@ def load_predicates(cache_dir, name, split, kg_json, wanted='all'):
             torch.from_numpy(label).long(), names, [attributes.index(n) for n in names])
 
 
+def predicate_train_auc(phi, valid, labels, kg, columns):
+    """AUC of each predicate against has (1) / lacks (0) of the sample's class, on valid cells the
+    KG knows, train split only (the selection never sees the test split). nan if one side is empty."""
+    aucs = []
+    for j, column in enumerate(columns):
+        mask = valid[:, j] & kg.known[labels, column].bool()
+        target, score = (kg.W[labels[mask], column] > 0).float(), phi[mask, j]
+        n_pos = target.sum().item()
+        n_neg = len(target) - n_pos
+        if n_pos == 0 or n_neg == 0:
+            aucs.append(float('nan'))
+            continue
+        ranks = score.argsort().argsort().double() + 1
+        aucs.append(((ranks[target == 1].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg)).item())
+    return aucs
+
+
 def predicate_stats(phi, valid):
     """Per-predicate mean / std over the valid train values."""
     w = valid.float()
@@ -271,7 +288,12 @@ if __name__ == '__main__':
     parser.add_argument('--kg', help='overrides kg (e.g. a shuffled KG for K2)')
     parser.add_argument('--embeddings', help='overrides embeddings (e.g. the CLIP file, A1-enc)')
     parser.add_argument('--seed', type=int, help='overrides seed')
+    parser.add_argument('--feature-noise', type=float,
+                        help='overrides feature_noise (Gaussian noise on z in train-std units, train only)')
     parser.add_argument('--device', default='cuda')
+    parser.add_argument('--predicates-from', metavar='KG_METRICS_JSON',
+                        help='use exactly the predicates selected by an earlier run (its kg_metrics.json), '
+                             'e.g. K2 with the set chosen on the real KG; disables min_train_auc')
     parser.add_argument('--head-arg', action='append', default=[], metavar='KEY=VALUE',
                         help='overrides head_args[KEY] (YAML value; dotted KEY for nested, e.g. '
                              'graph_args.layers=0); repeatable, for ablations')
@@ -279,9 +301,14 @@ if __name__ == '__main__':
 
     with open(args.config, encoding='utf-8') as handle:
         config = yaml.safe_load(handle)
-    for key in ('cache_dir', 'cache_name', 'work_dir', 'kg', 'embeddings', 'seed'):
+    for key in ('cache_dir', 'cache_name', 'work_dir', 'kg', 'embeddings', 'seed', 'feature_noise'):
         if getattr(args, key) is not None:
             config[key] = getattr(args, key)
+    if args.predicates_from:
+        with open(args.predicates_from, encoding='utf-8') as handle:
+            chosen = json.load(handle)['predicates']['names']
+        config['predicates'] = dict(config['predicates'], names=chosen, min_train_auc=None,
+                                    names_from=args.predicates_from)
     for item in args.head_arg:
         key, sep, value = item.partition('=')
         if not sep:
@@ -323,12 +350,25 @@ if __name__ == '__main__':
             if not torch.equal(loaded[split][2], y):
                 raise ValueError(f'predicate cache {split} rows do not match the feature cache')
         phi_train, valid_train, _, names, columns = loaded['train']
+        phi_test, valid_test = loaded['test'][0], loaded['test'][1]
+        aucs = predicate_train_auc(phi_train, valid_train, y_train, kg, columns)
+        min_auc = spec.get('min_train_auc')
+        if min_auc is not None:
+            keep = [j for j, auc in enumerate(aucs) if auc == auc and auc >= min_auc]
+            if not keep:
+                raise ValueError(f'no predicate reaches train AUC {min_auc}')
+            dropped = [f'{names[j]} {aucs[j]:.2f}' for j in range(len(names)) if j not in keep]
+            print(f'min_train_auc {min_auc}: dropped {len(dropped)}: {", ".join(dropped)}')
+            phi_train, valid_train = phi_train[:, keep], valid_train[:, keep]
+            phi_test, valid_test = phi_test[:, keep], valid_test[:, keep]
+            names, columns, aucs = [names[j] for j in keep], [columns[j] for j in keep], [aucs[j] for j in keep]
         mean, std = predicate_stats(phi_train, valid_train)
         predicate_args = dict(columns=columns, mean=mean, std=std,
                               learn_threshold=spec.get('learn_threshold', True))
         extra_train = dict(phi=phi_train.to(device), phi_valid=valid_train.to(device))
-        extra_test = dict(phi=loaded['test'][0].to(device), phi_valid=loaded['test'][1].to(device))
-        print(f'{len(names)} predicates from {spec["cache_name"]}: {", ".join(names)}')
+        extra_test = dict(phi=phi_test.to(device), phi_valid=valid_test.to(device))
+        print(f'{len(names)} predicates from {spec["cache_name"]} (train AUC): '
+              + ', '.join(f'{n} {a:.2f}' for n, a in zip(names, aucs)))
 
     kg = kg.to(device)
     head = build_head(config, z_train.shape[-1], class_embeddings, attribute_embeddings, kg,
@@ -342,7 +382,7 @@ if __name__ == '__main__':
         _, train_metrics = evaluate_a1(head, z_train[0], y_train, kg, extra=extra_train)
         metrics['head_train_view0'] = train_metrics['head']
         if predicate_args is not None:
-            metrics['predicates'] = dict(names=names, theta=head.predicates.theta.tolist(),
+            metrics['predicates'] = dict(names=names, train_auc=aucs, theta=head.predicates.theta.tolist(),
                                          scale=head.predicates.log_scale.exp().tolist())
     else:
         test_scores = score(head, z_test[0].to(device)).cpu()

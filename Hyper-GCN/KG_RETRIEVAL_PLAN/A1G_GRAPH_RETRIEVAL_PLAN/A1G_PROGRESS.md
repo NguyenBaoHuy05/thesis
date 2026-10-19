@@ -145,4 +145,26 @@ done
 Kiểm tra trước khi tin kết quả G4: bảng AUC của `cache_predicates.py` (vị từ `check sign` phải sửa định nghĩa
 trước; vị từ `weak` loại khỏi `predicates.names`). Chọn danh sách vị từ **chỉ theo AUC trên train**.
 
-*chờ*
+### Lần 1 (2026-10-18, seed 0, 37 vị từ, không lọc, không nhiễu)
+
+| | Full-pred | K2-pred (s0) |
+|---|---|---|
+| Top1 head / retrieval | 86.89 / 86.86 | 86.81 / 86.81 |
+| Recall@10 retrieval | 97.74 | 97.68 |
+| AUC thuộc tính (test) | **0.699** | 0.515 |
+| λ cuối, τ cuối | 0.943, 0.0463 | 0.836, 0.0465 |
+| spread `s` / `λv` | 4.02 / 0.16 | 4.01 / 0.11 |
+| đổi dự đoán khi bỏ `λv` | 0.47% | 0.42% |
+| sửa / phá so với retrieval; so với K0 | 81 / 67; 532 / 911 | 66 / 65; 516 / 932 |
+
+- **Vị từ đo đúng KG thật**: AUC 0.699 so với 0.515 với KG xáo trộn (≈ ngẫu nhiên). Đây là bằng chứng
+  grounding mà A1 không có (AUC của A1 suy từ `z`).
+- **VERIFY quá yếu để đổi quyết định**: spread `λv` nhỏ hơn `s` ~25 lần; λ giảm dần khi train vì retrieval đã
+  đúng 99.7% trên train (rủi ro #6). Head − retrieval +0.03 (Full) và 0.00 (K2): chưa kết luận được Q3.
+- Retrieval đồ thị Recall@10 97.74 < K1 98.32 < K0 98.72: cần G1 / G1-0 để biết R-GCN có làm hại không.
+- Độ phủ `v ≠ 0` = 100% (trong 10 ứng viên gần như luôn có một thuộc tính đối lập): chỉ số này không có
+  thông tin, đọc `đổi dự đoán khi bỏ λv` thay.
+
+Sửa sau lần 1: `predicates.min_train_auc` (lọc vị từ theo AUC **trên train**, mặc định 0.75);
+`--predicates-from` (K2 dùng đúng tập vị từ Full đã chọn); `--feature-noise` (nhiễu trên `z` khi train để
+retrieval có lỗi như ở test và λ học được cách dùng `v`).
