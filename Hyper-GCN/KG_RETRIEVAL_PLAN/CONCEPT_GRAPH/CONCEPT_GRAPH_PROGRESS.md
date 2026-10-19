@@ -123,3 +123,71 @@ writing / play_with_phone_tablet khoảng 6%, giving_object / exchange_things kh
 
 **Theo quy tắc của plan: dừng, không làm P2–P3** cho tới khi có hướng đem lại thông tin mới ở các cặp.
 E1b vẫn chạy lại để có baseline REASON đầy đủ.
+
+## Đổi mục tiêu (2026-10-19, người dùng quyết)
+
+Diễn giải không còn là ưu tiên; concept không thể đúng ở từng mẫu vì nhãn concept gán theo lớp.
+Đồ thị được coi là **nhánh hiệu chỉnh của K0**, không phải nút thắt. Thước đo chính: **Top1 của fusion
+K0 + head so với K0 (87.63)**. Mọi lần chạy giờ in thêm:
+`fusion K0 + λ head` = log_softmax(K0) + λ·log_softmax(head), λ = `fusion_lambda` (mặc định 1, chốt trước, không dò).
+
+Vì vậy làm tiếp P2 dù P1 không đạt theo quy tắc cũ. Dự đoán ghi trước: motif / ∨ gần như không đổi PCR khi
+λ = 0 (vẫn cùng vector c). Chỉ S = 4 có thể đem thêm thông tin (thứ tự thời gian).
+
+## Fusion cho các head P1 (không train lại)
+
+```
+!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1d.yaml --cache-dir $J --work-dir $W/e1d --eval-only
+!python train_concept_logic.py --config config/concept_graph/e1e.yaml --cache-dir $J --work-dir $W/e1e --eval-only
+```
+
+(Nếu E1b lần 2 được ghi vào `$W/e1b` thì đổi `e1b_v2` thành `e1b`.)
+
+| | fusion Top1 / Top5 | sửa / phá vs K0 | PCR fusion |
+|---|---|---|---|
+| K0 | 87.63 / 97.56 | | 3.58 |
+| K0 + E1a | *chờ* | *chờ* | *chờ* |
+| K0 + E1b | *chờ* | *chờ* | *chờ* |
+| K0 + E1c | *chờ* | *chờ* | *chờ* |
+| K0 + E1d | *chờ* | *chờ* | *chờ* |
+| K0 + E1e | *chờ* | *chờ* | *chờ* |
+
+## P2: cấu trúc đồ thị + S = 4
+
+Config ở `config/concept_graph/`:
+
+| | Config | Khác với |
+|---|---|---|
+| E2 | `e2.yaml` | E1c: thêm 25 motif ∧ + ∨ posture (đồ thị đầy đủ), α cố định |
+| E2-α | `e2_alpha.yaml` | E2: α học được (η = 1e-4) |
+| E2−OR | `e2_noor.yaml` | E2: bỏ ∨ (26 motif) |
+| E1a-S4 | `e1a_s4.yaml` | E1a: cache S = 4 |
+| E2-S4 | `e2_s4.yaml` | E2: cache S = 4 |
+
+Cache S = 4: khoảng 12.9 GB train + 10.4 GB test (fp16), ghi vào ổ local của Colab (không cần chép lên Drive).
+Train feat được nạp hết lên GPU (khoảng 13 GB trên L4 22 GB).
+
+```
+!python train_concept_logic.py --config config/concept_graph/e2.yaml       --cache-dir $J --work-dir $W/e2
+!python train_concept_logic.py --config config/concept_graph/e2_alpha.yaml --cache-dir $J --work-dir $W/e2_alpha
+!python train_concept_logic.py --config config/concept_graph/e2_noor.yaml  --cache-dir $J --work-dir $W/e2_noor
+
+!python tools/cache_joint_features.py --weights /content/large/ntu120/xsub/joint/runs-122-120048.pt \
+    --out-dir /content/jcache --name ntu120_xsub_joint_s4 --segments 4 --num-worker 2
+!python train_concept_logic.py --config config/concept_graph/e1a_s4.yaml --cache-dir $J --work-dir $W/e1a_s4
+!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml  --cache-dir $J --work-dir $W/e2_s4
+```
+
+| | Top1 / Top5 | PCR | fusion Top1 | fusion sửa / phá | K5 | train top1 |
+|---|---|---|---|---|---|---|
+| E2 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E2-α | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E2−OR | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E1a-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E2-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+
+Quy tắc (chốt trước): đồ thị **có ích cho độ chính xác** nếu fusion của E2 (hoặc E2-S4) vượt K0 ≥ 0.3 Top1
+**và** vượt fusion của E1a (hoặc E1a-S4, cùng S) ≥ 0.2. Không đạt thì đồ thị không thêm gì so với AND phẳng.

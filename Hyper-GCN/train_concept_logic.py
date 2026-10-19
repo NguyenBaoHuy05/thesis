@@ -18,7 +18,10 @@ Reported (kg_metrics.json in work_dir):
 - K5 on the test split: zero the concept that supports the predicted class most (has, largest c) and
   count changed predictions, against zeroing a random concept the predicted class does not have;
 - confusable pairs (model/pair_metrics.py, for every head and for K0): PCR, per-pair rate, Top1 inside /
-  outside the pairs, K5-pair (switch on M_j minus M_i, count predictions that move to j).
+  outside the pairs, K5-pair (switch on M_j minus M_i, count predictions that move to j);
+- late fusion with K0: log_softmax(fc_logits) + fusion_lambda * log_softmax(head logits), fusion_lambda fixed in
+  the config (default 1, never tuned on test; train cannot tune it, the head reaches ~100% there): Top1 / Top5,
+  pairs, fixed / broken against K0. Answers whether the concept head corrects K0 more than it breaks it.
 """
 
 import argparse
@@ -103,6 +106,16 @@ def predict(head, feat, valid, device):
         cs.append(out['c'].cpu())
         logits.append(out['logits'].cpu())
     return torch.cat(cs), torch.cat(logits)
+
+
+def fusion_metrics(fc_logits, head_logits, labels, pairs, actions, lam=1.0):
+    """Late fusion log_softmax(K0) + lam * log_softmax(head) (plan: concept head as a correction of K0)."""
+    fused = torch.log_softmax(fc_logits.float(), 1) + lam * torch.log_softmax(head_logits.float(), 1)
+    pred, k0 = fused.argmax(1), fc_logits.argmax(1)
+    return dict(lam=lam, topk=topk_metrics(fused, labels, ks=(1, 5)),
+                vs_k0=dict(fixed=int(((pred == labels) & (k0 != labels)).sum()),
+                           broken=int(((pred != labels) & (k0 == labels)).sum())),
+                pairs={k: v for k, v in pair_metrics(pred, labels, pairs, actions).items() if k != 'per_pair'})
 
 
 def make_graph(matrix, spec):
@@ -271,6 +284,7 @@ if __name__ == '__main__':
         k5=intervention(head, c_test, torch.Generator().manual_seed(config['seed'])),
         pairs=pair_metrics(pred, y_test, pairs, actions),
         pairs_k0=pair_metrics(k0, y_test, pairs, actions),
+        fusion=fusion_metrics(fc_test, logits, y_test, pairs, actions, config.get('fusion_lambda', 1.0)),
         k5_pair=k5_pair(logits_fn, c_test, M.cpu(), pairs),
         graph=graph.summary() if graph is not None else None,
         tau=head.tau.item(),
@@ -292,6 +306,9 @@ if __name__ == '__main__':
     print(f"K5: prediction changes when the strongest supporting concept is zeroed "
           f"{100 * metrics['k5']['drop_support']:.2f}%, a random absent concept "
           f"{100 * metrics['k5']['drop_random_absent']:.2f}%")
+    fu = metrics['fusion']
+    print(f"fusion K0 + {fu['lam']} head: " + ', '.join(f'{k} {100 * v:.2f}%' for k, v in fu['topk'].items())
+          + f", fixed / broken vs K0 {fu['vs_k0']['fixed']} / {fu['vs_k0']['broken']}, PCR {100 * fu['pairs']['pcr']:.2f}%")
     for key in ('pairs', 'pairs_k0'):
         pm = metrics[key]
         print(f"{key:>8}: PCR {100 * pm['pcr']:.2f}% on {pm['pcr_samples']} samples, top1 in pairs "
