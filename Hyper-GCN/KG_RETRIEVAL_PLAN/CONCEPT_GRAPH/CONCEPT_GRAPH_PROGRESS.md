@@ -68,7 +68,7 @@ Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trư
 **Ô 3: cache S = 1 + biến môi trường (mỗi phiên)**
 ```
 !mkdir -p /content/jcache
-!rsync -ah --size-only /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_{train,test}* /content/jcache/
+!rsync -ah --size-only /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_train* /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_test* /content/jcache/
 !ls -l /content/jcache /content/drive/MyDrive/BaoHuy/kg_cache | grep joint
 !df -h /content
 %env J=/content/jcache
