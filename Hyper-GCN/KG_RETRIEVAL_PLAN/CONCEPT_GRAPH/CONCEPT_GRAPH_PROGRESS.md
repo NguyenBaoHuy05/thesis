@@ -89,7 +89,7 @@ Dự đoán ghi trước: E1c giảm PCR 15–30% so với E1a, Top1 ±0.5. E1b 
 | K0 | 87.63 / 97.56 | **3.58** | 85.54 / 90.23 | | | | |
 | E1a (CL v2) | 85.60 / **94.98** | 4.18 | 83.59 / 88.12 | 804 / 1836 | **14.49** / 0.00 | **67.30** | 99.80 |
 | E1b (logic REASON), lần 1 | sụp | | | | | | 4.45 |
-| E1b, lần 2 (công thức REASON) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| E1b, lần 2 (công thức REASON + init mặc định) | 83.80 / 91.20 | 6.55 | 81.09 / 87.19 | 600 / 2548 | 20.41 / 0.02 | 43.96 | 99.00 |
 | E1c (+¬, ω = 1) | **86.05** / 93.79 | **4.17** | **84.43** / 88.09 | 740 / 1542 | 7.69 / 0.00 | 38.20 | 99.94 |
 | E1d (+¬, ω = 0) | 85.83 / 93.59 | **4.17** | 84.34 / 87.69 | 693 / 1610 | 10.19 / 0.00 | 43.19 | 99.91 |
 | E1e (¬ ngẫu nhiên) | 86.01 / 94.06 | 4.19 | 84.15 / **88.33** | 699 / 1525 | 8.85 / 0.00 | 59.76 | 99.94 |
@@ -114,6 +114,12 @@ writing / play_with_phone_tablet khoảng 6%, giving_object / exchange_things kh
 - Ngoài lề: CL v2 hơn CL v1 1.5 điểm Top1 (85.60 so với 84.09). K5 tăng từ 6.6% lên 14.5% nhưng chưa tới 20% như dự đoán.
   K5-pair của E1a là 67%: bật các concept phân biệt thì dự đoán chuyển sang đối tác. Logic phản ứng đúng với concept,
   nhưng concept thì không đúng ở các mẫu khó.
+
+- E1b (logic REASON trên cùng decoder, cùng cache): **thấp hơn CL v2 1.8 điểm Top1 và nhầm cặp nhiều hơn**
+  (PCR 6.55 so với 4.18). Cặp drop / thumb_down nhầm tới 57.8%: concept bị nhị phân hoá trước khi vào logic, nên mất
+  mức độ của concept, và các cặp chỉ khác nhau 1–2 concept dễ bị gộp. AUC concept 0.974, thấp hơn CL (0.987–0.989).
+  K5 20.4% là cao nhất (logic rời rạc nhạy với từng concept). τ dừng ở 0.64.
+  Kết luận phụ: AND mềm theo ma trận (CL v2) hơn logic học được kiểu REASON trên cùng concept, cả Top1 lẫn PCR.
 
 **Theo quy tắc của plan: dừng, không làm P2–P3** cho tới khi có hướng đem lại thông tin mới ở các cặp.
 E1b vẫn chạy lại để có baseline REASON đầy đủ.
