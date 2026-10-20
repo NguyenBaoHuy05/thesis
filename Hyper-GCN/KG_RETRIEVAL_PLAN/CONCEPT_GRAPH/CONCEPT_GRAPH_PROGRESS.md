@@ -2,7 +2,7 @@
 
 > Plan: [CONCEPT_GRAPH_PLAN.md](CONCEPT_GRAPH_PLAN.md). Sơ đồ: [drawio/architecture_concept_graph.drawio](../../drawio/architecture_concept_graph.drawio).
 > Số liệu chép từ log chạy thật; ô chưa có số ghi *chờ*. Dev: **1 seed (0)**.
-> Cập nhật lần cuối: 2026-10-19
+> Cập nhật lần cuối: 2026-10-20
 
 ## Quyết định đã chốt (2026-10-19)
 
@@ -24,7 +24,7 @@
 | `model/pair_metrics.py` (PCR, per-pair, K5-pair) | xong; test *chờ* Colab |
 | `train_concept_logic.py`: `head: cl \| graph \| reason`, chỉ số cặp cho mọi head và cho K0 | xong |
 | `config/concept_graph/e1{b,c,d,e}.yaml` | xong (E1a = `config/concept/cl_v2.yaml`) |
-| R-GCN theo tầng, nhánh action, head đầy đủ (`model/rgcn.py`, `model/concept_action_graph.py`, `return_tokens`) | xong 2026-10-20; test `tests/test_concept_action_graph.py` *chờ* Colab |
+| R-GCN theo tầng, nhánh action, head đầy đủ (`model/rgcn.py`, `model/concept_action_graph.py`, `return_tokens`) | xong 2026-10-20; `tests/test_concept_action_graph.py` 7/7 qua (Colab) |
 
 Đồ thị v1 trên v2.4 (`python tools/build_concept_graph.py`):
 
@@ -271,8 +271,27 @@ Lệnh: **ô 5** (S = 1), **ô 6** (tạo cache S = 4), **ô 7** (S = 4).
 
 | | Top1 / Top5 | Top1 sym / neural / aux | PCR | fusion Top1 | mức trần fusion | K5 | train top1 |
 |---|---|---|---|---|---|---|---|
-| E3 (S = 1) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| K0 | 87.63 / 97.56 | | **3.58** | | | | |
+| E1a (S = 1, để so) | 85.60 / 94.98 | | 4.18 | 86.24 | 87.66 (λ 0.02) | 14.49 | 99.80 |
+| E3 (S = 1) | 86.38 / 94.63 | 85.90 / 86.51 / 85.58 | 4.13 | 86.63 | 87.59 (λ 0.02) | 10.21 | 99.94 |
 | E3-S4 | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
 
 Quy tắc (chốt trước): đồ thị **có ích cho độ chính xác** nếu fusion của E2 (hoặc E2-S4) vượt K0 ≥ 0.3 Top1
 **và** vượt fusion của E1a (hoặc E1a-S4, cùng S) ≥ 0.2. Không đạt thì đồ thị không thêm gì so với AND phẳng.
+
+E3 (2026-10-20, seed 0): Top1 trong / ngoài cặp 84.74 / 88.42 (K0 85.54 / 90.23); fusion sửa / phá 647 / 1157,
+PCR fusion 4.01; K5-pair 39.26%; AUC concept 0.990; τ cuối 0.0706. Cặp nhầm nhiều nhất vẫn như P1
+(make_OK_sign / make_victory_sign 27.7%, put_on / take_off_a_shoe 13.0%, thumb_up / make_victory_sign 11.0%).
+
+### Kết luận E3 trên S = 1 (2026-10-20): **không đạt**
+
+- Fusion 86.63 < K0 87.63 (cần ≥ 87.93). Mức trần quét λ là 87.59, còn **thấp hơn K0**. Vế "hơn fusion E1a ≥ 0.2"
+  có đạt (+0.39), nhưng vế chính thì không.
+- Đứng một mình, E3 là head tốt nhất tới nay: hơn E1a 0.78 Top1 và hơn E1c 0.33. PCR vẫn như cũ
+  (4.13 so với 4.17–4.18), vẫn cao hơn K0 (3.58). Phần tăng Top1 nằm cả trong và ngoài cặp, nên không đến từ ¬(j|i).
+- Đường logic tự đứng được (λ = 0: 85.90, chỉ thấp hơn bản đầy đủ 0.48), nên rủi ro "nhánh action lấn át" không xảy ra.
+  Ngược lại, R-GCN một mình (86.51) **cao hơn bản kết hợp** (86.38): cộng thêm log s / τ không giúp gì.
+- Train top1 99.94%, CE train 0.0015: giống mọi head trước, head khớp hết tập train trên map l9 đóng băng.
+  Kết luận fusion của P1 vẫn đúng: thêm cấu trúc đồ thị trên cùng nguồn thông tin không tạo thêm thông tin mới.
+- Còn lại S = 4 (ô 6 rồi ô 7b phần S = 4). Ablation của E3 (−RGCN, randE, −r6) không chạy trên S = 1,
+  vì bản đầy đủ đã không vượt K0.
