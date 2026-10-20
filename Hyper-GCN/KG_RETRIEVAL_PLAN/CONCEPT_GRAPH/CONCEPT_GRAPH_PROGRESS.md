@@ -4,6 +4,26 @@
 > Số liệu chép từ log chạy thật; ô chưa có số ghi *chờ*. Dev: **1 seed (0)**.
 > Cập nhật lần cuối: 2026-10-20
 
+## Đang làm (cập nhật 2026-10-20)
+
+Mục tiêu (người dùng chốt): **độ chính xác**, giữ tri thức concept; không đi hướng giải thích (xAI).
+
+| Việc | Trạng thái |
+|---|---|
+| Mọi head trên l9 của stream joint (E1–E3, fusion, refine online_e3, chuyên gia theo cặp) | **không vượt K0**: lỗi tương quan với K0 (cùng nguồn thông tin) |
+| online_e3 (refine, 30 epoch) | dừng đọc ở epoch 15: 87.28 < K0; số epoch 30 *chờ* |
+| Stage 1 riêng (`stage1_decoders.yaml`) | code xong, *chưa chạy* |
+| Hướng 1 (chuyên gia theo cặp, S = 1) | **dừng**: K0 + A 87.57 |
+| **Hướng 2 (hợp nhất các stream)** | bước 0: oracle 94.52; **đang sửa cache bone / bone-motion** (lệch log 4.6 / 2.9 điểm) |
+
+**Bước kế tiếp:** tạo lại cache test bone với `bone_root=False`; nếu khớp 89.34 thì làm bone-motion, chạy lại
+`tools/stream_ensemble.py` để có mốc ensemble thật, rồi quyết định bước 1 của hướng 2 (đặc tả *chờ*).
+```
+!python tools/cache_joint_features.py --config config/large/nturgbd120-cross-subject/hyper_bone.yaml    --weights /content/drive/MyDrive/BaoHuy/large/ntu120/xsub/bone/runs-139-136776.pt    --out-dir /content/jcache --name ntu120_xsub_bone --splits test --num-worker 2 --feeder-set bone_root=False
+```
+Checkpoint 4 stream: `/content/drive/MyDrive/BaoHuy/large/ntu120/xsub/{joint,bone,joint_motion,bone_motion}/`
+(mỗi thư mục có `epoch1_test_score.pkl` chính thức, khớp log).
+
 ## Quyết định đã chốt (2026-10-19)
 
 - Nhóm ∨ ở v1: chỉ posture (hip / leg static stand ∨ sit).
@@ -336,6 +356,83 @@ B mọi khớp. Train trên mẫu train của i, j, nhiễu 1.0, Adam 1e-3, 30 e
 top-2 K0 = {i, j}. Thay quyết định K0 trên cổng. Đạt nếu Top1 (A) ≥ 87.93; mask có ích nếu A − B ≥ 0.1.
 Hạn chế: S = 1 mất thứ tự thời gian (put_on / take_off); nếu chỉ các cặp đó hỏng thì thử lại với S = 4.
 
-| | trần (mẫu) | Top1 nếu sửa hết | Top1 K0 + A | Top1 K0 + B |
-|---|---|---|---|---|
-| hướng 1 | *chờ* | *chờ* | *chờ* | *chờ* |
+**Bước 0 (2026-10-20): qua** (634 ≥ 300).
+
+| | Số mẫu |
+|---|---|
+| lỗi của K0 | 6 294 (12.36%) |
+| nhãn ở top-2 của K0 | 3 127 (6.14%) |
+| nhãn ở top-5 | 5 053 (9.92%) |
+| **nhãn ở top-2 và top-2 là một cặp (trần)** | **634 (1.25%)**, Top1 nếu sửa hết 88.88 |
+| cổng (top-2 là một cặp) | 6 590 (12.94%), K0 đúng 85.36% |
+| "chỉ head đúng" nằm trong trần | 160 / 880 |
+
+Trần tập trung: make_OK_sign / make_victory_sign 208 (K0 trên cổng 59.7%), thumb_up / make_victory_sign 67 (58.3%),
+put_on / take_off_a_shoe 46, giving_object / exchange_things 42, toss_a_coin / throw_up_cap_hat 30, thumb_up /
+thumb_down 27. Cử chỉ bàn tay chiếm gần nửa trần. Để đạt 87.93 cần sửa ròng ≥ ~153 mẫu: chuyên gia phải đạt
+~92.3% nhị phân trên 6 259 mẫu cổng có nhãn thuộc cặp (K0 89.9%).
+
+**Bước 1** (`tools/pair_experts.py`). Hai chỉnh so với đặc tả khi viết code: cổng lúc áp dụng không dùng nhãn
+(mọi mẫu có top-2 K0 là một cặp); chuyên gia có LayerNorm + GELU sau Linear đầu (không thì chỉ là fc tuyến tính).
+```
+!python tools/pair_experts.py --cache-dir /content/jcache --out /content/drive/MyDrive/BaoHuy/work_dir/concept_graph/pair_experts
+```
+Cần cache S = 1 ở `/content/jcache` (chép từ Drive như ô 3 cũ).
+
+| | Top1 | sửa / phá vs K0 |
+|---|---|---|
+| K0 | 87.64 | |
+| K0 + A (mask tri thức) | 87.57 | 93 / 125 |
+| K0 + B (mọi khớp) | 87.56 | 92 / 129 |
+
+### Kết luận bước 1 (2026-10-20, seed 0): **không đạt, dừng hướng 1 trên S = 1**
+
+- K0 + A = 87.57 < 87.93 (thực ra thấp hơn K0 0.06); chuyên gia phá nhiều hơn sửa. Trên các cặp lớn, độ chính xác
+  nhị phân của chuyên gia ≈ K0 (±1–3 điểm): map l9 S = 1 (dù giữ riêng người × khớp) không có thêm thông tin tách
+  cặp so với fc của K0.
+- make_OK_sign / make_victory_sign: chuyên gia 60.7% so với K0 63.4%, gần đoán bừa ở cả hai: thông tin hình dạng
+  bàn tay không có trong l9 (skeleton chỉ có đầu ngón tay và ngón cái). Cặp này chiếm 1/3 trần.
+- put_on / take_off_a_shoe: 83.1% so với K0 86.1%: S = 1 mất thứ tự thời gian, như dự đoán.
+- **Mask tri thức gần như không được thử**: 43/52 cặp có mask = cả 25 khớp, vì M_j∖M_i ∪ M_i∖M_j gần như luôn có
+  concept nhóm temporal / participant (mask mọi khớp). Ở 9 cặp có mask hẹp: thumb_up / victory A 73.4 so với B 70.5,
+  phone_call / headache A 84.0 so với B 92.0; không có xu hướng.
+- Cùng kết luận với mọi thử nghiệm trước: lỗi của K0 trên các cặp nằm gần giới hạn thông tin của stream joint ở l9.
+
+## Hướng 2: hợp nhất các stream ở mức concept (2026-10-20)
+
+Có đủ checkpoint large X-Sub của j, b, jm, bm. Đây là nguồn thông tin mới thật (K0 chỉ dùng j).
+**Mốc phải vượt: ensemble cộng điểm 4 stream của Hyper-GCN** (`ensemble.py`, alpha [1, 1.5, 0.7, 0.3]), không phải K0.
+
+**Bước 0 (`tools/stream_ensemble.py`, numpy):** Top1 từng stream, ensemble (đều nhau / alpha của tác giả), oracle;
+trong lỗi của K0 bao nhiêu stream khác đúng; trên 634 mẫu trần của hướng 1 bao nhiêu stream khác đúng; chồng lỗi
+giữa các stream. Cần cache test (S = 1) của b, jm, bm:
+```
+!for s in bone joint_motion bone_motion; do    python tools/cache_joint_features.py --config config/large/nturgbd120-cross-subject/hyper_$s.yaml      --weights $(ls /content/large/ntu120/xsub/$s/*.pt | head -1) --out-dir /content/jcache      --name ntu120_xsub_$s --splits test --num-worker 2; done
+!python tools/stream_ensemble.py --cache-dir /content/jcache
+```
+Quy tắc (chốt trước): bước 1 (đồ thị hợp nhất theo concept) chỉ làm nếu oracle − ensemble alpha ≥ 1.0 điểm
+(còn chỗ cho một cách hợp nhất tốt hơn cộng điểm). Bước 1 đạt nếu vượt ensemble alpha ≥ 0.3.
+
+**Kết quả bước 0 (2026-10-20):**
+
+| | Top1 |
+|---|---|
+| j (K0) / b / jm / bm | 87.63 / 84.75 / 83.26 / 80.53 |
+| j + b (đều) | 88.77 |
+| 4 stream đều / **alpha [1, 1.5, 0.7, 0.3] (mốc)** | 89.10 / **89.48** |
+| oracle (có stream đúng) | 94.52 |
+
+Trong 6 299 lỗi của K0: stream khác đúng 3 511 (6.90%), ensemble alpha sửa 2 027 nhưng phá 1 085.
+Trên 636 mẫu trần hướng 1: b đúng 314, jm 247, bm 260, ít nhất một stream đúng 451, ensemble đúng 296.
+Chồng lỗi: j/b 66.7%, j/jm 68.3%, j/bm 71.4%, b/jm 56.9%, b/bm 65.5%, jm/bm 72.1%.
+
+**Theo quy tắc: được làm bước 1** (oracle − ensemble = 5.04 ≥ 1.0). Thông tin tách cặp có ở stream khác (451/636).
+Lưu ý: b 84.75 thấp hơn j gần 3 điểm (thường ngang nhau): kiểm tra checkpoint / config bone trước khi tin.
+Rủi ro chính của bước 1: mọi stream ~99% trên train, nên một cách hợp nhất học trên train gần như không học được
+nên tin stream nào khi chúng bất đồng (vấn đề stacking không có tập giữ riêng).
+
+**Kiểm tra checkpoint (2026-10-20):** điểm chính thức (`epoch1_test_score.pkl`) khớp log: j 87.65, b 89.34,
+jm 83.27, bm 83.44. Cache: j 87.63 và jm 83.26 khớp; **b 84.75 và bm 80.53 lệch** → mốc 89.48 ở trên **sai**.
+Nghi phạm: nhánh bone của feeder repo gán toạ độ tuyệt đối vào khớp 21 (`bone_data_numpy[:, :, 20] = ...`), bản
+của REASON không có dòng này. Thêm `bone_root` (mặc định True, giữ hành vi cũ) và `--feeder-set` cho
+`tools/cache_joint_features.py` để thử `bone_root=False`.
