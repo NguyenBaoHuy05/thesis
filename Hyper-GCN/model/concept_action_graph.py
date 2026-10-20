@@ -29,6 +29,42 @@ from model.fuzzy_executor import FuzzyGraphExecutor
 from model.rgcn import StratifiedRGCN
 
 
+def add_dual_decoders(module, in_channels, K, A, joint_mask, decoder_args=None, action_decoder_args=None):
+    """Stage 1 on `module`: decoder (K concept queries, body-group mask), action_decoder (A action queries, every
+    joint), aux (Linear d -> 1 per action token). Same names in DualDecoders and ConceptActionGraphHead, so a stage-1
+    checkpoint loads into the full head. Returns d_model."""
+    decoder_args = dict(decoder_args or {})
+    module.decoder = AttributeDecoder(in_channels, torch.eye(K), joint_mask, **decoder_args)
+    action_args = dict(decoder_args, **(action_decoder_args or {}))
+    module.action_decoder = AttributeDecoder(in_channels, torch.eye(A), torch.ones(A, joint_mask.shape[1],
+                                             dtype=torch.bool), **action_args)
+    d = module.decoder.norm.normalized_shape[0]
+    if module.action_decoder.norm.normalized_shape[0] != d:
+        raise ValueError('both decoders need the same d_model')
+    module.aux = nn.Linear(d, 1)
+    return d
+
+
+def run_dual_decoders(module, features, valid):
+    """-> c [N, K] in (0, 1), concept tokens U [N, K, d], action tokens A [N, A, d]."""
+    c, U = module.decoder(features, valid, return_tokens=True)
+    _, A_tok = module.action_decoder(features, valid, return_tokens=True)
+    return c, U, A_tok
+
+
+class DualDecoders(nn.Module):
+    """Stage 1 alone (model/hypergcn_concept.py: Stage1Model): the two decoders and the action decoder's head."""
+
+    def __init__(self, in_channels, K, A, joint_mask, decoder_args=None, action_decoder_args=None):
+        super().__init__()
+        add_dual_decoders(self, in_channels, K, A, joint_mask, decoder_args, action_decoder_args)
+
+    def forward(self, features, valid):
+        """features [N, M, C, S, V], valid [N, M] -> dict(c, U, A, aux [N, A] logits of the action decoder)."""
+        c, U, A_tok = run_dual_decoders(self, features, valid)
+        return dict(c=c, U=U, A=A_tok, aux=self.aux(A_tok).squeeze(-1))
+
+
 class ConceptActionGraphHead(nn.Module):
     def __init__(self, in_channels, graph, joint_mask, decoder_args=None, action_decoder_args=None,
                  omega=1.0, nu=1.0, learn_alpha=True, eta=1e-4, tau=0.1, learn_tau=True,
@@ -42,15 +78,7 @@ class ConceptActionGraphHead(nn.Module):
         self.aux_weight, self.token_drop, self.eta = float(aux_weight), float(token_drop), float(eta)
 
         # stage 1
-        decoder_args = dict(decoder_args or {})
-        self.decoder = AttributeDecoder(in_channels, torch.eye(K), joint_mask, **decoder_args)
-        action_args = dict(decoder_args, **(action_decoder_args or {}))
-        self.action_decoder = AttributeDecoder(in_channels, torch.eye(A), torch.ones(A, joint_mask.shape[1],
-                                               dtype=torch.bool), **action_args)
-        d = self.decoder.norm.normalized_shape[0]
-        if self.action_decoder.norm.normalized_shape[0] != d:
-            raise ValueError('both decoders need the same d_model')
-        self.aux = nn.Linear(d, 1)
+        d = add_dual_decoders(self, in_channels, K, A, joint_mask, decoder_args, action_decoder_args)
 
         # stage 2 (graph) + stage 3 symbolic path
         self.executor = FuzzyGraphExecutor(graph, omega=omega, nu=nu, learn_alpha=learn_alpha)
@@ -100,8 +128,7 @@ class ConceptActionGraphHead(nn.Module):
 
     def forward(self, features, valid):
         """features [N, M, C, S, V], valid [N, M] -> dict(c, logits, logits_sym, z, h_action [N, A, d], aux)."""
-        c, U = self.decoder(features, valid, return_tokens=True)
-        _, A_tok = self.action_decoder(features, valid, return_tokens=True)
+        c, U, A_tok = run_dual_decoders(self, features, valid)
         log_s = self.executor(c)
         sym = log_s / self.tau
         z, h_action = self.neural(c, U, A_tok)

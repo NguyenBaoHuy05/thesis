@@ -266,4 +266,44 @@ Dự đoán ghi trước: `head` cao hơn E3 cache (bớt khớp tập train), n
 
 | | Epoch 0 | 5 | 10 | 15 | 20 | 25 | **30** | `head` / `head_sym` (30) |
 |---|---|---|---|---|---|---|---|---|
-| online_e3 | *chờ* (phải = 87.63) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| online_e3 | 87.64 (đạt kiểm tra) | 87.29 | 87.31 | 87.28 | *chờ* | *chờ* | *chờ* | *chờ* |
+| `head` / `head_sym` | 0.54 / 0.54 | 83.74 / 82.60 | 84.40 / 83.47 | 84.83 / 83.88 | | | | |
+
+Top5 refine: 97.56 → 97.06 (epoch 5–15). `k0` giữ 87.64 ở mọi lần eval (backbone và fc đóng băng đúng).
+Train (log): acc 99.5–99.6% suốt; `ce` của refine 0.863 → 0.845 (gần như không giảm); `delta_norm` (‖W‖) tăng
+gần tuyến tính 3.5 → 28.5 sau 15 epoch.
+
+### Đọc giữa chừng (epoch 15, 2026-10-20)
+
+- **Refine làm K0 tệ đi**: −0.35 Top1 ở cả 3 lần eval, ổn định, không có xu hướng đi lên. Cần +0.30 nên khó đạt
+  87.93 ở epoch 30. W lớn dần mà CE train không giảm: fc của K0 đã đúng 99.6% train, nên Δ chủ yếu học theo
+  label smoothing (độ tự tin của logits), không học sửa lỗi; trên test, Δ chỉ làm nhiễu.
+- **`head` (đồ thị một mình) chưa hơn E3 trên cache**: 84.83 ở epoch 15 so với 86.38, dù có augmentation và đủ 16
+  bước. Head còn tăng (lr chưa giảm, giảm ở epoch 20 và 25), nên chờ epoch 30. Dự đoán "head cao hơn E3 cache"
+  hiện đang sai.
+
+## Train theo từng stage: stage 1 = dual decoder (2026-10-20, người dùng quyết)
+
+Người dùng quyết: tách train theo stage, stage 1 là dual decoder train riêng. Lý do: online_e3 (train chung) cho
+refine −0.35 so với K0, và head một mình thấp hơn E3 trên cache.
+
+Lệnh (Colab, sau ô 1):
+```
+!python tools/run_refine.py --model-config config/concept_graph/stage1_decoders.yaml
+```
+Kết quả ở `/content/drive/MyDrive/BaoHuy/work_dir/concept_graph/stage1_decoders`.
+
+Config `config/concept_graph/stage1_decoders.yaml` (`Stage1Model` trong `model/hypergcn_concept.py`):
+- Hyper-GCN (backbone + fc) đóng băng, chạy mỗi bước, đủ 16 bước của l9; chỉ hai decoder train;
+- loss = CE (label smoothing 0.1) của decoder action + 0.5 · BCE(c, M[y]); không có đồ thị, không refine;
+- Adam 1e-3, 30 epoch, giảm ×0.1 ở epoch 20 và 25, batch 64, eval mỗi 5 epoch, báo cáo epoch 30;
+- tên tham số giống head đầy đủ (`cg.head.decoder.*`, `cg.head.action_decoder.*`, `cg.head.aux.*`): checkpoint
+  stage 1 dùng để khởi tạo các stage sau.
+
+Mỗi lần eval in: `Top1` = decoder action; `k0` (phải 87.64); `concept_match` = lớp đoán chỉ từ concept c
+(log-likelihood của c dưới từng hàng M, không có trọng số lớp học được): cho biết concept tốt tới đâu.
+
+| | Epoch 5 | 10 | 15 | 20 | 25 | **30** |
+|---|---|---|---|---|---|---|
+| decoder action (Top1) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+| `concept_match` | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |

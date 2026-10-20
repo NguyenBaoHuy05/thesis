@@ -7,7 +7,7 @@ import unittest
 import torch
 
 from model.checkpoint import load_model_weights
-from model.hypergcn_concept import Model, segment_mean
+from model.hypergcn_concept import Model, Stage1Model, segment_mean
 from model.hypergcn_large import Model as HyperGCN
 from model.training import configure_trainable_parameters, frozen_modules
 
@@ -95,6 +95,40 @@ class RefinementTests(unittest.TestCase):
         features = torch.arange(8.).view(1, 1, 1, 8, 1)
         self.assertEqual(segment_mean(features, 2).flatten().tolist(), [1.5, 5.5])
         self.assertIs(segment_mean(features, 8), features)
+
+
+
+class Stage1Tests(unittest.TestCase):
+    ARGS = dict(matrix=CONCEPT['matrix'], metadata=CONCEPT['metadata'], segments=16,
+                decoder_args=dict(d_model=16, heads=2, layers=1))
+
+    def test_trains_the_decoders_only(self):
+        torch.manual_seed(0)
+        model = Stage1Model(concept_args=self.ARGS, **BACKBONE)
+        configure_trainable_parameters(model, 'fc')
+        model.train()
+        x, labels = torch.randn(2, 3, 64, 25, 2), torch.tensor([3, 7])
+        logits, _ = model(x)
+        self.assertEqual(tuple(logits.shape), (2, 120))
+        extra, terms = model.extra_loss(labels)
+        (torch.nn.functional.cross_entropy(logits, labels) + extra).backward()
+        self.assertEqual(set(terms), {'concept_bce'})
+        self.assertTrue(all(p.grad is None for n, p in model.named_parameters() if not n.startswith('cg.')))
+        for name in ('cg.head.decoder.', 'cg.head.action_decoder.', 'cg.head.aux.'):
+            self.assertTrue(any(p.grad is not None and p.grad.abs().sum() > 0
+                                for n, p in model.named_parameters() if n.startswith(name)), name)
+        outs = model.eval_outputs()
+        self.assertEqual(set(outs), {'k0', 'concept_match'})
+        self.assertEqual(tuple(outs['concept_match'].shape), (2, 120))
+
+    def test_checkpoint_initializes_the_full_model(self):
+        stage1 = Stage1Model(concept_args=self.ARGS, **BACKBONE)
+        full = Model(concept_args=dict(CONCEPT, segments=16), **BACKBONE)
+        state = stage1.state_dict()
+        full_state = full.state_dict()
+        self.assertFalse(set(state) - set(full_state))
+        for k, v in state.items():
+            self.assertEqual(tuple(full_state[k].shape), tuple(v.shape), k)
 
 
 if __name__ == '__main__':

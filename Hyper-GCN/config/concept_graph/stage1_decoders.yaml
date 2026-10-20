@@ -1,0 +1,76 @@
+# Stage 1 alone: the dual decoder (concept decoder 102 queries + action decoder 120 queries), no graph.
+# Hyper-GCN (backbone and fc) frozen and run at every step on all 16 l9 frames; output = the action decoder's logits
+# (CE with label smoothing in main.py), loss + beta BCE(c, M[y]) on the concepts. Same recipe as online_e3.yaml.
+# Its checkpoint (cg.head.decoder / action_decoder / aux) initializes the later stages.
+work_dir: ./work_dir/concept_graph/stage1_decoders
+
+# feeder (as config/large/nturgbd120-cross-subject/hyper_joint.yaml)
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model
+model: model.hypergcn_concept.Stage1Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'
+  concept_args:
+    segments: 16                     # every l9 frame (64-frame window, two stride-2 layers)
+    matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+    metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+    beta: 0.5                        # BCE of the concepts against the class row of M
+    decoder_args:                    # concept decoder, as e3.yaml
+      d_model: 256
+      heads: 4
+      layers: 2
+      dropout: 0.1
+    action_decoder_args:             # light action decoder: the rest as decoder_args
+      layers: 1
+
+weights: /content/large/ntu120/xsub/joint/runs-122-120048.pt
+freeze_until: fc               # backbone and fc frozen: only the decoders (cg.*) train
+eval_before_train: False       # the decoders start at random
+select_best: False
+
+# optim (E3 on the cache: Adam 1e-3, cosine; main.py has steps)
+optimizer: Adam
+weight_decay: 0.0
+base_lr: 0.001
+lr_decay_rate: 0.1
+step: [20, 25]
+warm_up_epoch: 0
+
+# training
+device: [0]
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+save_epoch: 0
+save_interval: 10
+eval_interval: 5
+eval_epoch: 30
+seed: 0

@@ -15,6 +15,8 @@ head_args / segments), else from scratch (online training, config/concept_graph/
 eval_outputs(): logits of the last forward besides the refined ones (k0 = fc(f) of the same backbone, head, head_sym,
 head_neural = z of the R-GCN, action_decoder = aux logits of the action decoder alone),
 collected by main.py at test time. One GPU only (the last forward is kept on the module).
+
+Stage1Model trains stage 1 alone (the two decoders, no graph); see its docstring.
 """
 
 import torch
@@ -22,9 +24,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from model.actors import valid_actor_mask
-from model.concept_action_graph import ConceptActionGraphHead
+from model.concept_action_graph import ConceptActionGraphHead, DualDecoders
 from model.concept_graph import graph_from_matrix
-from model.concept_logic import concept_joint_mask, concept_loss, load_concepts
+from model.concept_logic import EPS, concept_joint_mask, concept_loss, load_concepts
 from model.concept_schema import NTU_ACTION_NAMES
 from model.hypergcn_large import Model as HyperGCN
 
@@ -102,3 +104,56 @@ class Model(HyperGCN):
         out = self._last['out']
         return dict(k0=self._last['k0'], head=out['logits'].detach(), head_sym=out['logits_sym'].detach(),
                     head_neural=out['z'].detach(), action_decoder=out['aux'].detach())
+
+
+class Stage1Decoders(nn.Module):
+    """Stage 1 only: the concept and action decoders on the l9 map, no graph. Parameters are named as in the full head
+    (cg.head.decoder.*, cg.head.action_decoder.*, cg.head.aux.*), so a stage-1 checkpoint initializes later stages."""
+
+    def __init__(self, in_channels, matrix, metadata, decoder_args=None, action_decoder_args=None, beta=0.5,
+                 num_person=2, segments=16):
+        super().__init__()
+        M, names, meta = load_concepts(matrix, metadata, NTU_ACTION_NAMES)
+        self.segments = int(segments)
+        decoder_args = dict(dict(num_person=num_person, max_frames=self.segments), **(decoder_args or {}))
+        self.head = DualDecoders(in_channels, M.shape[1], M.shape[0], concept_joint_mask(names, meta),
+                                 decoder_args=decoder_args, action_decoder_args=action_decoder_args)
+        self.register_buffer('M', M.float(), persistent=False)     # not in the checkpoint: it loads into later stages
+        self.beta = float(beta)
+
+    def forward(self, features, valid):
+        return self.head(segment_mean(features, self.segments), valid)
+
+    def concept_match(self, c):
+        """[N, A] log-likelihood of c under each class row of M (has and absent literals averaged separately):
+        how well the concepts alone identify the class, without any learned class weight."""
+        log_c, log_not = torch.log(c.clamp(EPS, 1 - EPS)), torch.log((1 - c).clamp(EPS, 1 - EPS))
+        M = self.M
+        return log_c @ M.t() / M.sum(1).clamp_min(1) + log_not @ (1 - M).t() / (1 - M).sum(1).clamp_min(1)
+
+
+class Stage1Model(HyperGCN):
+    """Train stage 1 alone (config/concept_graph/stage1_decoders.yaml): Hyper-GCN frozen and run at every step, the
+    output is the action decoder's logits (main.py: CE + Top1), plus beta BCE(c, M[y]) through extra_loss.
+    eval_outputs: k0 (fc of the backbone) and concept_match (class from the concepts alone)."""
+
+    def __init__(self, concept_args=None, **kwargs):
+        super().__init__(**kwargs)
+        self.cg = Stage1Decoders(self.embedding_channels * 4, num_person=kwargs.get('num_person', 2),
+                                 **(concept_args or {}))
+        self._last = None
+
+    def forward(self, x):
+        features, hyper_outputs = self.features(x)
+        out = self.cg(features, valid_actor_mask(x))
+        pooled = features.flatten(3).mean(3).mean(1)
+        self._last = dict(out=out, k0=self.fc(self.drop_out(pooled)).detach())
+        return out['aux'], hyper_outputs
+
+    def extra_loss(self, labels):
+        c = self._last['out']['c']
+        bce = F.binary_cross_entropy(c.clamp(EPS, 1 - EPS), self.cg.M[labels])
+        return self.cg.beta * bce, dict(concept_bce=bce.item())
+
+    def eval_outputs(self):
+        return dict(k0=self._last['k0'], concept_match=self.cg.concept_match(self._last['out']['c'].detach()))

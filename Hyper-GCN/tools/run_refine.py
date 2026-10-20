@@ -1,6 +1,6 @@
 """The main model (online, no cache) in one command.
 
-  python tools/run_refine.py [--config config/concept_graph/run_refine.yaml]
+  python tools/run_refine.py [--config config/concept_graph/run_refine.yaml] [--model-config <main.py config>]
 
 1. tests (tests/test_hypergcn_concept.py, tests/test_concept_action_graph.py), if run_tests;
 2. data: <data> -> data/ntu120/NTU120_CSub.npz (path of the feeder configs), unless the same size is there;
@@ -45,9 +45,12 @@ def need(path, what):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config/concept_graph/run_refine.yaml')
+    parser.add_argument('--model-config', help='overrides model_config, e.g. config/concept_graph/stage1_decoders.yaml')
     args = parser.parse_args()
     with open(os.path.join(REPO, args.config), encoding='utf-8') as handle:
         cfg = yaml.safe_load(handle)
+    if args.model_config:
+        cfg['model_config'] = args.model_config
     need(cfg['checkpoint'], 'checkpoint')
 
     if cfg.get('run_tests', True):
