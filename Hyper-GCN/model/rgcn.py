@@ -5,7 +5,7 @@ basis decomposition W_r = sum_b a_rb V_b (Schlichtkrull et al. 2018) and each re
 row-normalized (1 / c_{v,r}). Messages follow the order of the logic, so there is no cycle:
 
     B1: concept -> AND (r1), OR (r2), NOT(j|i) (r8)
-    B2: action (initial state) -> NOT(j|i) (r6, auxiliary; use_r6=False drops it)
+    B2: action (initial state) -> NOT(j|i) (r6, auxiliary)
     B3: concept (r3), AND (r4), OR (r5), NOT(j|i) (r7) -> action
 
 Each step updates only its target types: h_t <- LN(h_t + GELU(W0_t h_t + sum_r A_r h_src W_r)).
@@ -43,9 +43,8 @@ def relation_adjacency(graph):
 
 
 class StratifiedRGCN(nn.Module):
-    def __init__(self, graph, d=256, bases=4, use_r6=True, dropout=0.1):
+    def __init__(self, graph, d=256, bases=4, dropout=0.1):
         super().__init__()
-        self.relations = tuple(r for r in RELATIONS if use_r6 or r != 'r6')
         for r, A in relation_adjacency(graph).items():
             self.register_buffer(f'adj_{r}', A)
         self.bases = nn.Parameter(torch.randn(bases, d, d) * d ** -0.5)
@@ -64,8 +63,6 @@ class StratifiedRGCN(nn.Module):
         for rels, targets in STEPS:
             msgs = {t: 0 for t in targets}
             for r in rels:
-                if r not in self.relations:
-                    continue
                 src, tgt = ENDS[r]
                 A = getattr(self, f'adj_{r}')
                 if A.numel() == 0 or h[src].shape[1] == 0:

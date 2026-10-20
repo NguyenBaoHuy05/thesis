@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from model.concept_graph import ConceptGraph, build_graph, flat_graph, random_pair_graph, read_matrix
+from model.concept_graph import ConceptGraph, build_graph, graph_from_matrix, read_matrix
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MATRIX = os.path.join(ROOT, 'annotations', 'concepts', 'ntu_action_concept_v2_4.csv')
@@ -59,20 +59,8 @@ class ConceptGraphTests(unittest.TestCase):
             self.assertNotIn(key, keys, g.actions[a])
             keys.add(key)
 
-    def test_flat_graph_is_the_matrix(self):
-        g = flat_graph(self.actions, self.concepts, self.rows, nots=False)
-        self.assertEqual(g.action_direct, self.rows)
-        self.assertFalse(g.motifs or g.ors or g.nots)
-        self.assertTrue(all(not m and not o for m, o in zip(g.action_motifs, g.action_ors)))
-        self.assertEqual(len(flat_graph(self.actions, self.concepts, self.rows).nots), len(self.graph.nots))
-
-    def test_random_pairs_keep_sizes(self):
-        r = random_pair_graph(self.graph, seed=0)
-        self.assertEqual([len(d) for _, _, d in r.nots], [len(d) for _, _, d in self.graph.nots])
-        self.assertEqual(r.pairs, self.graph.pairs)
-        for i, j, diff in r.nots:
-            self.assertNotEqual(i, j)
-            self.assertFalse(set(diff) & set(self.rows[i]))
+    def test_graph_from_matrix(self):
+        self.assertEqual(graph_from_matrix(MATRIX).summary(), self.graph.summary())
 
     def test_save_load_round_trip(self):
         with tempfile.TemporaryDirectory() as tmp:

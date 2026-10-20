@@ -1,9 +1,7 @@
 """Build the concept–action logic graph (model/concept_graph.py) and print a report to read by hand.
 
   python tools/build_concept_graph.py [--matrix annotations/concepts/ntu_action_concept_v2_4.csv]
-      [--out annotations/concepts/graph_v1.json] [--flat] [--no-nots]
-
---flat: no motif / OR gate (CL v2 + NOT(j|i), plan E1c / E1d); --flat --no-nots: exactly CL v2.
+      [--out annotations/concepts/graph_v1.json]
 """
 
 import argparse
@@ -13,7 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model.concept_graph import build_graph, flat_graph, read_matrix
+from model.concept_graph import graph_from_matrix
 
 
 def report(graph):
@@ -37,14 +35,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--matrix', default='annotations/concepts/ntu_action_concept_v2_4.csv')
     parser.add_argument('--out', default='annotations/concepts/graph_v1.json')
-    parser.add_argument('--flat', action='store_true')
-    parser.add_argument('--no-nots', action='store_true')
     args = parser.parse_args()
-    actions, concepts, rows = read_matrix(args.matrix)
-    graph = flat_graph(actions, concepts, rows, nots=not args.no_nots) if args.flat \
-        else build_graph(actions, concepts, rows)
-    if args.no_nots and not args.flat:
-        graph.nots = []
+    graph = graph_from_matrix(args.matrix)
     graph.save(args.out)
     print(report(graph))
     print(f'\nSaved {args.out}')

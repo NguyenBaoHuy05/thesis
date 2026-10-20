@@ -1,16 +1,12 @@
-"""Train / evaluate a concept head on cached l9 joint features.
+"""Train / evaluate the concept-action graph head (model/concept_action_graph.py) on cached l9 joint features.
 
-  python train_concept_logic.py --config config/concept/cl_full.yaml [--cache-dir <folder>]
-      [--work-dir <folder>] [--matrix <csv>] [--seed 0] [--device cuda]
+  python train_concept_logic.py --config config/concept_graph/e3.yaml [--cache-dir <folder>]
+      [--work-dir <folder>] [--matrix <csv>] [--seed 0] [--device cuda] [--eval-only]
 
-config `head`:
-- cl     (default): flat soft AND over M, model/concept_logic.py (CL v1 / v2);
-- graph: concept-graph head, model/concept_graph_head.py, on the graph of config `graph`
-         (kind full | flat | random, nots, seed; model/concept_graph.py), plan KG_RETRIEVAL_PLAN/CONCEPT_GRAPH;
-- reason: REASON's logic layers on our concept decoder (model/reason_logic.py, baseline E1b);
-- full:   the whole proposed model (model/concept_action_graph.py): concept + action decoders, graph, stratified
-          R-GCN + fuzzy executor, logits = log s / tau + lam z; also reports the symbolic path alone (head_sym,
-          lam = 0), the R-GCN path alone (head_neural) and the action decoder's auxiliary head (head_aux).
+The head: concept + action decoders, graph (config `graph_cfg`, model/concept_graph.py), stratified R-GCN + fuzzy
+executor, logits = log s / tau + lam z; also reports the symbolic path alone (head_sym, lam = 0), the R-GCN path
+alone (head_neural) and the action decoder's auxiliary head (head_aux).
+The main model runs online instead (main.py, config/concept_graph/online_e3.yaml, tools/run_refine.py).
 
 Reads <cache_dir>/<cache_name>_{train,test}_feat.npy + .npz (tools/cache_joint_features.py).
 No validation split: the recipe is fixed in the config, test is scored once.
@@ -38,13 +34,11 @@ import numpy as np
 import torch
 import yaml
 
-from model.concept_graph import build_graph, confusable_pairs, flat_graph, random_pair_graph, read_matrix
 from model.concept_action_graph import ConceptActionGraphHead
-from model.concept_graph_head import ConceptGraphHead
-from model.concept_logic import ConceptLogicHead, concept_joint_mask, concept_loss, load_concepts
+from model.concept_graph import confusable_pairs, graph_from_matrix, read_matrix
+from model.concept_logic import concept_joint_mask, concept_loss, load_concepts
 from model.concept_schema import NTU_ACTION_NAMES
 from model.pair_metrics import k5_pair, pair_metrics
-from model.reason_logic import ReasonLogicHead
 
 EVAL_BATCH = 512
 SWEEP = (0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0)          # fusion_sweep: diagnostic, lambda chosen on test
@@ -112,7 +106,7 @@ def concept_auc(c, target):
 def predict(head, feat, valid, device):
     """-> c [N, K], logits [N, A], {extra output: [N, A]} (head.forward_outputs(), e.g. logits_sym, z)."""
     head.eval()
-    names = head.forward_outputs() if hasattr(head, 'forward_outputs') else ()
+    names = head.forward_outputs()
     cs, logits, extra = [], [], {k: [] for k in names}
     for i in range(0, len(valid), EVAL_BATCH):
         idx = torch.arange(i, min(i + EVAL_BATCH, len(valid)))
@@ -132,24 +126,6 @@ def fusion_metrics(fc_logits, head_logits, labels, pairs, actions, lam=1.0):
                 vs_k0=dict(fixed=int(((pred == labels) & (k0 != labels)).sum()),
                            broken=int(((pred != labels) & (k0 == labels)).sum())),
                 pairs={k: v for k, v in pair_metrics(pred, labels, pairs, actions).items() if k != 'per_pair'})
-
-
-def make_graph(matrix, spec):
-    """Concept graph of config `graph`: kind full (plan §5) | flat (no motif / OR) | random (E1e: NOT nodes on
-    random pairs, built from the flat graph); nots False drops the NOT(j|i) nodes."""
-    actions, concepts, rows = read_matrix(matrix)
-    kind = spec.get('kind', 'full')
-    if kind == 'full':
-        graph = build_graph(actions, concepts, rows, spec.get('cfg'))
-    elif kind in ('flat', 'random'):
-        graph = flat_graph(actions, concepts, rows)
-        if kind == 'random':
-            graph = random_pair_graph(graph, seed=spec.get('seed', 0))
-    else:
-        raise ValueError(f'unknown graph kind {kind}')
-    if not spec.get('nots', True):
-        graph.nots = []
-    return graph
 
 
 @torch.no_grad()
@@ -213,34 +189,17 @@ if __name__ == '__main__':
 
     head_args = dict(config.get('head_args', {}))
     decoder_args = dict(dict(num_person=n_person, max_frames=S), **head_args.pop('decoder_args', {}))
-    kind = config.get('head', 'cl')
-    graph = None
-    if kind == 'cl':
-        head = ConceptLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args)
-    elif kind == 'graph':
-        graph = make_graph(config['matrix'], config.get('graph', {}))
-        graph.save(os.path.join(config['work_dir'], 'graph.json'))
-        print(f'graph: {graph.summary()}')
-        head = ConceptGraphHead(C, graph, joint_mask, decoder_args=decoder_args, **head_args)
-        if not torch.equal(head.M, M):
-            raise ValueError('graph rows differ from the concept matrix')
-    elif kind == 'full':
-        graph = make_graph(config['matrix'], config.get('graph', {}))
-        graph.save(os.path.join(config['work_dir'], 'graph.json'))
-        print(f'graph: {graph.summary()}')
-        action_args = head_args.pop('action_decoder_args', {})
-        head = ConceptActionGraphHead(C, graph, joint_mask, decoder_args=decoder_args,
-                                      action_decoder_args=action_args, **head_args)
-        if not torch.equal(head.M, M):
-            raise ValueError('graph rows differ from the concept matrix')
-    elif kind == 'reason':
-        head = ReasonLogicHead(C, M, joint_mask, decoder_args=decoder_args, **head_args)
-    else:
-        raise ValueError(f'unknown head {kind}')
+    graph = graph_from_matrix(config['matrix'], config.get('graph_cfg'))
+    graph.save(os.path.join(config['work_dir'], 'graph.json'))
+    print(f'graph: {graph.summary()}')
+    action_args = head_args.pop('action_decoder_args', {})
+    head = ConceptActionGraphHead(C, graph, joint_mask, decoder_args=decoder_args, action_decoder_args=action_args,
+                                  **head_args)
+    if not torch.equal(head.M, M):
+        raise ValueError('graph rows differ from the concept matrix')
     head = head.to(device)
     wd = config.get('weight_decay', 0.0)
-    groups = head.param_groups(config['lr'], wd) if hasattr(head, 'param_groups') else head.parameters()
-    optimizer = torch.optim.Adam(groups, lr=config['lr'], weight_decay=wd)
+    optimizer = torch.optim.Adam(head.parameters(), lr=config['lr'], weight_decay=wd)
     steps = config['epochs'] * ((N + config['batch_size'] - 1) // config['batch_size'])
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=steps)
     M_dev, y_train_dev, valid_train_dev = head.M, y_train.to(device), valid_train.to(device)
@@ -265,20 +224,13 @@ if __name__ == '__main__':
                 x = x + noise * std * torch.randn_like(x)
             out = head(x, valid_train_dev[idx])
             loss, terms = concept_loss(out, y_train_dev[idx], M_dev, beta=config['loss']['beta'])
-            if hasattr(head, 'regularizer'):
-                loss = loss + head.regularizer()
-            if hasattr(head, 'extra_loss'):
-                extra_loss, extra_terms = head.extra_loss(out, y_train_dev[idx])
-                loss = loss + extra_loss
-                terms.update(extra_terms)
+            extra_loss, extra_terms = head.extra_loss(out, y_train_dev[idx])
+            loss = loss + extra_loss
+            terms.update(extra_terms)
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
-            if hasattr(head, 'clip_grads'):
-                head.clip_grads()
             optimizer.step()
             scheduler.step()
-            if hasattr(head, 'after_step'):
-                head.after_step()
             sums['loss'] += loss.item() * len(idx)
             for key, value in terms.items():
                 sums[key] = sums.get(key, 0.0) + value * len(idx)
@@ -318,7 +270,7 @@ if __name__ == '__main__':
         fusion_sweep={str(lam): fusion_metrics(fc_test, logits, y_test, pairs, actions, lam)['topk']['recall@1']
                       for lam in SWEEP},
         k5_pair=k5_pair(logits_fn, c_test, M.cpu(), pairs),
-        graph=graph.summary() if graph is not None else None,
+        graph=graph.summary(),
         tau=head.tau.item(),
     )
     for key, name in (('logits_sym', 'head_sym'), ('z', 'head_neural'), ('aux', 'head_aux')):

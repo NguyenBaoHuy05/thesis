@@ -1,16 +1,13 @@
-"""model/fuzzy_executor.py, model/concept_graph_head.py, model/reason_logic.py, model/pair_metrics.py."""
+"""model/fuzzy_executor.py, model/pair_metrics.py."""
 
 import os
 import unittest
 
 import torch
 
-from model.concept_graph import ConceptGraph, build_graph, flat_graph, read_matrix
-from model.concept_graph_head import ConceptGraphHead
-from model.concept_logic import logic_scores
+from model.concept_graph import ConceptGraph, build_graph, read_matrix
 from model.fuzzy_executor import FuzzyGraphExecutor, log1mexp
 from model.pair_metrics import k5_pair, pair_metrics
-from model.reason_logic import ReasonLogicHead
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MATRIX = os.path.join(ROOT, 'annotations', 'concepts', 'ntu_action_concept_v2_4.csv')
@@ -30,14 +27,6 @@ class FuzzyExecutorTests(unittest.TestCase):
     def test_log1mexp(self):
         x = torch.tensor([-1e-3, -0.5, -0.7, -5.0, -30.0])
         torch.testing.assert_close(log1mexp(x), torch.log(1 - torch.exp(x)), rtol=1e-4, atol=1e-6)
-
-    def test_flat_graph_without_nots_is_cl_v2(self):
-        actions, concepts, rows = read_matrix(MATRIX)
-        graph = flat_graph(actions, concepts, rows, nots=False)
-        ex = FuzzyGraphExecutor(graph, omega=1.0)
-        c = torch.rand(7, len(concepts)) * 0.98 + 0.01
-        M = ex.mask_row
-        torch.testing.assert_close(ex(c), logic_scores(c, M, 1.0, balance=True), rtol=1e-5, atol=1e-5)
 
     def test_truth_table(self):
         ex = FuzzyGraphExecutor(toy_graph(), omega=1.0, nu=1.0)
@@ -80,33 +69,6 @@ class FuzzyExecutorTests(unittest.TestCase):
         s = ex(torch.rand(4, len(concepts)) * 0.98 + 0.01)
         self.assertEqual(tuple(s.shape), (4, 120))
         self.assertTrue(torch.isfinite(s).all() and (s <= 0).all())
-
-
-class HeadTests(unittest.TestCase):
-    def setUp(self):
-        self.graph = toy_graph()
-        self.mask = torch.ones(6, 25, dtype=torch.bool)
-        self.args = dict(d_model=16, heads=2, layers=1, max_frames=2, num_person=2)
-        self.feats, self.valid = torch.randn(5, 2, 8, 2, 25), torch.tensor([[True, False]] * 5)
-
-    def test_graph_head(self):
-        head = ConceptGraphHead(8, self.graph, self.mask, decoder_args=self.args, learn_alpha=True, eta=1e-4)
-        out = head(self.feats, self.valid)
-        self.assertEqual(tuple(out['logits'].shape), (5, 2))
-        (out['logits'].sum() + head.regularizer()).backward()
-        self.assertIsNotNone(head.decoder.query.weight.grad)
-
-    def test_reason_head(self):
-        M = torch.tensor([[1., 1, 1, 0, 1, 0], [1, 1, 0, 1, 1, 0]])
-        head = ReasonLogicHead(8, M, self.mask, decoder_args=self.args, logic_args=dict(l1_dim=8, l2_dim=8))
-        out = head(self.feats, self.valid)
-        self.assertEqual(tuple(out['logits'].shape), (5, 2))
-        self.assertGreater(head.decoder.out.weight.abs().sum().item(), 0.0)      # not the zero init
-        (out['logits'].sum() + head.regularizer()).backward()
-        self.assertIsNotNone(head.logic.union1.con_layer.W.grad)
-        head.logic.union1.con_layer.W.data += 2
-        head.after_step()
-        self.assertLessEqual(head.logic.union1.con_layer.W.max().item(), 1.0)
 
 
 class PairMetricTests(unittest.TestCase):

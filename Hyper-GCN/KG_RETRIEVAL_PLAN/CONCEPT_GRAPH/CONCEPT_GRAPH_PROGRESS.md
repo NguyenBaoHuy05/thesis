@@ -39,8 +39,10 @@ Ví dụ: ¬(take_off_a_shoe | put_on_a_shoe) = 1 − ∧(motion_upward, seq_han
 
 ## Script chạy (Colab)
 
-Ablation và các biến thể (E1b–E1e, E2, S = 4, ft_e3 / ft_k0) đã xoá tạm (2026-10-20, người dùng quyết); config cũ
-lấy lại từ git (commit `56872b5`). Chỉ còn mô hình chính.
+Ablation và các biến thể đã xoá tạm (2026-10-20, người dùng quyết), lấy lại từ git (commit `56872b5`):
+config E1b–E1e, E2, S = 4, ft_e3 / ft_k0, `config/concept/` (CL v1 / v2); code `model/concept_graph_head.py`,
+`model/reason_logic.py` (port REASON), CL head + `logic_scores`, `flat_graph` / `random_pair_graph`, cờ `use_rgcn`,
+`freeze_node_emb`, `use_r6`. Chỉ còn mô hình chính (và E3 trên cache, `train_concept_logic.py`).
 
 **Ô 1: Drive + code (mỗi phiên)**
 ```

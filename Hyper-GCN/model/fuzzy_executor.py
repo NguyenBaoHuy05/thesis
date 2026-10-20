@@ -10,7 +10,6 @@ Everything is computed in log space on c in (0, 1)^K (clamped to [EPS, 1 - EPS])
     glob_i    = mean over concepts outside row i (and outside its OR groups) of log(1 - c_k)   (closed world, CL v2)
     log s_i   = (pos_i + nu [i has a partner] neg_i + omega glob_i) / (1 + nu [i has a partner] + omega)
 
-With no motif, no OR gate and no NOT node this is exactly model/concept_logic.py: logic_scores(balance=True).
 Edge weights a = softplus(theta), theta initialized so that a = 1; learned only with learn_alpha=True.
 """
 

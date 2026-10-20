@@ -42,9 +42,6 @@ model_args:
     segments: 16                     # every l9 frame (64-frame window, two stride-2 layers)
     matrix: annotations/concepts/ntu_action_concept_v2_4.csv
     metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
-    graph:
-      kind: full
-      nots: True
     beta: 0.5                        # BCE of the concepts
     head_weight: 1.0                 # the head's own losses (CE + beta BCE + aux / kl / margin / alpha)
     head_args:
@@ -60,11 +57,8 @@ model_args:
       margin: 0.1
       aux_weight: 0.1
       token_drop: 0.3
-      use_rgcn: True
-      freeze_node_emb: False
       rgcn_args:
         bases: 4
-        use_r6: True
         dropout: 0.1
       decoder_args:
         d_model: 256

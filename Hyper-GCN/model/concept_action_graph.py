@@ -33,14 +33,13 @@ class ConceptActionGraphHead(nn.Module):
     def __init__(self, in_channels, graph, joint_mask, decoder_args=None, action_decoder_args=None,
                  omega=1.0, nu=1.0, learn_alpha=True, eta=1e-4, tau=0.1, learn_tau=True,
                  lam=0.5, gamma=0.5, mu=0.5, margin=0.1, aux_weight=0.1, token_drop=0.3,
-                 rgcn_args=None, use_rgcn=True, freeze_node_emb=False):
+                 rgcn_args=None):
         super().__init__()
         K, A = len(graph.concepts), len(graph.actions)
         if joint_mask.shape[0] != K:
             raise ValueError('one joint_mask row per concept')
         self.lam, self.gamma, self.mu, self.margin = float(lam), float(gamma), float(mu), float(margin)
         self.aux_weight, self.token_drop, self.eta = float(aux_weight), float(token_drop), float(eta)
-        self.use_rgcn = bool(use_rgcn)
 
         # stage 1
         decoder_args = dict(decoder_args or {})
@@ -63,21 +62,20 @@ class ConceptActionGraphHead(nn.Module):
         self.log_tau = nn.Parameter(torch.tensor(float(tau)).log(), requires_grad=learn_tau)
 
         # stage 2 node parameters + stage 3 neural path
-        if self.use_rgcn:
-            with torch.no_grad():
-                e_c = self.decoder.query(self.decoder.attribute_embeddings).clone()
-                e_a = self.action_decoder.query(self.action_decoder.attribute_embeddings).clone()
-            n_other = len(graph.motifs) + len(graph.ors) + len(graph.nots)
-            self.emb_concept = nn.Parameter(e_c, requires_grad=not freeze_node_emb)
-            self.emb_action = nn.Parameter(e_a, requires_grad=not freeze_node_emb)
-            self.emb_other = nn.Parameter(torch.randn(n_other, d) * 0.02, requires_grad=not freeze_node_emb)
-            self.sizes = (len(graph.motifs), len(graph.ors), len(graph.nots))
-            self.init_concept = nn.Linear(2 * d + 1, d)
-            self.init_action = nn.Linear(2 * d, d)
-            self.rgcn = StratifiedRGCN(graph, d=d, **(rgcn_args or {}))
-            self.readout = nn.Linear(d, 1)
-            nn.init.zeros_(self.readout.weight)            # z = 0 at the start: the logic decides first
-            nn.init.zeros_(self.readout.bias)
+        with torch.no_grad():
+            e_c = self.decoder.query(self.decoder.attribute_embeddings).clone()
+            e_a = self.action_decoder.query(self.action_decoder.attribute_embeddings).clone()
+        n_other = len(graph.motifs) + len(graph.ors) + len(graph.nots)
+        self.emb_concept = nn.Parameter(e_c)
+        self.emb_action = nn.Parameter(e_a)
+        self.emb_other = nn.Parameter(torch.randn(n_other, d) * 0.02)
+        self.sizes = (len(graph.motifs), len(graph.ors), len(graph.nots))
+        self.init_concept = nn.Linear(2 * d + 1, d)
+        self.init_action = nn.Linear(2 * d, d)
+        self.rgcn = StratifiedRGCN(graph, d=d, **(rgcn_args or {}))
+        self.readout = nn.Linear(d, 1)
+        nn.init.zeros_(self.readout.weight)                # z = 0 at the start: the logic decides first
+        nn.init.zeros_(self.readout.bias)
 
     @property
     def tau(self):
@@ -106,20 +104,16 @@ class ConceptActionGraphHead(nn.Module):
         _, A_tok = self.action_decoder(features, valid, return_tokens=True)
         log_s = self.executor(c)
         sym = log_s / self.tau
-        out = dict(c=c, log_s=log_s, logits_sym=sym, aux=self.aux(A_tok).squeeze(-1))
-        if self.use_rgcn:
-            z, h_action = self.neural(c, U, A_tok)
-            out.update(z=z, h_action=h_action, logits=sym + self.lam * z)
-        else:
-            out['logits'] = sym
-        return out
+        z, h_action = self.neural(c, U, A_tok)
+        return dict(c=c, log_s=log_s, logits_sym=sym, aux=self.aux(A_tok).squeeze(-1), z=z, h_action=h_action,
+                    logits=sym + self.lam * z)
 
     def extra_loss(self, out, labels):
         """aux CE + gamma KL(z || sym) + mu margin on the NOT(j|y) partners + eta alpha penalty."""
         terms = {}
         loss = self.aux_weight * F.cross_entropy(out['aux'], labels)
         terms['aux'] = loss.item()
-        if self.use_rgcn and self.gamma > 0:
+        if self.gamma > 0:
             kl = F.kl_div(torch.log_softmax(out['logits_sym'], 1), torch.log_softmax(out['z'], 1),
                           log_target=True, reduction='batchmean')
             loss = loss + self.gamma * kl
@@ -137,4 +131,4 @@ class ConceptActionGraphHead(nn.Module):
 
     def forward_outputs(self):
         """Extra outputs collected at test time (train_concept_logic.py: predict)."""
-        return ('logits_sym', 'z', 'aux') if self.use_rgcn else ('logits_sym', 'aux')
+        return ('logits_sym', 'z', 'aux')

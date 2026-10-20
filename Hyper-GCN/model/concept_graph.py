@@ -193,26 +193,7 @@ def build_graph(actions, concepts, rows, cfg=None):
                         nots=nots, cfg=cfg_out)
 
 
-def flat_graph(actions, concepts, rows, nots=True, pair_hamming=4):
-    """No motif and no OR gate: every concept of a row is a direct edge (CL v2), optionally with NOT(j|i).
-    nots=False gives exactly the flat AND of model/concept_logic.py."""
-    cfg = dict(or_groups=(), max_motifs=0, pair_hamming=pair_hamming)
-    graph = build_graph(actions, concepts, rows, cfg)
-    if not nots:
-        graph.nots = []
-    return graph
-
-
-def random_pair_graph(graph, seed=0):
-    """E1e control: same number of NOT nodes and the same size of each M_j minus M_i, but the pair (i, j) and
-    the concepts are drawn at random (j != i, concepts outside the row of i)."""
-    import random
-    rng = random.Random(seed)
-    n_actions, n_concepts = len(graph.actions), len(graph.concepts)
-    nots = []
-    for _i, _j, diff in graph.nots:
-        i = rng.randrange(n_actions)
-        j = rng.choice([a for a in range(n_actions) if a != i])
-        outside = [c for c in range(n_concepts) if c not in set(graph.rows[i])]
-        nots.append((i, j, sorted(rng.sample(outside, len(diff)))))
-    return ConceptGraph(**{**asdict(graph), 'nots': nots})
+def graph_from_matrix(matrix_path, cfg=None):
+    """The concept–action graph of a concept matrix CSV (build_graph with its default rules, or `cfg`)."""
+    actions, concepts, rows = read_matrix(matrix_path)
+    return build_graph(actions, concepts, rows, cfg)

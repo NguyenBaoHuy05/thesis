@@ -37,20 +37,18 @@ class RGCNTests(unittest.TestCase):
 
     def test_gates_do_not_read_actions(self):
         torch.manual_seed(0)
-        for use_r6 in (True, False):
-            rgcn = StratifiedRGCN(self.graph, d=D, use_r6=use_r6, dropout=0.0).eval()
-            h = random_states(self.graph)
-            h2 = dict(h, action=h['action'] + 1.0)
-            out, out2 = rgcn(h), rgcn(h2)
-            torch.testing.assert_close(out['motif'], out2['motif'])
-            torch.testing.assert_close(out['orr'], out2['orr'])
-            same_not = torch.allclose(out['notn'], out2['notn'])
-            self.assertEqual(same_not, not use_r6)          # r6 is the only action -> NOT relation
-            self.assertEqual(tuple(out['action'].shape), (3, 120, D))
+        rgcn = StratifiedRGCN(self.graph, d=D, dropout=0.0).eval()
+        h = random_states(self.graph)
+        h2 = dict(h, action=h['action'] + 1.0)
+        out, out2 = rgcn(h), rgcn(h2)
+        torch.testing.assert_close(out['motif'], out2['motif'])
+        torch.testing.assert_close(out['orr'], out2['orr'])
+        self.assertFalse(torch.allclose(out['notn'], out2['notn']))     # r6: action -> NOT
+        self.assertEqual(tuple(out['action'].shape), (3, 120, D))
 
     def test_action_reads_its_concepts(self):
         torch.manual_seed(0)
-        rgcn = StratifiedRGCN(self.graph, d=D, use_r6=False, dropout=0.0).eval()
+        rgcn = StratifiedRGCN(self.graph, d=D, dropout=0.0).eval()
         h = random_states(self.graph)
         c = self.graph.action_direct[0][0]                  # a concept action 0 reads directly
         h2 = {k: v.clone() for k, v in h.items()}
@@ -114,13 +112,6 @@ class FullHeadTests(unittest.TestCase):
         _, terms = head.extra_loss(out, no_partner)
         self.assertEqual(terms['margin'], 0.0)
 
-    def test_without_rgcn_and_frozen_embeddings(self):
-        head = self.make(use_rgcn=False)
-        out = head(self.feats, self.valid)
-        self.assertNotIn('z', out)
-        torch.testing.assert_close(out['logits'], out['logits_sym'])
-        frozen = self.make(freeze_node_emb=True)
-        self.assertFalse(frozen.emb_other.requires_grad or frozen.emb_concept.requires_grad)
 
 
 if __name__ == '__main__':

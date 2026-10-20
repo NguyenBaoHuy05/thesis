@@ -9,10 +9,6 @@ cache_name: ntu120_xsub_joint                  # tools/cache_joint_features.py -
 
 matrix: annotations/concepts/ntu_action_concept_v2_4.csv
 metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
-head: full
-graph:
-  kind: full
-  nots: True
 head_args:
   omega: 1.0                         # closed-world NOT over absent concepts
   nu: 1.0                            # NOT(j|i) literals
@@ -26,11 +22,8 @@ head_args:
   margin: 0.1
   aux_weight: 0.1                    # CE of the action decoder's own head
   token_drop: 0.3                    # whole action-token dropout before the R-GCN
-  use_rgcn: True
-  freeze_node_emb: False
   rgcn_args:
     bases: 4
-    use_r6: True
     dropout: 0.1
   decoder_args:                      # concept decoder (as CL v2)
     d_model: 256

@@ -22,6 +22,7 @@ import torch.nn.functional as F
 
 from model.actors import valid_actor_mask
 from model.concept_action_graph import ConceptActionGraphHead
+from model.concept_graph import graph_from_matrix
 from model.concept_logic import concept_joint_mask, concept_loss, load_concepts
 from model.concept_schema import NTU_ACTION_NAMES
 from model.hypergcn_large import Model as HyperGCN
@@ -38,20 +39,17 @@ def segment_mean(features, segments):
 
 
 class ConceptRefiner(nn.Module):
-    def __init__(self, in_channels, matrix, metadata, graph=None, head_args=None, beta=0.5, head_weight=1.0,
+    def __init__(self, in_channels, matrix, metadata, graph_cfg=None, head_args=None, beta=0.5, head_weight=1.0,
                  num_person=2, segments=1):
         super().__init__()
-        from train_concept_logic import make_graph                 # avoids a model -> script import at load time
         M, names, meta = load_concepts(matrix, metadata, NTU_ACTION_NAMES)
-        graph = make_graph(matrix, graph or {})
+        graph = graph_from_matrix(matrix, graph_cfg)
         head_args = dict(head_args or {})
         self.segments = int(segments)
         decoder_args = dict(dict(num_person=num_person, max_frames=self.segments), **head_args.pop('decoder_args', {}))
         action_args = head_args.pop('action_decoder_args', {})
         self.head = ConceptActionGraphHead(in_channels, graph, concept_joint_mask(names, meta),
                                            decoder_args=decoder_args, action_decoder_args=action_args, **head_args)
-        if not self.head.use_rgcn:
-            raise ValueError('the refinement reads the R-GCN action nodes: use_rgcn must be True')
         if not torch.equal(self.head.M, M):
             raise ValueError('graph rows differ from the concept matrix')
         d = self.head.decoder.norm.normalized_shape[0]
