@@ -16,7 +16,6 @@ BACKBONE = dict(num_class=120, num_point=25, num_person=2, hyper_joints=3,
                 graph='graph.ntu_rgb_d.Graph', graph_args=dict(labeling_mode='virtual_ensemble'))
 CONCEPT = dict(matrix=os.path.join(ROOT, 'annotations', 'concepts', 'ntu_action_concept_v2_4.csv'),
                metadata=os.path.join(ROOT, 'annotations', 'concepts', 'ntu_concept_metadata_v2_4.csv'),
-               graph=dict(kind='full', nots=True),
                head_args=dict(decoder_args=dict(d_model=16, heads=2, layers=1), rgcn_args=dict(bases=2)))
 
 
