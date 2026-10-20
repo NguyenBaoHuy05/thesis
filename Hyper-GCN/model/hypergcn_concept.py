@@ -12,7 +12,8 @@ Loss (main.py): CE(fc(f')) + divergence of the backbone + head_weight * (CE(head
 extra_loss). The head starts from `head_weights` if given (head.pt of train_concept_logic.py, same matrix / graph /
 head_args / segments), else from scratch (online training, config/concept_graph/online_e3.yaml).
 
-eval_outputs(): logits of the last forward besides the refined ones (k0 = fc(f) of the same backbone, head, head_sym),
+eval_outputs(): logits of the last forward besides the refined ones (k0 = fc(f) of the same backbone, head, head_sym,
+head_neural = z of the R-GCN, action_decoder = aux logits of the action decoder alone),
 collected by main.py at test time. One GPU only (the last forward is kept on the module).
 """
 
@@ -99,4 +100,5 @@ class Model(HyperGCN):
 
     def eval_outputs(self):
         out = self._last['out']
-        return dict(k0=self._last['k0'], head=out['logits'].detach(), head_sym=out['logits_sym'].detach())
+        return dict(k0=self._last['k0'], head=out['logits'].detach(), head_sym=out['logits_sym'].detach(),
+                    head_neural=out['z'].detach(), action_decoder=out['aux'].detach())
