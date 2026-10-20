@@ -308,6 +308,9 @@ class Processor():
         self.baseline_accuracy = {}
 
         self.model = self.model.cuda(self.output_device)
+        self.model_ref = self.model
+        if hasattr(self.model, 'extra_loss') and type(self.arg.device) is list and len(self.arg.device) > 1:
+            raise ValueError('models with extra_loss / eval_outputs keep their last forward: use one GPU')
 
         if type(self.arg.device) is list:
             if len(self.arg.device) > 1:
@@ -471,6 +474,11 @@ class Processor():
                 ce_loss = self.loss(output, label)
                 h_loss = data.new_zeros(())
                 loss = ce_loss
+            # Extension losses of the last forward (e.g. model/hypergcn_concept.py: the concept graph's own losses).
+            extra_terms = {}
+            if hasattr(self.model_ref, 'extra_loss'):
+                extra_loss, extra_terms = self.model_ref.extra_loss(label)
+                loss = loss + extra_loss
 
             # backward
             self.optimizer.zero_grad()
@@ -485,11 +493,11 @@ class Processor():
             acc_value.append(acc.data.item())
             self.train_writer.add_scalar('acc', acc, self.global_step)
             self.train_writer.add_scalar('loss', loss.data.item(), self.global_step)
-            components = dict(ce=ce_loss, divergence=h_loss)
+            components = dict(ce=ce_loss, divergence=h_loss, **extra_terms)
             for name, component in components.items():
-                value = component.detach().item()
+                value = component.detach().item() if torch.is_tensor(component) else float(component)
                 self.train_writer.add_scalar('loss/' + name, value, self.global_step)
-                component_sums[name] += value * label.size(0)
+                component_sums[name] = component_sums.get(name, 0.0) + value * label.size(0)
             sample_count += label.size(0)
 
 
@@ -546,6 +554,7 @@ class Processor():
         for ln in loader_name:
             loss_value = []
             score_frag = []
+            extra_frag, label_frag = {}, []
             step = 0
             process = tqdm(self.data_loader[ln], ncols=40)
             for batch_idx, (data, label, index) in enumerate(process):
@@ -559,6 +568,11 @@ class Processor():
                     else:
                         loss = self.loss(output, label)
                     score_frag.append(output.cpu())
+                    label_frag.append(label.cpu())
+                    # Other logits of the same forward (e.g. K0 and the concept head of model/hypergcn_concept.py).
+                    if hasattr(self.model_ref, 'eval_outputs'):
+                        for key, value in self.model_ref.eval_outputs().items():
+                            extra_frag.setdefault(key, []).append(value.float().cpu())
                     loss_value.append(loss.data.item())
                     _, predict_label = torch.max(output.data, 1)
                     step += 1
@@ -596,6 +610,16 @@ class Processor():
             delta_pp = None if baseline is None else 100 * (accuracy - baseline)
             action_metrics = dict(epoch=epoch + 1, top1=accuracy, initial_top1=baseline,
                                   delta_from_initial_pp=delta_pp)
+            if extra_frag:
+                labels = torch.cat(label_frag)
+                extra = {key: torch.cat(value) for key, value in extra_frag.items()}
+                action_metrics['extra_top1'] = {key: (value.argmax(1) == labels).float().mean().item()
+                                                for key, value in extra.items()}
+                self.print_log('	Top1 of the other outputs: ' + ', '.join(
+                    '{} {:.2f}%'.format(key, 100 * value) for key, value in action_metrics['extra_top1'].items()))
+                np.savez(os.path.join(self.arg.work_dir, 'epoch{}_{}_outputs.npz'.format(epoch + 1, ln)),
+                         output=score.astype(np.float32), label=labels.numpy(),
+                         **{key: value.numpy() for key, value in extra.items()})
             with open(os.path.join(self.arg.work_dir, 'epoch{}_{}_action_metrics.json'.format(epoch + 1, ln)),
                       'w', encoding='utf-8') as handle:
                 json.dump(action_metrics, handle, indent=2, allow_nan=False)

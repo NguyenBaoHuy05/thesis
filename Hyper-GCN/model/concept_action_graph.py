@@ -98,18 +98,18 @@ class ConceptActionGraphHead(nn.Module):
         other = self.emb_other.expand(N, -1, -1)
         h = self.rgcn(dict(concept=h_c, action=h_a, motif=other[:, :g], orr=other[:, g:g + o],
                            notn=other[:, g + o:g + o + n]))
-        return self.readout(h['action']).squeeze(-1)
+        return self.readout(h['action']).squeeze(-1), h['action']
 
     def forward(self, features, valid):
-        """features [N, M, C, S, V], valid [N, M] -> dict(c, logits, logits_sym, z, aux)."""
+        """features [N, M, C, S, V], valid [N, M] -> dict(c, logits, logits_sym, z, h_action [N, A, d], aux)."""
         c, U = self.decoder(features, valid, return_tokens=True)
         _, A_tok = self.action_decoder(features, valid, return_tokens=True)
         log_s = self.executor(c)
         sym = log_s / self.tau
         out = dict(c=c, log_s=log_s, logits_sym=sym, aux=self.aux(A_tok).squeeze(-1))
         if self.use_rgcn:
-            z = self.neural(c, U, A_tok)
-            out.update(z=z, logits=sym + self.lam * z)
+            z, h_action = self.neural(c, U, A_tok)
+            out.update(z=z, h_action=h_action, logits=sym + self.lam * z)
         else:
             out['logits'] = sym
         return out

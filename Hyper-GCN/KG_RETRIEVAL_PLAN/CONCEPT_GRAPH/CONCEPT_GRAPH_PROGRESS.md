@@ -132,6 +132,20 @@ Trên cache S = 4 (cần ô 6 trước):
 Ablation (sửa trong một bản chép của `e3.yaml`): `use_rgcn: False`, `freeze_node_emb: True`, `rgcn_args.use_r6: False`,
 `graph.nots: False`, `graph.cfg.or_groups: []`.
 
+**Ô 7c: fine-tune nhẹ, đồ thị E3 làm refinement của K0 (code 2026-10-20, mỗi lệnh khoảng 1–1.5 giờ trên L4)**
+
+Cần `$W/e3/head.pt` (ô 7b), checkpoint `/content/large/ntu120/xsub/joint/runs-122-120048.pt` và
+`data/ntu120/NTU120_CSub.npz`, như khi tạo cache.
+```
+!ls -l /content/large/ntu120/xsub/joint/runs-122-120048.pt data/ntu120/NTU120_CSub.npz $W/e3/head.pt
+!python -m pytest tests/test_hypergcn_concept.py tests/test_concept_action_graph.py -q
+!python main.py --config config/concept_graph/ft_e3.yaml --work-dir $W/ft_e3
+!python main.py --config config/concept_graph/ft_k0.yaml --work-dir $W/ft_k0
+```
+Ngay sau `Initial evaluation` của ft_e3, kiểm tra Top1 = 87.63 và `head` ≈ 86.38 (xem mục "Fine-tune nhẹ").
+Nếu lệch thì dừng lại và gửi log. Cần dán: các dòng `Top1`, `Top1 of the other outputs`, `Mean loss components`
+ở epoch 0 / 5 / 10 / 15 của cả hai lần chạy.
+
 **Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
 ```
 !python tools/summarize_runs.py $W
@@ -295,3 +309,38 @@ PCR fusion 4.01; K5-pair 39.26%; AUC concept 0.990; τ cuối 0.0706. Cặp nh�
   Kết luận fusion của P1 vẫn đúng: thêm cấu trúc đồ thị trên cùng nguồn thông tin không tạo thêm thông tin mới.
 - Còn lại S = 4 (ô 6 rồi ô 7b phần S = 4). Ablation của E3 (−RGCN, randE, −r6) không chạy trên S = 1,
   vì bản đầy đủ đã không vượt K0.
+
+## Fine-tune nhẹ: đồ thị E3 làm refinement của K0 (code 2026-10-20, lệnh: ô 7c)
+
+Người dùng chọn (2026-10-20): refinement + mở l9, có đối chứng K0-ft. Lý do: trên map l9 đóng băng, không head nào
+có thông tin K0 chưa có (trần fusion < K0). Fine-tune cho gradient của concept / đồ thị chảy vào l9.
+
+Mô hình (`model/hypergcn_concept.py`, config `config/concept_graph/ft_e3.yaml`):
+```
+f      = mean(actor, T, V) của l9                  (đúng pooling của K0)
+out    = head E3 trên l9 lấy trung bình theo T     (S = 1 như cache; nạp từ $W/e3/head.pt)
+r      = Σ_k softmax(out.logits)_k · h_k            (node action sau R-GCN, trọng số theo niềm tin của đồ thị)
+f'     = f + W [LN(r) ; c]                          (W khởi tạo 0: epoch 0 = K0)
+logits = fc(f')                                     (fc của K0)
+L      = CE(fc(f')) + divergence + 1.0 · (CE(head) + 0.5 BCE + aux + KL + margin + η)
+```
+Công thức (chốt trước, như P6 của A1, chỉ khác là chỉ mở l9): từ `runs-122-120048.pt`, `freeze_until: l8`
+(train l9, fc, đồ thị), SGD nesterov lr 0.0025 (lớp W ×10), giảm ×0.1 ở epoch 10, 15 epoch, batch 64,
+wd 0.0004, augmentation như train gốc, không nhiễu đặc trưng. Eval ở epoch 0 / 5 / 10 / 15; **báo cáo epoch 15**
+(`select_best: False`). Đối chứng **K0-ft** (`ft_k0.yaml`): cùng công thức, không có đồ thị.
+Mỗi lần eval in thêm Top1 của `k0` (fc(f) không có Δ, cùng backbone), `head`, `head_sym`, và lưu
+`epoch<n>_test_outputs.npz` (mọi logits + nhãn) để tính PCR / fusion sau.
+
+Kiểm tra trước khi tin kết quả: ở epoch 0, ft_e3 phải cho Top1 = 87.63 (bằng K0, vì W = 0) và `head` ≈ 86.38
+(E3 trên cache; lệch ≤ 0.1 vì cache lưu fp16). Lệch nhiều thì pooling hoặc head nạp sai: dừng.
+
+**Quy tắc (chốt trước):** đồ thị có ích khi fine-tune nếu Top1 ft_e3 (epoch 15) ≥ Top1 K0-ft (epoch 15) + 0.3.
+Chênh trong ±0.3 thì chạy thêm seed 1 cho cả hai. Phụ: nếu Top1 của ft_e3 ≈ `k0` bên trong nó thì Δ không được dùng.
+
+Dự đoán ghi trước: K0-ft trong khoảng 87.63 ± 0.3. ft_e3 − K0-ft trong khoảng ±0.3 (không đạt): đồ thị vẫn học từ
+nhãn concept gán theo lớp, nên gradient của nó gần với gradient của CE.
+
+| | Epoch 0 | Epoch 5 | Epoch 10 | **Epoch 15** | `k0` / `head` / `head_sym` (epoch 15) |
+|---|---|---|---|---|---|
+| K0-ft | *chờ* (phải ≈ 87.63) | *chờ* | *chờ* | *chờ* | |
+| ft_e3 | *chờ* (phải = 87.63) | *chờ* | *chờ* | *chờ* | *chờ* |
