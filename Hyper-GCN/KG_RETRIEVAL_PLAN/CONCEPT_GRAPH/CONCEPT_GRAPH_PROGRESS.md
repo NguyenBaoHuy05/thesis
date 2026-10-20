@@ -132,15 +132,15 @@ Trên cache S = 4 (cần ô 6 trước):
 Ablation (sửa trong một bản chép của `e3.yaml`): `use_rgcn: False`, `freeze_node_emb: True`, `rgcn_args.use_r6: False`,
 `graph.nots: False`, `graph.cfg.or_groups: []`.
 
-**Ô 7c: fine-tune nhẹ, đồ thị E3 làm refinement của K0 (code 2026-10-20, mỗi lệnh khoảng 1–1.5 giờ trên L4)**
+**Ô 7c: fine-tune nhẹ, đồ thị E3 làm refinement của K0 (một lệnh, khoảng 1–1.5 giờ trên L4)**
 
-Cần `$W/e3/head.pt` (ô 7b), checkpoint `/content/large/ntu120/xsub/joint/runs-122-120048.pt` và
-`data/ntu120/NTU120_CSub.npz`, như khi tạo cache.
+Điền 2 đường dẫn `FILL` (dữ liệu, checkpoint) trong `config/concept_graph/run_refine.yaml` một lần. Sau ô 1:
 ```
-!ls -l /content/large/ntu120/xsub/joint/runs-122-120048.pt data/ntu120/NTU120_CSub.npz $W/e3/head.pt
-!python -m pytest tests/test_hypergcn_concept.py tests/test_concept_action_graph.py -q
-!python main.py --config config/concept_graph/ft_e3.yaml --work-dir $W/ft_e3
+!python tools/run_refine.py
 ```
+Script tự bỏ qua bước đã có: test → dữ liệu → cache S = 1 (chép từ Drive, không có thì tạo) → E3 (`$W/e3/head.pt`,
+`--force-head` để train lại) → ft_e3.
+
 Chỉ khi ft_e3 ở epoch 15 ≥ 87.93 mới chạy đối chứng:
 ```
 !python main.py --config config/concept_graph/ft_k0.yaml --work-dir $W/ft_k0
