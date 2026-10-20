@@ -1,14 +1,8 @@
-# tools/run_refine.py: the whole refinement model in one command. Fill the two paths marked FILL.
-# Every step is skipped when its output already exists.
+# tools/run_refine.py: the main model in one command (online, no cache). Fill the two paths marked FILL.
 
 data: /content/drive/MyDrive/BaoHuy/FILL/NTU120_CSub.npz             # NTU120 X-Sub, copied to data/ntu120/
 checkpoint: /content/drive/MyDrive/BaoHuy/FILL/runs-122-120048.pt     # Hyper-GCN large, joint, X-Sub (K0)
+work_dir: /content/drive/MyDrive/BaoHuy/work_dir/concept_graph       # results in <work_dir>/<model_config name>
 
-cache_drive: /content/drive/MyDrive/BaoHuy/kg_cache    # S = 1 cache: only used when E3 (head.pt) must be trained
-cache_dir: /content/jcache                             # local copy read by the training
-cache_name: ntu120_xsub_joint
-work_dir: /content/drive/MyDrive/BaoHuy/work_dir/concept_graph
-
-head_config: config/concept_graph/e3.yaml              # stages 1-3 on the cache -> <work_dir>/e3/head.pt
-refine_config: config/concept_graph/ft_e3.yaml         # light fine-tuning (l9 open) -> <work_dir>/ft_e3
+model_config: config/concept_graph/online_e3.yaml
 run_tests: True

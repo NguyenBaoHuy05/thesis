@@ -7,9 +7,9 @@ import unittest
 import torch
 
 from model.checkpoint import load_model_weights
-from model.hypergcn_concept import Model
+from model.hypergcn_concept import Model, segment_mean
 from model.hypergcn_large import Model as HyperGCN
-from model.training import configure_trainable_parameters
+from model.training import configure_trainable_parameters, frozen_modules
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BACKBONE = dict(num_class=120, num_point=25, num_person=2, hyper_joints=3,
@@ -76,6 +76,26 @@ class RefinementTests(unittest.TestCase):
             torch.testing.assert_close(value, before[key])
         with self.assertRaises(ValueError):
             load_model_weights(Model(concept_args=CONCEPT, **BACKBONE), self.backbone.state_dict())
+
+    def test_every_frame_online_with_frozen_backbone_and_fc(self):
+        # online_e3.yaml: 16 l9 frames, backbone and fc frozen, the graph from scratch.
+        model = Model(concept_args=dict(CONCEPT, segments=16), **BACKBONE)
+        load_model_weights(model, self.backbone.state_dict(), allow_new=True)
+        torch.nn.init.normal_(model.cg.proj.weight, std=0.01)
+        configure_trainable_parameters(model, 'fc')
+        self.assertIn('fc', frozen_modules('fc'))
+        model.train()
+        logits, _ = model(self.x)
+        extra, _ = model.extra_loss(self.labels)
+        (torch.nn.functional.cross_entropy(logits, self.labels) + extra).backward()
+        self.assertTrue(all(p.grad is None for n, p in model.named_parameters() if not n.startswith('cg.')))
+        self.assertTrue(model.cg.proj.weight.grad.abs().sum() > 0)
+        self.assertEqual(len(model.cg.head.decoder.time_emb), 16)
+
+    def test_segment_mean(self):
+        features = torch.arange(8.).view(1, 1, 1, 8, 1)
+        self.assertEqual(segment_mean(features, 2).flatten().tolist(), [1.5, 5.5])
+        self.assertIs(segment_mean(features, 8), features)
 
 
 if __name__ == '__main__':

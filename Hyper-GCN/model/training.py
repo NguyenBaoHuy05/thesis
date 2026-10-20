@@ -16,14 +16,16 @@ def frozen_modules(freeze_until=None):
     """Top-level backbone names frozen by ``freeze_until``.
 
     None / "none": nothing is frozen. "stem": the input embedding only.
-    "lK": the embedding and layers l1..lK; "l9" freezes the whole backbone.
+    "lK": the embedding and layers l1..lK; "l9" freezes the whole backbone; "fc" also its classifier.
     """
     if freeze_until in (None, "none"):
         return ()
     if freeze_until == "stem":
         return STEM
+    if freeze_until == "fc":
+        return STEM + LAYERS + ("fc",)
     if freeze_until not in LAYERS:
-        raise ValueError("freeze_until must be none, stem or one of {}".format(LAYERS))
+        raise ValueError("freeze_until must be none, stem, fc or one of {}".format(LAYERS))
     return STEM + LAYERS[:LAYERS.index(freeze_until) + 1]
 
 

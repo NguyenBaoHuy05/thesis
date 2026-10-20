@@ -34,6 +34,7 @@ import yaml
 
 from model.actors import valid_actor_mask
 from model.checkpoint import load_model_weights
+from model.hypergcn_concept import segment_mean
 
 
 def import_class(name):
@@ -68,14 +69,6 @@ def build_loader(dataset, batch_size, num_worker, seed):
     random.seed(seed)
     return DataLoader(dataset, batch_size=batch_size, shuffle=False,
                       num_workers=num_worker, drop_last=False)
-
-
-def segment_mean(features, segments):
-    """[N, M, C, T, V] -> [N, M, C, S, V]: mean inside S equal (adaptive) time segments."""
-    N, M, C, T, V = features.shape
-    x = features.permute(0, 1, 2, 4, 3).reshape(N * M * C, V, T)
-    x = F.adaptive_avg_pool1d(x, segments)
-    return x.reshape(N, M, C, V, segments).permute(0, 1, 2, 4, 3)
 
 
 @torch.no_grad()

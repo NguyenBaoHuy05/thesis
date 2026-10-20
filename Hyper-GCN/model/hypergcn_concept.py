@@ -1,15 +1,16 @@
 """Hyper-GCN large + the concept-action graph (model/concept_action_graph.py) as a feature refinement of K0.
 
     f    = mean over (actors, T, V) of the l9 map            (exactly Model.forward's pooling)
-    out  = ConceptActionGraphHead(l9 map averaged over T (S = 1, as the cache), valid actors)
+    out  = ConceptActionGraphHead(l9 map in `segments` time segments, valid actors)
+           (segments = 16: every l9 frame of a 64-frame window; 1: the S = 1 cache)
     r    = sum_k softmax(out.logits)_k h_k                     (R-GCN action nodes weighted by the graph's belief)
     f'   = f + W [LN(r) ; c]                                   (W zero-initialized: f' = f at the start)
     logits = fc(f')                                            (fc of K0)
 
 At initialization the model reproduces the checkpoint (K0) exactly; the graph can only correct K0, not replace it.
 Loss (main.py): CE(fc(f')) + divergence of the backbone + head_weight * (CE(head) + beta BCE(c, M[y]) + the head's
-extra_loss), so the graph keeps the training signal it had on the cache. The head is loaded from `head_weights`
-(head.pt of train_concept_logic.py, same matrix / graph / head_args).
+extra_loss). The head starts from `head_weights` if given (head.pt of train_concept_logic.py, same matrix / graph /
+head_args / segments), else from scratch (online training, config/concept_graph/online_e3.yaml).
 
 eval_outputs(): logits of the last forward besides the refined ones (k0 = fc(f) of the same backbone, head, head_sym),
 collected by main.py at test time. One GPU only (the last forward is kept on the module).
@@ -17,6 +18,7 @@ collected by main.py at test time. One GPU only (the last forward is kept on the
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from model.actors import valid_actor_mask
 from model.concept_action_graph import ConceptActionGraphHead
@@ -25,15 +27,26 @@ from model.concept_schema import NTU_ACTION_NAMES
 from model.hypergcn_large import Model as HyperGCN
 
 
+def segment_mean(features, segments):
+    """[N, M, C, T, V] -> [N, M, C, S, V]: mean inside S equal (adaptive) time segments."""
+    N, M, C, T, V = features.shape
+    if segments == T:
+        return features
+    x = features.permute(0, 1, 2, 4, 3).reshape(N * M * C, V, T)
+    x = F.adaptive_avg_pool1d(x, segments)
+    return x.reshape(N, M, C, V, segments).permute(0, 1, 2, 4, 3)
+
+
 class ConceptRefiner(nn.Module):
     def __init__(self, in_channels, matrix, metadata, graph=None, head_args=None, beta=0.5, head_weight=1.0,
-                 num_person=2):
+                 num_person=2, segments=1):
         super().__init__()
         from train_concept_logic import make_graph                 # avoids a model -> script import at load time
         M, names, meta = load_concepts(matrix, metadata, NTU_ACTION_NAMES)
         graph = make_graph(matrix, graph or {})
         head_args = dict(head_args or {})
-        decoder_args = dict(dict(num_person=num_person, max_frames=1), **head_args.pop('decoder_args', {}))
+        self.segments = int(segments)
+        decoder_args = dict(dict(num_person=num_person, max_frames=self.segments), **head_args.pop('decoder_args', {}))
         action_args = head_args.pop('action_decoder_args', {})
         self.head = ConceptActionGraphHead(in_channels, graph, concept_joint_mask(names, meta),
                                            decoder_args=decoder_args, action_decoder_args=action_args, **head_args)
@@ -50,7 +63,7 @@ class ConceptRefiner(nn.Module):
 
     def forward(self, features, valid):
         """features [N, M, C, T, V] -> (delta [N, C], head output dict)."""
-        out = self.head(features.mean(3, keepdim=True), valid)
+        out = self.head(segment_mean(features, self.segments), valid)
         p = torch.softmax(out['logits'], 1)
         r = torch.einsum('na,nad->nd', p, out['h_action'])
         return self.proj(torch.cat([self.norm(r), out['c']], 1)), out

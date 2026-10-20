@@ -1,0 +1,99 @@
+# Main model, online (no cache): Hyper-GCN runs on the data at every step (full augmentation), the E3 graph reads
+# all 16 l9 frames and refines K0's feature (model/hypergcn_concept.py): f' = f + W [LN(r) ; c], W = 0 at the start,
+# logits = fc(f'). Backbone AND fc frozen: K0 stays 87.63 exactly, so the gain is the graph's (no K0-ft control).
+# The graph trains from scratch with the E3 recipe (Adam 1e-3, 30 epochs). Fixed before running; last epoch reported.
+work_dir: ./work_dir/concept_graph/online_e3
+
+# feeder (as config/large/nturgbd120-cross-subject/hyper_joint.yaml)
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model
+model: model.hypergcn_concept.Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'
+  concept_args:                      # head_args as config/concept_graph/e3.yaml
+    segments: 16                     # every l9 frame (64-frame window, two stride-2 layers)
+    matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+    metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+    graph:
+      kind: full
+      nots: True
+    beta: 0.5                        # BCE of the concepts
+    head_weight: 1.0                 # the head's own losses (CE + beta BCE + aux / kl / margin / alpha)
+    head_args:
+      omega: 1.0
+      nu: 1.0
+      learn_alpha: True
+      eta: 1.0e-4
+      tau: 0.1
+      learn_tau: True
+      lam: 0.5
+      gamma: 0.5
+      mu: 0.5
+      margin: 0.1
+      aux_weight: 0.1
+      token_drop: 0.3
+      use_rgcn: True
+      freeze_node_emb: False
+      rgcn_args:
+        bases: 4
+        use_r6: True
+        dropout: 0.1
+      decoder_args:
+        d_model: 256
+        heads: 4
+        layers: 2
+        dropout: 0.1
+      action_decoder_args:
+        layers: 1
+
+weights: /content/large/ntu120/xsub/joint/runs-122-120048.pt
+freeze_until: fc               # backbone and fc frozen: only the graph (cg.*) trains
+eval_before_train: True        # epoch 0 must reproduce K0 (87.63)
+select_best: False
+
+# optim (E3 on the cache: Adam 1e-3, cosine; main.py has steps)
+optimizer: Adam
+weight_decay: 0.0
+base_lr: 0.001
+lr_decay_rate: 0.1
+step: [20, 25]
+warm_up_epoch: 0
+
+# training
+device: [0]
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+save_epoch: 0
+save_interval: 10
+eval_interval: 5
+eval_epoch: 30
+seed: 0

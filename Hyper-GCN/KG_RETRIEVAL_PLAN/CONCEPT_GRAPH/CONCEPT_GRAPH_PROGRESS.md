@@ -132,22 +132,15 @@ Trên cache S = 4 (cần ô 6 trước):
 Ablation (sửa trong một bản chép của `e3.yaml`): `use_rgcn: False`, `freeze_node_emb: True`, `rgcn_args.use_r6: False`,
 `graph.nots: False`, `graph.cfg.or_groups: []`.
 
-**Ô 7c: fine-tune nhẹ, đồ thị E3 làm refinement của K0 (một lệnh, khoảng 1–1.5 giờ trên L4)**
+**Ô 7c: mô hình chính, chạy backbone mỗi bước (không cache), một lệnh**
 
 Điền 2 đường dẫn `FILL` (dữ liệu, checkpoint) trong `config/concept_graph/run_refine.yaml` một lần. Sau ô 1:
 ```
 !python tools/run_refine.py
 ```
-Script tự bỏ qua bước đã có: test → dữ liệu → cache S = 1 (chép từ Drive, không có thì tạo) → E3 (`$W/e3/head.pt`,
-`--force-head` để train lại) → ft_e3.
-
-Chỉ khi ft_e3 ở epoch 15 ≥ 87.93 mới chạy đối chứng:
-```
-!python main.py --config config/concept_graph/ft_k0.yaml --work-dir $W/ft_k0
-```
-Ngay sau `Initial evaluation` của ft_e3, kiểm tra Top1 = 87.63 và `head` ≈ 86.38 (xem mục "Fine-tune nhẹ").
-Nếu lệch thì dừng lại và gửi log. Cần dán: các dòng `Top1`, `Top1 of the other outputs`, `Mean loss components`
-ở epoch 0 / 5 / 10 / 15.
+Chạy test → chép dữ liệu → `main.py` với `config/concept_graph/online_e3.yaml`, kết quả ở `$W/online_e3`.
+Epoch 0 phải ra Top1 87.63. Dán các dòng `Top1`, `Top1 of the other outputs`, `Mean loss components` ở mỗi lần eval
+(epoch 0, 5, …, 30).
 
 **Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
 ```
@@ -348,3 +341,24 @@ nhãn concept gán theo lớp, nên gradient của nó gần với gradient củ
 |---|---|---|---|---|---|
 | K0-ft | *chờ* (phải ≈ 87.63) | *chờ* | *chờ* | *chờ* | |
 | ft_e3 | *chờ* (phải = 87.63) | *chờ* | *chờ* | *chờ* | *chờ* |
+
+## Mô hình chính: chạy backbone mỗi bước, không cache (2026-10-20, lệnh: ô 7c)
+
+Người dùng quyết (2026-10-20): **bỏ cache, chạy Hyper-GCN mỗi bước** làm hướng chính. ft_e3 (head.pt từ cache, mở l9)
+không chạy nữa. Lý do: trên cache, head khớp hết tập train (một view augment cố định) và chỉ thấy S = 1.
+
+Config `config/concept_graph/online_e3.yaml` (chốt trước):
+- backbone **và fc** đóng băng (`freeze_until: fc`). Chỉ đồ thị (`cg.*`) train, nên K0 giữ đúng 87.63 và không cần K0-ft;
+- đồ thị E3 học từ đầu (không head.pt), đọc **cả 16 bước** của l9 (`segments: 16`, 800 token / mẫu);
+- refinement f' = f + W [LN(r) ; c], W = 0 lúc đầu, logits = fc(f');
+- augmentation như train gốc, không nhiễu đặc trưng; Adam 1e-3, wd 0, 30 epoch, giảm ×0.1 ở epoch 20 và 25,
+  batch 64; eval mỗi 5 epoch; **báo cáo epoch 30**.
+
+**Quy tắc (chốt trước):** đạt nếu Top1 epoch 30 ≥ K0 + 0.3 = **87.93**. Chênh trong ±0.1 quanh ngưỡng thì chạy seed 1.
+Phụ: `head` (đồ thị đứng một mình) so với E3 trên cache (86.38) cho biết augmentation + 16 bước có giúp head không.
+
+Dự đoán ghi trước: `head` cao hơn E3 cache (bớt khớp tập train), nhưng Top1 refinement < 87.93.
+
+| | Epoch 0 | 5 | 10 | 15 | 20 | 25 | **30** | `head` / `head_sym` (30) |
+|---|---|---|---|---|---|---|---|---|
+| online_e3 | *chờ* (phải = 87.63) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
