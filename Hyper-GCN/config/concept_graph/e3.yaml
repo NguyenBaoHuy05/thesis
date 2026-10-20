@@ -27,10 +27,10 @@ head_args:
   aux_weight: 0.1                    # CE of the action decoder's own head
   token_drop: 0.3                    # whole action-token dropout before the R-GCN
   use_rgcn: True
-  freeze_node_emb: False             # ablation "random E": True
+  freeze_node_emb: False
   rgcn_args:
     bases: 4
-    use_r6: True                     # ablation: False
+    use_r6: True
     dropout: 0.1
   decoder_args:                      # concept decoder (as CL v2)
     d_model: 256

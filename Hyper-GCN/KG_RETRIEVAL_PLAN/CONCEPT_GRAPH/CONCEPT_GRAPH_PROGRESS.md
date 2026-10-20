@@ -37,124 +37,27 @@
 
 Ví dụ: ¬(take_off_a_shoe | put_on_a_shoe) = 1 − ∧(motion_upward, seq_hands_first, lower_then_raise).
 
-## Script chạy (Colab), chạy theo thứ tự từng ô
+## Script chạy (Colab)
 
-Ô 3 dùng `rsync --size-only`: chép lại file nào khác kích thước với bản trên Drive. `cp -n` từng giữ lại một file
-chép dở (lỗi `mmap length is greater than file size`, 2026-10-20). Hai cột kích thước ở `ls -l` phải bằng nhau.
-
-Một ô = một khối code. Ô nào đã chạy xong ở phiên trước thì bỏ qua, trừ ô 1–3 (mỗi phiên Colab mới đều phải chạy).
-Mọi kết quả ghi vào `$W/<tên>/` trên Drive: `kg_metrics.json`, `head.pt`, `history.json`, `test_concepts.npy`.
-`git pull` không đụng tới các thư mục này.
+Ablation và các biến thể (E1b–E1e, E2, S = 4, ft_e3 / ft_k0) đã xoá tạm (2026-10-20, người dùng quyết); config cũ
+lấy lại từ git (commit `56872b5`). Chỉ còn mô hình chính.
 
 **Ô 1: Drive + code (mỗi phiên)**
 ```
 from google.colab import drive
 drive.mount('/content/drive')
 %cd /content/Hyper-GCN
-!git status --short
 !git pull
 !git log --oneline -1
 ```
-Nếu `git status` có file bị sửa trên Colab thì chạy `!git stash` trước rồi pull lại.
-`git log` phải là commit mới nhất trên GitHub.
 
-**Ô 2: test (mỗi phiên, khoảng 1 phút)**
-```
-!pip -q install pytest
-!python -m pytest tests -q
-!python tools/build_concept_graph.py --out /content/graph_v1.json | head -5
-```
-
-**Ô 3: cache S = 1 + biến môi trường (mỗi phiên)**
-```
-!mkdir -p /content/jcache
-!rsync -ah --size-only /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_train* /content/drive/MyDrive/BaoHuy/kg_cache/ntu120_xsub_joint_test* /content/jcache/
-!ls -l /content/jcache /content/drive/MyDrive/BaoHuy/kg_cache | grep joint
-!df -h /content
-%env J=/content/jcache
-%env W=/content/drive/MyDrive/BaoHuy/work_dir/concept_graph
-```
-
-**Ô 4: fusion + quét λ (chẩn đoán) cho các head P1, không train lại (mỗi lệnh 1–2 phút)**
-```
-!python train_concept_logic.py --config config/concept/cl_v2.yaml     --cache-dir $J --work-dir $W/e1a    --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1b.yaml --cache-dir $J --work-dir $W/e1b_v2 --eval-only
-!python train_concept_logic.py --config config/concept_graph/e1c.yaml --cache-dir $J --work-dir $W/e1c    --eval-only
-!python tools/summarize_runs.py $W e1a e1b_v2 e1c
-```
-Dòng `fusion sweep (DIAGNOSTIC ...)` cho mức trần của fusion (λ chọn trên test, không dùng để claim).
-**Quyết định trước khi chạy P2:** nếu mức trần của cả 3 head đều < K0 + 0.3 (87.93) thì không chạy ô 5–7.
-
-**Ô 5: P2 trên cache S = 1: KHÔNG CHẠY** (fusion của head trên S = 1 không vượt K0, xem kết luận fusion)
-```
-!python train_concept_logic.py --config config/concept_graph/e2.yaml       --cache-dir $J --work-dir $W/e2
-!python train_concept_logic.py --config config/concept_graph/e2_alpha.yaml --cache-dir $J --work-dir $W/e2_alpha
-!python train_concept_logic.py --config config/concept_graph/e2_noor.yaml  --cache-dir $J --work-dir $W/e2_noor
-!python tools/summarize_runs.py $W e1a e1c e2 e2_alpha e2_noor
-```
-
-**Ô 6: tạo cache S = 4 (một lần, khoảng 23 GB trên ổ local Colab, lâu nhất trong script)**
-```
-!df -h /content
-!python tools/cache_joint_features.py --weights /content/large/ntu120/xsub/joint/runs-122-120048.pt \
-    --out-dir /content/jcache --name ntu120_xsub_joint_s4 --segments 4 --num-worker 2
-!ls -lh /content/jcache
-```
-Cache này nằm trên ổ local, nên mất khi phiên Colab tắt. Phiên sau phải chạy lại ô 6, hoặc chép lên Drive
-(`!cp /content/jcache/ntu120_xsub_joint_s4_* /content/drive/MyDrive/BaoHuy/kg_cache/`) rồi chép về như ô 3.
-
-**Ô 7: E1a trên cache S = 4 (train vài chục phút)**
-```
-!python train_concept_logic.py --config config/concept_graph/e1a_s4.yaml --cache-dir $J --work-dir $W/e1a_s4
-!python tools/summarize_runs.py $W e1a e1a_s4
-```
-Chỉ khi cột "sweep ceiling" của e1a_s4 ≥ 87.93 mới chạy tiếp:
-```
-!python train_concept_logic.py --config config/concept_graph/e2_s4.yaml --cache-dir $J --work-dir $W/e2_s4
-!python tools/summarize_runs.py $W e1a_s4 e2_s4
-```
-
-**Ô 7b: mô hình đầy đủ (P3, code 2026-10-20)**
-
-Hai nhánh decoder, đồ thị, R-GCN theo tầng, bộ thực thi logic mờ; logits = log s / τ + λ z
-(`model/concept_action_graph.py`, config `config/concept_graph/e3.yaml`). Log in thêm `head_sym` (chỉ đường logic,
-λ = 0), `head_neural` (chỉ R-GCN), `head_aux` (head riêng của nhánh action), và các loss aux / kl / margin theo epoch.
-```
-!python -m pytest tests/test_concept_action_graph.py -q
-!python train_concept_logic.py --config config/concept_graph/e3.yaml --cache-dir $J --work-dir $W/e3
-!python tools/summarize_runs.py $W e1a e1c e3
-```
-Trên cache S = 4 (cần ô 6 trước):
-```
-!python train_concept_logic.py --config config/concept_graph/e3_s4.yaml --cache-dir $J --work-dir $W/e3_s4
-!python tools/summarize_runs.py $W e1a_s4 e3_s4
-```
-Ablation (sửa trong một bản chép của `e3.yaml`): `use_rgcn: False`, `freeze_node_emb: True`, `rgcn_args.use_r6: False`,
-`graph.nots: False`, `graph.cfg.or_groups: []`.
-
-**Ô 7c: mô hình chính, chạy backbone mỗi bước (không cache), một lệnh**
-
-Điền 2 đường dẫn `FILL` (dữ liệu, checkpoint) trong `config/concept_graph/run_refine.yaml` một lần. Sau ô 1:
+**Ô 2: mô hình chính, một lệnh** (điền 2 đường dẫn `FILL` trong `config/concept_graph/run_refine.yaml` một lần)
 ```
 !python tools/run_refine.py
 ```
-Chạy test → chép dữ liệu → `main.py` với `config/concept_graph/online_e3.yaml`, kết quả ở `$W/online_e3`.
-Epoch 0 phải ra Top1 87.63. Dán các dòng `Top1`, `Top1 of the other outputs`, `Mean loss components` ở mỗi lần eval
-(epoch 0, 5, …, 30).
-
-**Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
-```
-!python tools/summarize_runs.py $W
-```
-
-Ghi chú lỗi đã gặp:
-- `head.pt` được lưu ngay sau khi train. Nếu bước đánh giá lỗi, chạy lại đúng lệnh đó với `--eval-only`.
-- E1b lần 1 train bị sụp (train top1 4.45%: một lr 1e-3, không clip, lớp ra của decoder khởi tạo 0).
-  Đã sửa theo công thức REASON: lr logic 1e-4, clip 1.0 / 0.5, init mặc định.
-- E1b bị OOM ở K5 (logits REASON trên cả tập test một lần, khoảng 12.4 GiB). Đã sửa: tính theo batch.
-
-Mỗi lần chạy in ra: Top1 / Top5; PCR (head và K0); Top1 trong / ngoài cặp; 8 cặp nhầm nhiều nhất; K5; K5-pair;
-fusion K0 + head. Đầy đủ ở `$W/<tên>/kg_metrics.json` (`pairs.per_pair` có 58 dòng).
+Chạy test → chép dữ liệu → `main.py` với `config/concept_graph/online_e3.yaml`, kết quả ở
+`/content/drive/MyDrive/BaoHuy/work_dir/concept_graph/online_e3`. Epoch 0 phải ra Top1 87.63. Dán các dòng `Top1`,
+`Top1 of the other outputs`, `Mean loss components` ở mỗi lần eval (epoch 0, 5, …, 30).
 
 ## P1: kết quả
 
@@ -306,7 +209,7 @@ PCR fusion 4.01; K5-pair 39.26%; AUC concept 0.990; τ cuối 0.0706. Cặp nh�
 - Còn lại S = 4 (ô 6 rồi ô 7b phần S = 4). Ablation của E3 (−RGCN, randE, −r6) không chạy trên S = 1,
   vì bản đầy đủ đã không vượt K0.
 
-## Fine-tune nhẹ: đồ thị E3 làm refinement của K0 (code 2026-10-20, lệnh: ô 7c)
+## Fine-tune nhẹ: đồ thị E3 làm refinement của K0 (code 2026-10-20; bỏ, thay bằng mô hình chính online)
 
 Người dùng chọn (2026-10-20): refinement + mở l9, có đối chứng K0-ft. Lý do: trên map l9 đóng băng, không head nào
 có thông tin K0 chưa có (trần fusion < K0). Fine-tune cho gradient của concept / đồ thị chảy vào l9.
@@ -342,7 +245,7 @@ nhãn concept gán theo lớp, nên gradient của nó gần với gradient củ
 | K0-ft | *chờ* (phải ≈ 87.63) | *chờ* | *chờ* | *chờ* | |
 | ft_e3 | *chờ* (phải = 87.63) | *chờ* | *chờ* | *chờ* | *chờ* |
 
-## Mô hình chính: chạy backbone mỗi bước, không cache (2026-10-20, lệnh: ô 7c)
+## Mô hình chính: chạy backbone mỗi bước, không cache (2026-10-20, lệnh: ô 2)
 
 Người dùng quyết (2026-10-20): **bỏ cache, chạy Hyper-GCN mỗi bước** làm hướng chính. ft_e3 (head.pt từ cache, mở l9)
 không chạy nữa. Lý do: trên cache, head khớp hết tập train (một view augment cố định) và chỉ thấy S = 1.
