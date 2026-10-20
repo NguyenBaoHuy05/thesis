@@ -307,3 +307,35 @@ Mỗi lần eval in: `Top1` = decoder action; `k0` (phải 87.64); `concept_matc
 |---|---|---|---|---|---|---|
 | decoder action (Top1) | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
 | `concept_match` | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* | *chờ* |
+
+## So sánh lỗi online_e3 với K0 (epoch 15, `tools/compare_outputs.py`, 2026-10-20)
+
+| | Top1 | Trong 6 294 lỗi của K0: cũng sai / sai cùng lớp | chỉ nó đúng | chỉ K0 đúng | oracle với K0 |
+|---|---|---|---|---|---|
+| head | 84.83 | 86.0% / 61.7% | 880 (1.73%) | 2 312 (4.54%) | 89.37 |
+| head_sym | 83.88 | 85.9% / 58.1% | 888 (1.74%) | 2 801 (5.50%) | 89.38 |
+
+head và head_sym: trùng dự đoán 97.3%, khi head sai thì head_sym sai cùng lớp 90.4% (R-GCN gần như không thêm gì
+so với bộ thực thi logic). **Kết luận: lỗi của đồ thị tương quan mạnh với K0 (cùng nguồn), xác nhận ECOC.** Phần bù
+nhau có (oracle +1.73) nhưng không có bộ chọn nào lấy được (quét fusion < K0).
+
+## Hướng 1: chuyên gia theo cặp dễ nhầm, dẫn hướng bởi ¬(j|i) (đặc tả chốt 2026-10-20)
+
+Câu hỏi: map l9 (cache S = 1, giữ riêng người × khớp) có đủ thông tin để tách các cặp dễ nhầm tốt hơn K0 không, và
+mask khớp từ ¬(j|i) có giúp không. Không train lại backbone.
+
+**Bước 0 (`tools/pair_ceiling.py`, numpy, vài giây):** trần = số lỗi của K0 có nhãn ở top-2 **và** (top-1, top-2) là
+một trong 58 cặp. Quy tắc: trần < 300 mẫu (0.6%) thì dừng hướng 1.
+```
+!python tools/pair_ceiling.py /content/drive/MyDrive/BaoHuy/work_dir/concept_graph/online_e3/epoch15_test_outputs.npz
+```
+
+**Bước 1 (chỉ khi bước 0 qua, `tools/pair_experts.py`, chưa viết):** mỗi cặp (i, j) hai chuyên gia nhỏ
+(token người × khớp → Linear 512→64 → mean có mask → Linear 64→2): A chỉ khớp của concept trong M_j∖M_i ∪ M_i∖M_j,
+B mọi khớp. Train trên mẫu train của i, j, nhiễu 1.0, Adam 1e-3, 30 epoch, seed 0. Cổng: test có nhãn ∈ {i, j} và
+top-2 K0 = {i, j}. Thay quyết định K0 trên cổng. Đạt nếu Top1 (A) ≥ 87.93; mask có ích nếu A − B ≥ 0.1.
+Hạn chế: S = 1 mất thứ tự thời gian (put_on / take_off); nếu chỉ các cặp đó hỏng thì thử lại với S = 4.
+
+| | trần (mẫu) | Top1 nếu sửa hết | Top1 K0 + A | Top1 K0 + B |
+|---|---|---|---|---|
+| hướng 1 | *chờ* | *chờ* | *chờ* | *chờ* |
