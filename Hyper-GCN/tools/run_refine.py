@@ -4,9 +4,9 @@
 
 1. tests (tests/test_hypergcn_concept.py, tests/test_concept_action_graph.py), if run_tests;
 2. data: <data> -> data/ntu120/NTU120_CSub.npz (path of the feeder configs), unless the same size is there;
-3. S = 1 cache in <cache_dir>: copied from <cache_drive> if there, else built from <checkpoint>
-   (tools/cache_joint_features.py) and copied to <cache_drive> for the next session;
-4. E3 on the cache (head_config) -> <work_dir>/e3/head.pt, unless it exists (--force-head trains it again);
+3-4. only when <work_dir>/e3/head.pt is missing (or --force-head): the S = 1 cache in <cache_dir> (copied from
+   <cache_drive> if there, else built from <checkpoint> and copied to <cache_drive>), then E3 on the cache
+   (head_config) -> head.pt. The fine-tuning itself does not read the cache;
 5. refinement fine-tuning (refine_config) with weights / head_weights / work_dir from this config ->
    <work_dir>/ft_e3 (the config actually run is saved there as run_config.yaml).
 Google Drive must be mounted first (Colab).
@@ -66,19 +66,19 @@ if __name__ == '__main__':
         need(cfg['data'], 'NTU120 data')
         copy(cfg['data'], DATA_IN_REPO)
 
-    files = [f"{cfg['cache_name']}_{split}{ext}" for split in ('train', 'test') for ext in ('_feat.npy', '.npz')]
-    on_drive = all(os.path.isfile(os.path.join(cfg['cache_drive'], f)) for f in files)
-    if on_drive:
-        for f in files:
-            copy(os.path.join(cfg['cache_drive'], f), os.path.join(cfg['cache_dir'], f))
-    elif not all(os.path.isfile(os.path.join(cfg['cache_dir'], f)) for f in files):
-        run('tools/cache_joint_features.py', '--weights', cfg['checkpoint'], '--out-dir', cfg['cache_dir'],
-            '--name', cfg['cache_name'], '--num-worker', '2')
-        for f in files:
-            copy(os.path.join(cfg['cache_dir'], f), os.path.join(cfg['cache_drive'], f))
-
+    # The cache (frozen l9 map) is only read to train E3 (step 4); the fine-tuning runs the backbone on the data.
     head = os.path.join(cfg['work_dir'], 'e3', 'head.pt')
     if args.force_head or not os.path.isfile(head):
+        files = [f"{cfg['cache_name']}_{split}{ext}" for split in ('train', 'test') for ext in ('_feat.npy', '.npz')]
+        on_drive = all(os.path.isfile(os.path.join(cfg['cache_drive'], f)) for f in files)
+        if on_drive:
+            for f in files:
+                copy(os.path.join(cfg['cache_drive'], f), os.path.join(cfg['cache_dir'], f))
+        elif not all(os.path.isfile(os.path.join(cfg['cache_dir'], f)) for f in files):
+            run('tools/cache_joint_features.py', '--weights', cfg['checkpoint'], '--out-dir', cfg['cache_dir'],
+                '--name', cfg['cache_name'], '--num-worker', '2')
+            for f in files:
+                copy(os.path.join(cfg['cache_dir'], f), os.path.join(cfg['cache_drive'], f))
         run('train_concept_logic.py', '--config', cfg['head_config'], '--cache-dir', cfg['cache_dir'],
             '--work-dir', os.path.dirname(head))
     else:

@@ -4,7 +4,7 @@
 data: /content/drive/MyDrive/BaoHuy/FILL/NTU120_CSub.npz             # NTU120 X-Sub, copied to data/ntu120/
 checkpoint: /content/drive/MyDrive/BaoHuy/FILL/runs-122-120048.pt     # Hyper-GCN large, joint, X-Sub (K0)
 
-cache_drive: /content/drive/MyDrive/BaoHuy/kg_cache    # S = 1 cache on Drive (copied if present, else rebuilt)
+cache_drive: /content/drive/MyDrive/BaoHuy/kg_cache    # S = 1 cache: only used when E3 (head.pt) must be trained
 cache_dir: /content/jcache                             # local copy read by the training
 cache_name: ntu120_xsub_joint
 work_dir: /content/drive/MyDrive/BaoHuy/work_dir/concept_graph
