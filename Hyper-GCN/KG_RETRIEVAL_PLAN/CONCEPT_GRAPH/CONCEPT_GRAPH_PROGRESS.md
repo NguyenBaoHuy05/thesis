@@ -140,11 +140,14 @@ Cần `$W/e3/head.pt` (ô 7b), checkpoint `/content/large/ntu120/xsub/joint/runs
 !ls -l /content/large/ntu120/xsub/joint/runs-122-120048.pt data/ntu120/NTU120_CSub.npz $W/e3/head.pt
 !python -m pytest tests/test_hypergcn_concept.py tests/test_concept_action_graph.py -q
 !python main.py --config config/concept_graph/ft_e3.yaml --work-dir $W/ft_e3
+```
+Chỉ khi ft_e3 ở epoch 15 ≥ 87.93 mới chạy đối chứng:
+```
 !python main.py --config config/concept_graph/ft_k0.yaml --work-dir $W/ft_k0
 ```
 Ngay sau `Initial evaluation` của ft_e3, kiểm tra Top1 = 87.63 và `head` ≈ 86.38 (xem mục "Fine-tune nhẹ").
 Nếu lệch thì dừng lại và gửi log. Cần dán: các dòng `Top1`, `Top1 of the other outputs`, `Mean loss components`
-ở epoch 0 / 5 / 10 / 15 của cả hai lần chạy.
+ở epoch 0 / 5 / 10 / 15.
 
 **Ô 8: bảng tổng hợp mọi lần chạy (dán vào đây để cập nhật md)**
 ```
@@ -334,8 +337,9 @@ Mỗi lần eval in thêm Top1 của `k0` (fc(f) không có Δ, cùng backbone),
 Kiểm tra trước khi tin kết quả: ở epoch 0, ft_e3 phải cho Top1 = 87.63 (bằng K0, vì W = 0) và `head` ≈ 86.38
 (E3 trên cache; lệch ≤ 0.1 vì cache lưu fp16). Lệch nhiều thì pooling hoặc head nạp sai: dừng.
 
-**Quy tắc (chốt trước):** đồ thị có ích khi fine-tune nếu Top1 ft_e3 (epoch 15) ≥ Top1 K0-ft (epoch 15) + 0.3.
-Chênh trong ±0.3 thì chạy thêm seed 1 cho cả hai. Phụ: nếu Top1 của ft_e3 ≈ `k0` bên trong nó thì Δ không được dùng.
+**Quy tắc (chốt trước):** người dùng chọn (2026-10-20) chạy ft_e3 trước. Nếu ft_e3 (epoch 15) < K0 + 0.3 = 87.93
+thì dừng, không chạy K0-ft. Nếu ≥ 87.93 thì chạy K0-ft: đồ thị có ích khi ft_e3 ≥ K0-ft + 0.3 (fine-tune một mình
+từng cho +0.30 ở P6 của A1). Chênh trong ±0.3 thì chạy thêm seed 1 cho cả hai. Phụ: nếu Top1 của ft_e3 ≈ `k0` bên trong nó thì Δ không được dùng.
 
 Dự đoán ghi trước: K0-ft trong khoảng 87.63 ± 0.3. ft_e3 − K0-ft trong khoảng ±0.3 (không đạt): đồ thị vẫn học từ
 nhãn concept gán theo lớp, nên gradient của nó gần với gradient của CE.
