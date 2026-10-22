@@ -9,7 +9,7 @@ from feeders.tools import align
 class Feeder(Dataset):
     def __init__(self, data_path, label_path=None, p_interval=1, num_clips=1, split='train', random_choose=False, random_shift=False,
                  random_move=False, random_rot=False, frame_sample='resize', align=False, spatial_flip=False, drop_joint=False,
-                 drop_axis=False, window_size=-1, normalization=False, debug=False, use_mmap=False, bone=False, vel=False):
+                 drop_axis=False, window_size=-1, normalization=False, debug=False, use_mmap=False, bone=False, vel=False, bone_root=True):
         """
         :param data_path:
         :param label_path:
@@ -24,6 +24,8 @@ class Feeder(Dataset):
         :param use_mmap: If true, use mmap mode to load data, which can save the running memory
         :param bone: use bone modality or not
         :param vel: use motion modality or not
+        :param bone_root: bone modality only: put the absolute coordinates of joint 21 (spine) in its zero bone
+            (default, this repo's behaviour); False leaves it zero, as REASON's feeder
         :param only_label: only load label for ensemble score compute
         """
 
@@ -38,6 +40,7 @@ class Feeder(Dataset):
         self.num_clips = num_clips
         self.normalization = normalization
         self.use_mmap = use_mmap
+        self.bone_root = bone_root
         self.p_interval = p_interval
         self.random_rot = random_rot
         self.align = align
@@ -101,7 +104,8 @@ class Feeder(Dataset):
             from .bone_pairs import ntu_pairs
             for v1, v2 in ntu_pairs:
                 bone_data_numpy[:, :, v1 - 1] = data_numpy[:, :, v1 - 1] - data_numpy[:, :, v2 - 1]
-            bone_data_numpy[:, :, 20] = data_numpy[:, :, 20]
+            if self.bone_root:
+                bone_data_numpy[:, :, 20] = data_numpy[:, :, 20]
             data_numpy = bone_data_numpy
         elif not self.vel:
             trajectory = data_numpy[:, :, 20]

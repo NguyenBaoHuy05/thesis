@@ -1,0 +1,74 @@
+# A3, S2, control K0-ft: the same pass 2 and recipe without G_KG (fine-tuning l7..l9 + fc only).
+# A3 must beat this, not only K0.
+# S2 recipe (= the old K0-ft light fine-tuning): SGD nesterov 0.0025, wd 4e-4, 15 epochs, step 10. l1..l9 (pass 1) frozen;
+# a3.layers (l7'..l9'), fc, a3.* train. Fixed before running; last epoch reported. Weights: the S1 checkpoint.
+work_dir: ./work_dir/a3/s2_k0ft
+
+# feeder (as config/large/nturgbd120-cross-subject/hyper_joint.yaml)
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model
+model: model.hypergcn_a3.Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'
+  a3_args:
+    matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+    metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+    concept_weight: 0.5            # lambda_c: L = L_action + lambda_c BCE(c, M[y])
+    stage: a3
+    use_kg: False
+
+weights: FILL_S1_CHECKPOINT
+freeze_until: l9               # pass 1 (K0 l1..l9) frozen with its BN statistics; fc and a3.* train
+eval_before_train: True        # epoch 0 = K0 (87.63): beta = 0 and l7'..l9' are copies of l7..l9
+select_best: False
+lr_scale:                      # the new scalars start at 0 / 1: 10x lr
+  a3.beta: 10
+  a3.w_kg: 10
+
+# optim
+optimizer: SGD
+nesterov: True
+weight_decay: 0.0004
+base_lr: 0.0025
+lr_decay_rate: 0.1
+step: [10]
+warm_up_epoch: 0
+num_epoch: 15
+save_epoch: 0
+save_interval: 5
+eval_interval: 5
+eval_epoch: 15
+
+# training
+device: [0]
+batch_size: 64
+test_batch_size: 64
+seed: 0

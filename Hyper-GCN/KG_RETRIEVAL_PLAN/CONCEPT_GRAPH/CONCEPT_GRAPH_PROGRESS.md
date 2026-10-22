@@ -2,7 +2,7 @@
 
 > Plan: [CONCEPT_GRAPH_PLAN.md](CONCEPT_GRAPH_PLAN.md). Sơ đồ: [drawio/architecture_concept_graph.drawio](../../drawio/architecture_concept_graph.drawio).
 > Số liệu chép từ log chạy thật; ô chưa có số ghi *chờ*. Dev: **1 seed (0)**.
-> Cập nhật lần cuối: 2026-10-20
+> Cập nhật lần cuối: 2026-10-21
 
 ## Đang làm (cập nhật 2026-10-20)
 
@@ -14,13 +14,64 @@ Mục tiêu (người dùng chốt): **độ chính xác**, giữ tri thức con
 | online_e3 (refine, 30 epoch) | dừng đọc ở epoch 15: 87.28 < K0; số epoch 30 *chờ* |
 | Stage 1 riêng (`stage1_decoders.yaml`) | code xong, *chưa chạy* |
 | Hướng 1 (chuyên gia theo cặp, S = 1) | **dừng**: K0 + A 87.57 |
-| **Hướng 2 (hợp nhất các stream)** | bước 0: oracle 94.52; **đang sửa cache bone / bone-motion** (lệch log 4.6 / 2.9 điểm) |
+| **Hướng 2 (hợp nhất các stream)** | bước 0 (pkl tác giả): **mốc ensemble alpha 90.87**, oracle 95.01 → được làm bước 1; cache bone / bone-motion lệch log, phải sửa trước bước 1 |
 
-**Bước kế tiếp:** tạo lại cache test bone với `bone_root=False`; nếu khớp 89.34 thì làm bone-motion, chạy lại
-`tools/stream_ensemble.py` để có mốc ensemble thật, rồi quyết định bước 1 của hướng 2 (đặc tả *chờ*).
+**Bước kế tiếp:** sửa cache bone (`bone_root=False`, test phải khớp 89.34), rồi bone-motion (83.44); sau đó chốt
+đặc tả bước 1 của hướng 2 (*chờ*) và cache train + test của cả 4 stream.
+
+**2026-10-22 (sau): người dùng bỏ CGF.** Rà lại các hướng trong `KG_RETRIEVAL_PLAN/` theo tiềm năng ý tưởng
+(không dựa số liệu): đề xuất **A3** (KG điều kiện hoá hyperedge / virtual joint của Hyper-GCN, train end-to-end) làm
+hướng chính, **A5** (luật thời gian trên vị từ theo đoạn, chỉ cho cặp dễ nhầm) làm hướng phụ; *chờ* người dùng chọn.
+Sơ đồ A3 (2026-10-22): [drawio/architecture_a3_concept_hyperedge.drawio](../../drawio/architecture_a3_concept_hyperedge.drawio)
+(lượt 1 K0 đóng băng → c; B: concept không gian → tập khớp; G_KG = hyper_norm(B·c, W_KG); lượt 2 chạy lại l7–l9 với
+A = A_phys + α G_dyn + β G_KG, β = 0 lúc đầu; đối chứng K0-ft, mặt nạ ngẫu nhiên).
+**A3 được chọn, code xong 2026-10-22, chưa chạy**: plan, quy tắc đạt và các bước chạy ở
+[A3_PLAN.md](../A3_CONCEPT_HYPEREDGE/A3_PLAN.md); một lệnh trên Colab: `!python tools/run_a3.py`.
+
+**(Đã bỏ) QUYẾT ĐỊNH 2026-10-22 (người dùng giao Claude chốt):** đi **hướng 2, hợp nhất stream theo concept trên logits
+(CGF)**. Dừng hẳn: LoRA, ft_e3, Stage 1 riêng, hướng 1, mọi head mới trên l9 joint (online_e3: chỉ đọc số epoch 30
+nếu đã chạy xong).
+
+Kiến trúc CGF (≈ 420 tham số, không đụng backbone):
+- vào: logits z_s của 4 stream s ∈ {j, b, jm, bm}; p_s = softmax(z_s / T_s)
+- concept theo stream: c_s = p_s · A (A: 120 × 102 từ `ntu_action_concept_v2_4.csv`) = xác suất concept k đúng
+- cổng tin stream theo concept: g[s, k] = softmax theo s của w[s, k] (4 × 102); c_k = Σ_s g[s, k] · c_s,k
+- điểm lớp: Σ_s α_s log p_s,y + β · Σ_k [A_yk log c_k + (1 − A_yk) log(1 − c_k)]
+- khởi tạo: α = alpha tác giả, T = 1, w = 0, β = 0, tức đúng bằng ensemble mốc 90.87 lúc bắt đầu
+
+Bước A (numpy, 4 pkl, không GPU): chia test theo subject 2 nửa, fit trên nửa này đo nửa kia, đổi vai, trung bình.
+So với cùng giao thức: (a) alpha toàn cục fit lại (4 tham số), (b) alpha theo lớp × stream (480 tham số, đối chứng
+"nhiều tham số hơn mà không có concept"). **Đạt nếu CGF ≥ 91.17 và ≥ max(a, b) + 0.3.** Không đạt thì dừng hướng 2,
+chuyển viết luận văn với kết quả phân tích (tri thức concept theo lớp không thêm thông tin ngoài backbone).
+Bước B (chỉ khi A đạt): giữ riêng ~10% subject của train, huấn luyện lại 4 stream trên 90% còn lại (đồng thời giải
+quyết checkpoint bone 84.72 ≠ 89.34), fit CGF trên logits tập giữ riêng, báo cáo trên test (số hợp lệ).
+
+Tính mới CGF (đánh giá 2026-10-22): **thấp–trung bình**. c_s = p_s · A là IAP, hạng tử giải mã là kiểu DAP
+(Lampert 2009); trọng số theo concept × stream là stacking có ràng buộc. REASON (README / `eval.py`) chỉ cộng điểm
+các stream, không hợp nhất ở mức concept. Muốn bảo vệ được: (1) đối chứng A xáo trộn (cùng mật độ) để chứng minh cấu
+trúc concept có tác dụng; (2) nếu bước A đạt, nâng cổng thành theo mẫu (dựa trên bất đồng giữa các stream ở concept k)
+làm đóng góp chính. Chưa chốt (1) vì người dùng đã bỏ đối chứng xáo trộn (K2) trước đây.
+
+**Đề xuất 2026-10-21 (đã thay bằng quyết định trên):** chèn **bước 0.5** trước bước 1, chỉ dùng 4 pkl tác giả (numpy,
+không GPU). Trần của *mọi* cách hợp nhất học được trên logits: chia test theo subject làm 2 nửa, học trên nửa này,
+đo trên nửa kia (đổi vai, lấy trung bình): (a) alpha theo stream tìm lưới, (b) alpha theo lớp × stream,
+(c) stacking tuyến tính / MLP nhỏ trên 4 × 120 logits. Quy tắc chốt trước: nếu cả (a)–(c) < 91.17 thì hợp nhất học
+được không có chỗ, dừng bước 1; nếu có cái ≥ 91.17 thì bước 1 phải giải quyết việc thiếu tập giữ riêng (train ~99%):
+đo Top1 train thật của 4 stream (cache train, không augment) trước khi thiết kế.
+Biến thể chỉ dùng logits (bàn 2026-10-21, *chờ duyệt*): concept theo stream c_s = softmax(z_s) · A (A: lớp × 102
+concept), trọng số tin stream theo concept w[s, k] (4 × 102), rồi giải mã sang lớp. Hạn chế: pkl chỉ có test (học
+trên test không báo cáo được, cần logits train → vẫn vướng checkpoint bone); không có thông tin mới ngoài logits.
+Bàn LoRA (2026-10-22, chưa quyết): LoRA chỉ là cách giới hạn lượng cập nhật khi fine-tune, không thêm thông tin;
+concept trong CSV là hàm của nhãn lớp nên giám sát concept vẫn là giám sát lớp (ECOC), LoRA không đổi điều đó.
+Chỉ đáng dùng như regularizer nếu fine-tune với nguồn tri thức theo mẫu (không theo lớp) hoặc cho hợp nhất stream.
 ```
 !python tools/cache_joint_features.py --config config/large/nturgbd120-cross-subject/hyper_bone.yaml    --weights /content/drive/MyDrive/BaoHuy/large/ntu120/xsub/bone/runs-139-136776.pt    --out-dir /content/jcache --name ntu120_xsub_bone --splits test --num-worker 2 --feeder-set bone_root=False
 ```
+Eval bằng `main.py --phase test` với checkpoint bone (2026-10-20): **84.72** (cache 84.75), nên script cache đúng;
+checkpoint + feeder hiện tại không tái tạo 89.34 của pkl. Còn lại: feeder (`bone_root`) hay tác giả up nhầm checkpoint.
+`bone_root` và `--feeder-set` đã thêm thật vào code (ghi chú cũ nói đã thêm nhưng chưa có).
+Hướng 1: đã soát `pair_experts.py`, `pair_ceiling.py` và các hàm phụ, không thấy lỗi; cache joint khớp K0 nên lỗi
+`bone_root` không ảnh hưởng hướng 1.
 Checkpoint 4 stream: `/content/drive/MyDrive/BaoHuy/large/ntu120/xsub/{joint,bone,joint_motion,bone_motion}/`
 (mỗi thư mục có `epoch1_test_score.pkl` chính thức, khớp log).
 
@@ -413,23 +464,24 @@ giữa các stream. Cần cache test (S = 1) của b, jm, bm:
 Quy tắc (chốt trước): bước 1 (đồ thị hợp nhất theo concept) chỉ làm nếu oracle − ensemble alpha ≥ 1.0 điểm
 (còn chỗ cho một cách hợp nhất tốt hơn cộng điểm). Bước 1 đạt nếu vượt ensemble alpha ≥ 0.3.
 
-**Kết quả bước 0 (2026-10-20):**
+**Kết quả bước 0 (2026-10-20, logits từ `epoch1_test_score.pkl` của tác giả, `--score-dir`):**
 
 | | Top1 |
 |---|---|
-| j (K0) / b / jm / bm | 87.63 / 84.75 / 83.26 / 80.53 |
-| j + b (đều) | 88.77 |
-| 4 stream đều / **alpha [1, 1.5, 0.7, 0.3] (mốc)** | 89.10 / **89.48** |
-| oracle (có stream đúng) | 94.52 |
+| j (K0) / b / jm / bm | 87.65 / 89.34 / 83.27 / 83.44 (khớp log) |
+| j + b (đều) | 90.26 |
+| 4 stream đều / **alpha [1, 1.5, 0.7, 0.3] (mốc)** | 90.16 / **90.87** |
+| oracle (có stream đúng) | 95.01 |
 
-Trong 6 299 lỗi của K0: stream khác đúng 3 511 (6.90%), ensemble alpha sửa 2 027 nhưng phá 1 085.
-Trên 636 mẫu trần hướng 1: b đúng 314, jm 247, bm 260, ít nhất một stream đúng 451, ensemble đúng 296.
-Chồng lỗi: j/b 66.7%, j/jm 68.3%, j/bm 71.4%, b/jm 56.9%, b/bm 65.5%, jm/bm 72.1%.
+Trong 6 288 lỗi của K0: stream khác đúng 3 745 (7.35%), ensemble alpha sửa 2 266 nhưng phá 628.
+Trên 635 mẫu trần hướng 1: b đúng 402, jm 244, bm 243, ít nhất một stream đúng 491, ensemble đúng 341.
+Chồng lỗi: j/b 59.2%, j/jm 68.3%, j/bm 68.3%, b/jm 67.0%, b/bm 68.2%, jm/bm 69.7%.
 
-**Theo quy tắc: được làm bước 1** (oracle − ensemble = 5.04 ≥ 1.0). Thông tin tách cặp có ở stream khác (451/636).
-Lưu ý: b 84.75 thấp hơn j gần 3 điểm (thường ngang nhau): kiểm tra checkpoint / config bone trước khi tin.
+**Theo quy tắc: được làm bước 1** (oracle − ensemble = 4.14 ≥ 1.0); bước 1 đạt nếu ≥ 91.17 (mốc + 0.3).
+b là stream bổ sung mạnh nhất cho j (chồng lỗi thấp nhất 59.2%; trên trần hướng 1 b đúng 402/635).
 Rủi ro chính của bước 1: mọi stream ~99% trên train, nên một cách hợp nhất học trên train gần như không học được
 nên tin stream nào khi chúng bất đồng (vấn đề stacking không có tập giữ riêng).
+Số cũ từ cache (b 84.75, bm 80.53, mốc 89.48, oracle 94.52) **sai** do cache bone lệch, bỏ.
 
 **Kiểm tra checkpoint (2026-10-20):** điểm chính thức (`epoch1_test_score.pkl`) khớp log: j 87.65, b 89.34,
 jm 83.27, bm 83.44. Cache: j 87.63 và jm 83.26 khớp; **b 84.75 và bm 80.53 lệch** → mốc 89.48 ở trên **sai**.

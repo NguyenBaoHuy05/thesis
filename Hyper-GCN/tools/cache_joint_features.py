@@ -3,6 +3,7 @@
   python tools/cache_joint_features.py --weights <checkpoint.pt> --out-dir <folder>
       [--config config/large/nturgbd120-cross-subject/hyper_joint.yaml] [--name ntu120_xsub_joint]
       [--segments 1] [--splits test train] [--batch-size 128] [--num-worker 4] [--device cuda]
+      [--feeder-set key=value ...]      (overrides train_ and test_feeder_args, value parsed as YAML: bone_root=False)
 
 Writes per split
     <name>_<split>_feat.npy   [N, M, C, S, V] float16, l9 output averaged inside S equal time segments
@@ -107,6 +108,8 @@ if __name__ == '__main__':
     parser.add_argument('--batch-size', type=int, default=128)
     parser.add_argument('--num-worker', type=int, default=4)
     parser.add_argument('--device', default='cuda')
+    parser.add_argument('--feeder-set', nargs='+', default=[], metavar='KEY=VALUE',
+                        help='override feeder args of both splits, e.g. bone_root=False')
     args = parser.parse_args()
 
     repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -116,11 +119,16 @@ if __name__ == '__main__':
     os.makedirs(out_dir, exist_ok=True)
     with open(config_path, encoding='utf-8') as handle:
         config = yaml.safe_load(handle)
+    overrides = {k: yaml.safe_load(v) for k, v in (item.split('=', 1) for item in args.feeder_set)}
+    for key in ('train_feeder_args', 'test_feeder_args'):
+        config[key].update(overrides)
+    if overrides:
+        print(f'Feeder overrides: {overrides}')
     model, report = load_frozen_model(config, weights, args.device)
     print(f'Checkpoint load: {report}')
     Feeder = import_class(config['feeder'])
 
-    summary = dict(config=config_path, weights=weights, segments=args.segments, splits={})
+    summary = dict(config=config_path, weights=weights, segments=args.segments, feeder_set=overrides, splits={})
     for split in sorted(args.splits, key=['test', 'train'].index):
         dataset = Feeder(**config['train_feeder_args' if split == 'train' else 'test_feeder_args'])
         feat_path = os.path.join(out_dir, f'{args.name}_{split}_feat.npy')

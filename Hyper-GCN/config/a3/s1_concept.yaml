@@ -1,0 +1,68 @@
+# A3, S1 (model/hypergcn_a3.py): concept head c = sigmoid(W_c z) on K0's pooled l9 feature. Backbone and fc frozen,
+# the output is K0's logits (Top1 stays 87.63); only a3.concept learns (BCE). extra Top1 concept_match = class from c.
+# Fixed before running; last epoch reported. Weights: the K0 checkpoint (tools/run_a3.py fills it).
+work_dir: ./work_dir/a3/s1_concept
+
+# feeder (as config/large/nturgbd120-cross-subject/hyper_joint.yaml)
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
+  window_size: 64
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+
+test_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+  debug: False
+
+# model
+model: model.hypergcn_a3.Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: 'virtual_ensemble'
+  a3_args:
+    matrix: annotations/concepts/ntu_action_concept_v2_4.csv
+    metadata: annotations/concepts/ntu_concept_metadata_v2_4.csv
+    concept_weight: 0.5            # lambda_c: L = L_action + lambda_c BCE(c, M[y])
+    stage: concept
+
+weights: FILL_K0_CHECKPOINT
+freeze_until: fc               # only a3.* trains (the pass-2 copies get no gradient in this stage)
+eval_before_train: True        # epoch 0 = K0 (87.63)
+select_best: False
+
+# optim (linear head on a frozen feature)
+optimizer: Adam
+weight_decay: 0.0
+base_lr: 0.001
+lr_decay_rate: 0.1
+step: [8]
+warm_up_epoch: 0
+num_epoch: 10
+save_epoch: 0
+save_interval: 10
+eval_interval: 5
+eval_epoch: 10
+
+# training
+device: [0]
+batch_size: 64
+test_batch_size: 64
+seed: 0

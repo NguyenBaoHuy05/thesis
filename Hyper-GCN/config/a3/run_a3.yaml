@@ -1,0 +1,8 @@
+# tools/run_a3.py: A3 in one command (S1, then the S2 configs below). Paths from script.txt.
+
+data: /content/drive/MyDrive/BaoHuy/KLTN_Huy-Nhu/NTU120_CSub.npz                 # NTU120 X-Sub, copied to data/ntu120/
+checkpoint: /content/drive/MyDrive/BaoHuy/large/ntu120/xsub/joint/runs-122-120048.pt   # Hyper-GCN large, joint (K0)
+work_dir: /content/drive/MyDrive/BaoHuy/work_dir/a3                               # results in <work_dir>/<config name>
+
+stages: [s2_a3, s2_k0ft, s2_random]    # order of the S2 runs (main model first)
+run_tests: True

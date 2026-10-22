@@ -125,7 +125,9 @@ class HYPERGC(nn.Module):
         d_r = torch.norm(A, 1, dim=2, keepdim=True) + 1e-8
         return A / d_r
 
-    def forward(self, x):
+    def forward(self, x, extra_adjacency=None):
+        """extra_adjacency: optional [N, 1 or num_subset, V + virtual, V + virtual] added to A after the hypergraph
+        term (model/hypergcn_a3.py: beta * G_KG); None keeps the original layer."""
         N, C, T, V = x.size()
 
         h_x = self.hyper_joint
@@ -156,6 +158,8 @@ class HYPERGC(nn.Module):
             alpha = self.alpha
             alpha = self.relu(alpha)
             A = A + alpha * G
+        if extra_adjacency is not None:
+            A = A + extra_adjacency
 
         d_x = self.conv_d(x)
         d_x = d_x.view(N, self.num_subset, self.mid_out_channels, T, V)
@@ -303,8 +307,8 @@ class TCN_GCN_unit(nn.Module):
         else:
             self.residual = unit_tcn(in_channels, out_channels, kernel_size=1, stride=stride)
 
-    def forward(self, x):
-        y, h_x = self.gcn1(x)
+    def forward(self, x, extra_adjacency=None):
+        y, h_x = self.gcn1(x, extra_adjacency)
         y = self.relu(self.tcn1(y) + self.residual(x))
         return y, h_x
 
