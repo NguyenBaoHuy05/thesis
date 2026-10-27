@@ -256,7 +256,36 @@ Chỉ chạy một phần:
 | Input | *chờ* | — | — | — |
 | Random | *chờ* | *chờ* | *chờ* | *chờ* |
 
-G0: *chờ*.
+**G0 (2026-10-27, Colab): KHÔNG ĐẠT → G1 không chạy theo quy tắc §4.** 15/15 test đạt; vị từ hữu hạn; bất biến xoay
+`|Δê|` = 1.0e-7 (đạt). Cặp đạt AUC gập ≥ 0.75 trên train: **6 / 13** (cần 7).
+
+| Cặp | n train | AUC train (cột) | AUC test (cột, chỉ báo cáo) |
+|---|---|---|---|
+| into / out bag | 768 | 0.712 (hands_close@2) | 0.687 |
+| put_on / take_off shoe | 1336 | 0.624 (foot_raised@2) | 0.672 |
+| headphone | 751 | **0.815** (lowering_a@clip) | 0.770 |
+| hat_cap | 1336 | 0.712 (mouth_a@5) | 0.755 |
+| thumb_up / down | 764 | **0.784** (elbow_up_a@6) | 0.811 |
+| OK / victory | 764 | 0.640 (pinch_a@7) | 0.629 |
+| victory / snap_fingers | 763 | **0.831** (lowering_a@clip) | 0.848 |
+| drink_water / yawn | 1049 | **0.854** (above_head_a@1) | 0.850 |
+| yawn / blow_nose | 766 | **0.793** (head_down@7) | 0.762 |
+| hush / blow_nose | 764 | 0.739 (ear_a@4) | 0.757 |
+| reading / writing | 1324 | 0.668 (rising_a@clip) | 0.687 |
+| writing / play_with_phone | 1329 | 0.680 (lowering_a@clip) | 0.720 |
+| reading / staple_book | 1047 | **0.755** (rising_a@0) | 0.709 |
+
+Nhận xét: n train / test khác nhau theo cặp là do phân bố subject của X-Sub (lớp NTU60 nhiều mẫu train hơn lớp mới
+của NTU120), tổng mỗi cặp ≈ 2 × 950: không phải lỗi. Hyperedge hình bàn tay yếu đúng như rủi ro đã ghi: thumb_up / down
+tách bằng `elbow_up_a`, không phải `thumb_up_a`; OK / victory 0.64. Theo quy tắc, không sửa định nghĩa vị từ sau khi
+đã xem kết quả này.
+
+**Run xác nhận (người dùng chọn 2026-10-27), ngoài quy tắc §4:** chỉ `a3g` và `a3g_off`, đúng config đã chốt, không
+tinh chỉnh gì (như A1-G đã làm với THEN). Mỗi thư mục run có `G0_OVERRIDE.txt`. Số của hai run này chỉ dùng để kiểm
+chứng quyết định dừng; Shuffle / Input / Random chỉ chạy nếu A3-G − K0-ft ≥ 0.3.
+```
+!python tools/run_a3g.py --ignore-g0 --only a3g a3g_off
+```
 
 ## 9. Rủi ro
 

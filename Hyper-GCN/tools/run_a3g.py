@@ -5,7 +5,8 @@
 1. tests (tests/test_a3g.py), if run_tests;
 2. data: <data> -> data/ntu120/NTU120_CSub.npz, unless the same size is there;
 3. G0 (tools/predicate_stats.py) -> <work_dir>/predicate_stats.npz + .json, if the report is missing or --only g0;
-4. stop unless the report says "passed": true (plan §4); a failed G0 is never skipped by a rerun;
+4. stop unless the report says "passed": true (plan §4); a failed G0 is never skipped by a rerun, only by an explicit
+   --ignore-g0 (confirmation run, plan §8), which writes G0_OVERRIDE.txt into each run directory;
 5. each G1 config of <stages> (or --only) from the K0 checkpoint: config/a3g/a3g.yaml merged with
    config/a3g/<name>.yaml, stats = <work_dir>/predicate_stats.npz, results in <work_dir>/<name>.
 A run whose best_checkpoint.json exists is skipped, so the command resumes after a Colab disconnect.
@@ -57,6 +58,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config/a3g/run_a3g.yaml')
     parser.add_argument('--only', nargs='+', help="'g0', or G1 configs to run instead of <stages>")
+    parser.add_argument('--ignore-g0', action='store_true',
+                        help='run G1 even if G0 failed (confirmation run; writes G0_OVERRIDE.txt in each run dir)')
     args = parser.parse_args()
     with open(os.path.join(REPO, args.config), encoding='utf-8') as handle:
         cfg = yaml.safe_load(handle)
@@ -84,10 +87,19 @@ if __name__ == '__main__':
         sys.exit(f'no G0 report at {report}')
     with open(report, encoding='utf-8') as handle:
         g0 = json.load(handle)
+    override = None
     if not g0['passed']:
-        sys.exit('G0 did not pass, G1 is not run (plan §4): ' + '; '.join(g0['failed']))
+        if not args.ignore_g0 or g0_only:
+            sys.exit('G0 did not pass, G1 is not run (plan §4): ' + '; '.join(g0['failed']))
+        override = 'G1 run although G0 did not pass (confirmation run outside the rule, plan §8): ' + \
+            '; '.join(g0['failed'])
+        print('\nWARNING: ' + override)
     if g0_only:
         sys.exit(0)
 
     for name in args.only or cfg['stages']:
+        if override:                                   # mark the run, so its numbers are never read as a passed G0
+            os.makedirs(os.path.join(cfg['work_dir'], name), exist_ok=True)
+            with open(os.path.join(cfg['work_dir'], name, 'G0_OVERRIDE.txt'), 'w', encoding='utf-8') as handle:
+                handle.write(override + '\n')
         stage(name, cfg, stats)

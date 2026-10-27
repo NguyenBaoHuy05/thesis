@@ -80,6 +80,10 @@ quantile lẫn người rỗng; chạy lại bỏ qua điểm dừng G0; stage k
 `tools/predicate_stats.py`, `tools/run_a3g.py`, `tests/test_a3g.py` (15 test: khung xương tổng hợp, bất biến xoay,
 tay active, người rỗng / bản sao, mọi mode = K0 lúc đầu, shuffle / random, gradient). K0-ft = `a3g_off` từ K0.
 Bước tiếp: `!python tools/run_a3g.py --only g0` trên Colab (A3G_PLAN.md §7).
+**G0 2026-10-27: không đạt (6 / 13 cặp, cần 7)**; test 15/15, bất biến xoay 1e-7. G1 chưa chạy. Gần ngưỡng: hush /
+blow_nose 0.739, into / out bag 0.712, hat 0.712. Bảng chi tiết: A3G_PLAN.md §8.
+**Người dùng chọn run xác nhận (ngoài quy tắc):** `!python tools/run_a3g.py --ignore-g0 --only a3g a3g_off`
+(cờ mới, ghi `G0_OVERRIDE.txt` vào thư mục run). Shuffle / Input / Random chỉ chạy nếu A3-G − K0-ft ≥ 0.3. Kết quả *chờ*.
 
 **(Đã bỏ) QUYẾT ĐỊNH 2026-10-22 (người dùng giao Claude chốt):** đi **hướng 2, hợp nhất stream theo concept trên logits
 (CGF)**. Dừng hẳn: LoRA, ft_e3, Stage 1 riêng, hướng 1, mọi head mới trên l9 joint (online_e3: chỉ đọc số epoch 30
