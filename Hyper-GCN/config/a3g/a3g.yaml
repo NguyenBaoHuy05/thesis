@@ -7,6 +7,10 @@ feeder: feeders.feeder_ntu.Feeder
 train_feeder_args:
   data_path: data/ntu120/NTU120_CSub.npz
   split: train
+  debug: False
+  random_choose: False
+  random_shift: False
+  random_move: False
   window_size: 64
   random_rot: True
   p_interval: [0.5, 1]
@@ -19,6 +23,7 @@ test_feeder_args:
   p_interval: [0.95]
   vel: False
   bone: False
+  debug: False
 model: model.hypergcn_a3g.Model
 model_args:
   num_class: 120

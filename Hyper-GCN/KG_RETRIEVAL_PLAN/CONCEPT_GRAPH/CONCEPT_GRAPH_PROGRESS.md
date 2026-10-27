@@ -86,6 +86,9 @@ blow_nose 0.739, into / out bag 0.712, hat 0.712. Bảng chi tiết: A3G_PLAN.md
 (cờ mới, ghi `G0_OVERRIDE.txt` vào thư mục run). Shuffle / Input / Random chỉ chạy nếu A3-G − K0-ft ≥ 0.3. Kết quả *chờ*.
 Lỗi Colab 2026-10-27 `No module named 'run_refine'`: bản Colab (`/content/thesis/Hyper-GCN`) thiếu `tools/run_refine.py`
 (file có trong commit 5d219b1). `run_a3g.py` đã tự chứa các hàm đó, không cần `run_refine.py` nữa.
+Lỗi Colab tiếp theo: `KeyError: 'debug'` trong main.py — `config/a3g/a3g.yaml` thiếu khoá feeder (`debug`,
+`random_choose`, `random_shift`, `random_move`). Đã bổ sung đúng giá trị của `config/a3/s2_a3.yaml`; đối chiếu diff:
+phần feeder và optim/training của hai config giờ trùng nhau (chỉ khác `model:`). Test 15/15 đạt trên Colab.
 
 **(Đã bỏ) QUYẾT ĐỊNH 2026-10-22 (người dùng giao Claude chốt):** đi **hướng 2, hợp nhất stream theo concept trên logits
 (CGF)**. Dừng hẳn: LoRA, ft_e3, Stage 1 riêng, hướng 1, mọi head mới trên l9 joint (online_e3: chỉ đọc số epoch 30
