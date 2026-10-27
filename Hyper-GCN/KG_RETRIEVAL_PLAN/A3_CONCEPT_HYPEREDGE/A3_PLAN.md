@@ -153,10 +153,32 @@ Chỉ chạy một phần (ví dụ khi hết giờ GPU):
 | | Top1 epoch cuối | no_kg | concept_match | β_l7 / β_l8 / β_l9 cuối |
 |---|---|---|---|---|
 | K0 | 87.63 | — | — | — |
-| S1 | *chờ* (phải = 87.63) | — | *chờ* | — |
-| **A3** | *chờ* | *chờ* | *chờ* | *chờ* |
+| S1 | **87.63** (mọi epoch, đúng thiết kế) | — | **84.11** (epoch 5: 83.72; epoch 0: 0.53) | — |
+| **A3** | **87.47** (epoch 0 / 5 / 10: 87.64 / 87.17 / 87.27) | 85.28 (5 / 10: 85.50 / 85.01) | 84.09 | 0.121 / 0.293 / 0.098 (w_KG 0.79) |
 | K0-ft | *chờ* | — | *chờ* | — |
 | Random | *chờ* | *chờ* | *chờ* | *chờ* |
+
+**S1 (2026-10-22, seed 0):** 8/8 test đạt trên Colab. Epoch 0 = 87.63 (kiểm tra cài đặt đạt). Train
+`concept_bce` 0.0912 → 0.0103, train acc 99.6% (của K0). `concept_match` 84.11%: chỉ từ c đã gần đoán đúng lớp (kém
+K0 3.5 điểm), tức c gần như là mã lớp. Điều này dự kiến được, vì concept chỉ có nhãn mức lớp. Hệ quả cho S2: G_KG
+mang thông tin "lớp dự đoán", nên đối chứng Random là phép thử quyết định. Thời gian: ~3.9 phút / epoch train,
+~3.1 phút / eval (S1, không backward qua backbone). Checkpoint: `work_dir/a3/s1_concept/runs-10-9840.pt`.
+
+**S2 A3, giữa chừng (epoch 5 / 15):** epoch 0 = 87.64 và no_kg = 87.64. Lệch 0.01 so với 87.63 của S1 là sai số
+số học khi eval (test loss 1.2278666 so với 1.2278625; 87.64 cũng là số `main.py` eval K0 trước đây), không phải lỗi.
+β rời 0 ngay từ epoch 1 và tăng đều, lớn nhất ở l8 (0.23 ở epoch 5); w_KG giảm nhẹ (0.98 → 0.88). Epoch 5: Top1
+87.17 (−0.47 so với epoch 0), no_kg 85.50: bỏ G_KG lúc test thì tụt 1.67 điểm, tức lượt 2 **đã dùng** G_KG. Train acc
+99.37 → 99.54 (thấp hơn 99.6 của K0 lúc đầu: fine-tune làm xáo trộn rồi hồi lại). Chưa kết luận: số có nghĩa là epoch 15
+(sau khi giảm lr ở epoch 10), so với K0-ft ở cùng epoch. Thời gian: ~8.1 phút / epoch train, ~5.4 phút / eval.
+Ghi chú w_KG: hyper_norm tuyến tính theo tỉ lệ chung của W (nhân mọi w với s thì G_KG nhân s), nên mức w_KG trung bình
+và β dư nhau một hệ số; cường độ thật là β_l · mean(w_KG) (l8: 0.10 → 0.20 từ epoch 1 đến 5, vẫn tăng). Thông tin
+nằm ở **phân bố** w_KG giữa các concept, xem sau khi chạy xong (so với Random).
+
+**S2 A3, xong (2026-10-22, seed 0):** Top1 epoch 15 = **87.47**, thấp hơn K0 0.17 (epoch 0 = 87.64). Train acc cuối
+99.72 (cao hơn 99.6 của K0). no_kg 85.28: mạng phụ thuộc G_KG (bỏ đi tụt 2.2), nhưng phụ thuộc đó không đem lại
+Top1 hơn K0. β ổn định sau giảm lr (l8 ≈ 0.29). Theo quy tắc, A3 chỉ đạt nếu K0-ft ≤ 87.17, tức riêng công thức
+fine-tune đã làm tụt ≥ 0.47; ngay cả khi đó A3 vẫn dưới K0, nên không có lợi ích độ chính xác để báo cáo.
+Quyết định: chạy K0-ft (cần để biết tụt do công thức fine-tune hay do G_KG); Random chỉ chạy nếu A3 ≥ K0-ft + 0.3.
 
 ## 8. Rủi ro
 

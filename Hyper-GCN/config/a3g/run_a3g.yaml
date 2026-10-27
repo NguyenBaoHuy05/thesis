@@ -1,0 +1,10 @@
+# tools/run_a3g.py: A3-G in one command (G0, then the G1 configs below). Paths from script.txt.
+
+data: /content/drive/MyDrive/BaoHuy/KLTN_Huy-Nhu/NTU120_CSub.npz                 # NTU120 X-Sub, copied to data/ntu120/
+checkpoint: /content/drive/MyDrive/BaoHuy/large/ntu120/xsub/joint/runs-122-120048.pt   # Hyper-GCN large, joint (K0)
+work_dir: /content/drive/MyDrive/BaoHuy/work_dir/a3g                              # results in <work_dir>/<config name>
+k0_scores:                     # optional: K0 test score pkl, G0 then reports AUC on K0-right / K0-wrong samples
+
+# every G1 run starts from the K0 checkpoint; a3g_off = K0-ft (same pass 2 and recipe, no G_geo)
+stages: [a3g, a3g_off, a3g_shuffle, a3g_input, a3g_random]
+run_tests: True

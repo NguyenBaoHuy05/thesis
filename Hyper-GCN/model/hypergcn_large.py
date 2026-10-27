@@ -125,9 +125,11 @@ class HYPERGC(nn.Module):
         d_r = torch.norm(A, 1, dim=2, keepdim=True) + 1e-8
         return A / d_r
 
-    def forward(self, x, extra_adjacency=None):
+    def forward(self, x, extra_adjacency=None, temporal_adjacency=None):
         """extra_adjacency: optional [N, 1 or num_subset, V + virtual, V + virtual] added to A after the hypergraph
-        term (model/hypergcn_a3.py: beta * G_KG); None keeps the original layer."""
+        term (model/hypergcn_a3.py: beta * G_KG). temporal_adjacency is optional
+        [N, T, V + virtual, V + virtual] or [N, T, num_subset, V + virtual,
+        V + virtual]. None keeps the original layer."""
         N, C, T, V = x.size()
 
         h_x = self.hyper_joint
@@ -164,6 +166,19 @@ class HYPERGC(nn.Module):
         d_x = self.conv_d(x)
         d_x = d_x.view(N, self.num_subset, self.mid_out_channels, T, V)
         y = torch.einsum('nkuv,nkctv->nkctu', A, d_x).contiguous()
+        if temporal_adjacency is not None:
+            if temporal_adjacency.ndim == 4:
+                temporal_adjacency = temporal_adjacency.unsqueeze(2)
+            if temporal_adjacency.ndim != 5:
+                raise ValueError("temporal_adjacency must be [N,T,V,V] or [N,T,K,V,V]")
+            if temporal_adjacency.shape[0] != N or temporal_adjacency.shape[1] != T:
+                raise ValueError("temporal_adjacency batch/time dimensions do not match x")
+            if temporal_adjacency.shape[2] == 1:
+                temporal_adjacency = temporal_adjacency.expand(-1, -1, self.num_subset, -1, -1)
+            if temporal_adjacency.shape[2] != self.num_subset or temporal_adjacency.shape[-2:] != (V, V):
+                raise ValueError("temporal_adjacency has incompatible subset or vertex dimensions")
+            temporal_adjacency = temporal_adjacency.to(device=d_x.device, dtype=d_x.dtype)
+            y = y + torch.einsum('ntkuv,nkctv->nkctu', temporal_adjacency, d_x)
         y = y.view(N, self.out_channels, T, V)
 
         x = x[..., :self.vertex_nums]
@@ -307,8 +322,8 @@ class TCN_GCN_unit(nn.Module):
         else:
             self.residual = unit_tcn(in_channels, out_channels, kernel_size=1, stride=stride)
 
-    def forward(self, x, extra_adjacency=None):
-        y, h_x = self.gcn1(x, extra_adjacency)
+    def forward(self, x, extra_adjacency=None, temporal_adjacency=None):
+        y, h_x = self.gcn1(x, extra_adjacency, temporal_adjacency)
         y = self.relu(self.tcn1(y) + self.residual(x))
         return y, h_x
 

@@ -1,0 +1,57 @@
+# A3-G, main model: pass 2 re-runs l7'..l9' with beta_l * G_geo (predicate hyperedges, per frame).
+# The other G1 configs (a3g_off = K0-ft, a3g_shuffle, a3g_input, a3g_random) only override a3g_args.mode.
+# Recipe = A3 S2 (KG_RETRIEVAL_PLAN/A3_CONCEPT_HYPEREDGE/A3_PLAN.md §2), from the K0 checkpoint. Fixed before running;
+# last epoch reported. tools/run_a3g.py fills weights and a3g_args.stats.
+work_dir: ./work_dir/a3g/a3g
+feeder: feeders.feeder_ntu.Feeder
+train_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: train
+  window_size: 64
+  random_rot: True
+  p_interval: [0.5, 1]
+  vel: False
+  bone: False
+test_feeder_args:
+  data_path: data/ntu120/NTU120_CSub.npz
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  vel: False
+  bone: False
+model: model.hypergcn_a3g.Model
+model_args:
+  num_class: 120
+  num_point: 25
+  num_person: 2
+  hyper_joints: 3
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: virtual_ensemble
+  a3g_args:
+    mode: geo
+    stats: FILL_PREDICATE_STATS    # <work_dir>/predicate_stats.npz from G0 (tools/predicate_stats.py)
+    seed: 0                        # seed of the random joint sets (mode: random)
+weights: FILL_K0_CHECKPOINT
+freeze_until: l9               # pass 1 (K0 l1..l9) frozen; a3g.* (l7'..l9', beta, w_geo, input_proj) and fc train
+eval_before_train: True        # epoch 0 = K0 (87.63): beta = 0, input_proj = 0, l7'..l9' are copies of l7..l9
+select_best: False
+lr_scale:
+  a3g.beta: 10
+  a3g.w_geo: 10
+optimizer: SGD
+nesterov: True
+weight_decay: 0.0004
+base_lr: 0.0025
+lr_decay_rate: 0.1
+step: [10]
+warm_up_epoch: 0
+num_epoch: 15
+save_epoch: 0
+save_interval: 5
+eval_interval: 5
+eval_epoch: 15
+device: [0]
+batch_size: 64
+test_batch_size: 64
+seed: 0

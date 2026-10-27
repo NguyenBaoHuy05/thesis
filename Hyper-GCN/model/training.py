@@ -4,7 +4,7 @@ STEM = ("data_bn", "to_joint_embedding", "pos_embedding")
 LAYERS = tuple("l{}".format(i) for i in range(1, 10))
 # Top-level modules added on top of Hyper-GCN (e.g. "cg.", model/hypergcn_concept.py; "a3.", model/hypergcn_a3.py):
 # absent from official checkpoints, always trainable.
-EXTENSION_PREFIXES = ("kg.", "cg.", "a3.")
+EXTENSION_PREFIXES = ("kg.", "cg.", "a3.", "a3g.")
 
 
 def is_extension_key(key):

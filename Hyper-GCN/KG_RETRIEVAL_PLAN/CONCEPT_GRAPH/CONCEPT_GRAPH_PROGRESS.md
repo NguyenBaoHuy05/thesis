@@ -27,6 +27,59 @@ Sơ đồ A3 (2026-10-22): [drawio/architecture_a3_concept_hyperedge.drawio](../
 A = A_phys + α G_dyn + β G_KG, β = 0 lúc đầu; đối chứng K0-ft, mặt nạ ngẫu nhiên).
 **A3 được chọn, code xong 2026-10-22, chưa chạy**: plan, quy tắc đạt và các bước chạy ở
 [A3_PLAN.md](../A3_CONCEPT_HYPEREDGE/A3_PLAN.md); một lệnh trên Colab: `!python tools/run_a3.py`.
+2026-10-22: test 8/8 đạt; **S1 xong** (Top1 87.63 giữ nguyên, concept_match 84.11); **S2 A3 xong: 87.47** (< K0 87.64,
+no_kg 85.28); K0-ft *chờ*; Random chỉ chạy nếu A3 ≥ K0-ft + 0.3.
+**Đề xuất 2026-10-26 (chờ người dùng chọn): symbolic không qua concept mức lớp.** Nguồn symbol phải là theo mẫu và
+độc lập với backbone: (1) vị từ hình học tính trực tiếp từ skeleton thô (khoảng cách, độ cao, vận tốc, tiếp xúc) theo
+đoạn thời gian; (2) luật thời gian (kiểu A5) chỉ cho các cặp K0 hay nhầm, chỉ gọi khi top-2 của K0 là một cặp đó;
+(3) ràng buộc cứng số người (body 2 rỗng ⇒ loại lớp tương tác). Bước 0 (không GPU): đếm lỗi K0 sửa được bởi (3) và
+trần oracle của (2) trên các cặp nhầm.
+**Thiết kế 2026-10-27 (chờ người dùng duyệt): "Pair Referee"** — sơ đồ mermaid: https://claude.ai/artifact/9rwB1w7Ug92hR8avmHG9WY.
+K0 đóng băng; vị từ K ≈ 40 × S = 8 đoạn từ skeleton thô; đồ thị nhầm G_conf (cặp từ val tách subject); mỗi cạnh luật
+r_ij = σ(a·φ_{i∖j} − b·φ_{j∖i} + c) trên literal p@s / ¬p@s / THEN / DUR; chỉ gọi khi top-2 ∈ G_conf và margin < τ;
+mặt nạ 1 người. Điểm dừng: Bước 0 trần ≥ +0.8; luật đúng ≥ 60% trên lỗi K0 trong cặp. Đối chứng: cặp ngẫu nhiên, xáo
+đoạn, bỏ φ_{j∖i}, can thiệp literal.
+Cách học (2026-10-27): supervised, không RL. Chọn literal bằng AUC theo cặp; a, b, c bằng logistic regression có L1
+cho từng cặp (lồi, CPU); τ, γ bằng grid search trên val; không backprop vào Hyper-GCN.
+Nguồn luật (2026-10-27): vị từ + toán tử (p@s, ¬, THEN, DUR) viết tay một lần, dùng chung mọi cặp; luật từng cạnh
+tự học (AUC + loại literal tương quan + L1 logistic) trên train. Không viết luật tay theo cặp (phases KG từng ngược dấu
+ở cặp túi). Người chỉ đọc luật sau khi học, trên train. KG/LLM làm prior thu hẹp ứng viên = ablation tuỳ chọn.
+Đặc tả vị từ (2026-10-27, chờ duyệt, chưa code): [PAIR_REFEREE/PREDICATES.md](../PAIR_REFEREE/PREDICATES.md) — 39 vị từ
+theo frame (tay, bàn tay, cánh tay, đầu-thân, toàn thân, động học, hai người) + 3 mức clip + n_person; chuẩn hoá theo
+phân vị train, S = 8 đoạn, ≈ 759 literal ứng viên.
+So với REASON (đọc code 2026-10-27): REASON lấy concept từ decoder trên feature encoder (nhãn concept mức lớp), logic
+AND/OR/¬concept một lớp-vs-tất cả, không có toán tử thời gian; có thêm `llm_reranker` (LLaMA + LoRA, top-15, đầu vào
+là concept dự đoán). Điểm mới Pair Referee: (1) bằng chứng từ hình học thô, độc lập backbone; (2) luật tương phản
+¬(j|i) trên cạnh đồ thị nhầm; (3) toán tử thời gian @s / THEN / DUR. Phải chứng minh (1) bằng đo tương quan lỗi.
+So với A3 (2026-10-27): A3 lấy c = σ(W_c z) từ chính z của K0 (concept_match 84.11 < K0), sửa biểu diễn của mọi mẫu,
+train GPU; Pair Referee lấy bằng chứng ngoài backbone, chỉ sửa mẫu qua cổng, CPU. Hướng nối: A3-G = thay c bằng vị từ
+hình học P trong H_KG (chỉ xét nếu Bước 0 của Pair Referee cho thấy P có thông tin độc lập). Thứ tự đề xuất: K0-ft để
+đóng A3 → Bước 0 Pair Referee.
+Đánh giá khả năng paper (2026-10-27): ứng viên chính = Pair Referee, mở bài bằng phân tích lỗi tương quan (A1 ECOC,
+concept heads, THEN, A3). Điều kiện: tăng trên ensemble 4 stream (91.17), NTU60/120 cả hai split, ≥ 2 backbone, 3 seed,
+so với REASON. A3 hiện tại không đủ (87.47 < K0); A3-G chỉ là mở rộng. Bước 0 quyết định có đi tiếp không.
+2026-10-27: người dùng muốn thử lại A3. Rà code `model/hypergcn_a3.py`: A = a_norm(edge_importance·PA) + relu(α)·G_dyn
+(kNN-9 theo feature) + β_l·G_KG; G_KG tĩnh theo thời gian, chung 8 subset, B theo nhóm thân nên 74 hyperedge chỉ có
+≤ 7 tập khớp khác nhau (HEAD 3, ARMS 13, ARMS+HEAD, ARMS+TORSO, TORSO 8, LEGS 9, ...), trọng số c lấy từ z của K0.
+Đề xuất A3-G (chờ duyệt): hyperedge nhỏ theo vị từ (3–6 khớp, tay active), trọng số = vị từ hình học theo đoạn
+(G_KG[n, t] thay đổi theo thời gian; GCN của l7 thấy T = 32, l8–l9 thấy T = 16). Đối chứng: K0-ft, tập khớp ngẫu nhiên, xáo vị từ giữa các mẫu.
+Làm rõ (2026-10-27): A3-G bỏ cả concept (c từ z) lẫn B nhóm thân; hyperedge = vị từ, trọng số = giá trị vị từ.
+Bảng 2×2 để tách hiệu ứng: cấu trúc (nhóm thân / tập khớp chính xác) × trọng số (c từ z / vị từ hình học).
+Tính mới A3-G so với concept (2026-10-27, trích dẫn từ trí nhớ, cần kiểm tra): A3-concept gần LA-GCN (2023, topology từ
+tri thức LLM mức lớp) và REASON; A3-G mới ở chỗ topology theo mẫu, theo thời gian từ vị từ hình học. Rủi ro reviewer:
+"sao không đưa vị từ làm kênh đầu vào" → bắt buộc ablation vị từ-làm-input (cùng thông tin, khác vị trí).
+**Plan A3-G viết xong 2026-10-27, chờ duyệt, chưa code:** [A3G_PLAN.md](../A3G_PREDICATE_HYPEREDGE/A3G_PLAN.md).
+21 hyperedge (3–6 khớp, tay active), trọng số = vị từ theo frame (l7: T 32, l8–l9: T 16), β = 0 lúc đầu, nạp K0 trực
+tiếp. Run: A3-G, Shuffle, Input, Random (+ K0-ft dùng chung A3). Đạt: ≥ K0-ft + 0.3 và ≥ Shuffle + 0.3; tuyên bố
+topology cần thêm ≥ Input + 0.2. Điểm dừng G0: ≥ 7/13 cặp có hyperedge AUC train ≥ 0.75.
+Review code A3-G (2026-10-27): **chưa chạy được, chưa đúng plan**. Lỗi chặn: `BodyFrame.project` sai broadcast với
+[N,M,T,V,3] (scores() crash); `incidence` đảo tay active; hyperedge có dấu dùng ê / 1−ê (triệt tiêu nhau) thay vì
+clip(2ê−1); người rỗng không ra p = 0 sau chuẩn hoá; G0 dùng cặp lớp tuỳ ý (0/119, ...) thay vì 13 cặp §5 và tính
+quantile lẫn người rỗng; chạy lại bỏ qua điểm dừng G0; stage k0ft fine-tune tiếp từ checkpoint A3.
+**Đã sửa 2026-10-27 (chưa chạy test, cần Colab):** viết lại `model/geo_predicates.py`, `model/hypergcn_a3g.py`,
+`tools/predicate_stats.py`, `tools/run_a3g.py`, `tests/test_a3g.py` (15 test: khung xương tổng hợp, bất biến xoay,
+tay active, người rỗng / bản sao, mọi mode = K0 lúc đầu, shuffle / random, gradient). K0-ft = `a3g_off` từ K0.
+Bước tiếp: `!python tools/run_a3g.py --only g0` trên Colab (A3G_PLAN.md §7).
 
 **(Đã bỏ) QUYẾT ĐỊNH 2026-10-22 (người dùng giao Claude chốt):** đi **hướng 2, hợp nhất stream theo concept trên logits
 (CGF)**. Dừng hẳn: LoRA, ft_e3, Stage 1 riêng, hướng 1, mọi head mới trên l9 joint (online_e3: chỉ đọc số epoch 30
