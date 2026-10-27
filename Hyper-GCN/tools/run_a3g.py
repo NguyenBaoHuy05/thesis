@@ -15,12 +15,36 @@ A run whose best_checkpoint.json exists is skipped, so the command resumes after
 import argparse
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 import yaml
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from run_refine import DATA_IN_REPO, REPO, copy, need, run   # noqa: E402
+# Self-contained (same helpers as tools/run_refine.py), so a Colab copy without run_refine.py still runs.
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_IN_REPO = os.path.join(REPO, 'data', 'ntu120', 'NTU120_CSub.npz')
+
+
+def run(*cmd):
+    print('\n$ ' + ' '.join(cmd), flush=True)
+    subprocess.run([sys.executable, *cmd], cwd=REPO, check=True)
+
+
+def copy(src, dst):
+    """Copy through a temporary name, so an interrupted copy never looks complete."""
+    if os.path.isfile(dst) and os.path.getsize(dst) == os.path.getsize(src):
+        print(f'ok   {dst}')
+        return
+    print(f'copy {src} -> {dst}', flush=True)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    shutil.copyfile(src, dst + '.part')
+    os.replace(dst + '.part', dst)
+
+
+def need(path, what):
+    if not os.path.isfile(path):
+        sys.exit(f'{what} not found: {path} (fill it in the config; is Drive mounted?)')
 
 
 def merge(base, override):
