@@ -74,7 +74,9 @@ def get_parser():
     p.add_argument("--cf_frac", type=float, default=0.25, help="fraction of each batch given a counterfactual")
     p.add_argument("--cf_steps", type=int, default=10)
     p.add_argument("--cf_min_w", type=float, default=0.5, help="only literals with w+ >= this are edited")
-    p.add_argument("--cf_margin", type=float, default=1.0)
+    p.add_argument("--cf_margin", type=float, default=1.0, help="required drop of log p(y) on the counterfactual")
+    p.add_argument("--lam_net", type=float, default=1.0, help="stage 3: CE on logits_net (keeps HyperGCN anchored)")
+    p.add_argument("--clip_grad", type=float, default=1.0, help="grad-norm clipping (0 = off)")
     p.add_argument("--no_cache", action="store_true",
                    help="recompute HyperGCN + geo signals every epoch even while the backbone is frozen")
     p.add_argument("--max_train_batches", type=int, default=None, help="debug: batches per epoch")
@@ -163,7 +165,8 @@ def save(path, ccp, model, stage, epoch, metrics, arg, c6, backbone_trained):
 
 def cf_loss(model, ccp, x, y, out, arg, editable):
     """Counterfactual consistency: removing a concept that the program of the true class
-    relies on must lower the network's logit of that class by >= cf_margin."""
+    relies on must lower the network's log-probability of that class by >= cf_margin.
+    (A margin on raw logits is met by inflating the logit scale -> stage 3 diverged.)"""
     n = int(round(arg.cf_frac * x.shape[0]))
     zero = x.new_zeros(())
     if n == 0:
@@ -185,9 +188,9 @@ def cf_loss(model, ccp, x, y, out, arg, editable):
     logits_x = out["logits_net"][rows].detach()
     logits_cf, _ = backbone_pass(model, gen["x_cf"][ok])
     ar = torch.arange(len(rows), device=x.device)
-    drop = logits_x[ar, ys] - logits_cf[ar, ys]
+    drop = F.log_softmax(logits_x, 1)[ar, ys] - F.log_softmax(logits_cf, 1)[ar, ys]
     return F.relu(arg.cf_margin - drop).mean(), dict(
-        cf_n=int(len(rows)), cf_success=float(ok.float().mean()), cf_drop=float(drop.mean()),
+        cf_n=int(len(rows)), cf_success=float(ok.float().mean()), cf_drop=float(drop.detach().mean()),
         cf_edit=float(gen["edit"][ok].mean()))
 
 
@@ -274,12 +277,17 @@ def run_stage(stage, model, ccp, fit_loader, val_loader, arg, c6, history):
             else:
                 loss = F.cross_entropy(out["fused"], y) + arg.lam_gate * out["alpha"] \
                     + arg.lam_sparse * ccp.logic.sparsity() + arg.lam_concept2 * lc
+                if backbone_trained:
+                    # anchor: the fine-tuned HyperGCN must still classify on its own
+                    loss = loss + arg.lam_net * F.cross_entropy(out["logits_net"], y)
                 if backbone_trained and arg.lam_cf > 0:
                     lcf, extra = cf_loss(model, ccp, x, y, out, arg, editable)
                     loss = loss + arg.lam_cf * lcf
                 pred = out["fused"]
             opt.zero_grad(set_to_none=True)
             loss.backward()
+            if arg.clip_grad > 0:
+                torch.nn.utils.clip_grad_norm_([p for g in groups for p in g["params"]], arg.clip_grad)
             opt.step()
             sched.step()
             run["loss"] += float(loss) * len(y)
