@@ -95,11 +95,16 @@ def _load_state_dict(checkpoint):
 
 
 def load_hypergcn(hypergcn_root, checkpoint, num_class=60, device='cuda'):
+    """Builds hypergcn_base or hypergcn_large, picked from the checkpoint: the two differ only
+    in the width of l7..l9 / fc (2x vs 4x embedding_channels); forward is identical."""
     add_hypergcn_path(hypergcn_root)
-    from model.hypergcn_base import Model
-
-    model = Model(num_class=num_class, **DEFAULT_MODEL_ARGS)
     state = _load_state_dict(checkpoint)
+    from model.hypergcn_base import Model
+    model = Model(num_class=num_class, **DEFAULT_MODEL_ARGS)
+    if 'fc.weight' in state and state['fc.weight'].shape[1] != model.fc.in_features:
+        from model.hypergcn_large import Model
+        model = Model(num_class=num_class, **DEFAULT_MODEL_ARGS)
+    print('[load_hypergcn] using {}.Model'.format(Model.__module__))
     missing, unexpected = model.load_state_dict(state, strict=False)
     if unexpected:
         print('[load_hypergcn] unexpected keys:', unexpected)

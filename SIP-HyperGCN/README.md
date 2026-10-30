@@ -1,4 +1,31 @@
-# SIP-HyperGCN — Symbolic Intervention Probing (v3)
+# SIP-HyperGCN
+
+## v4 — Causal Concept Program (current)
+
+Design: [docs/architecture_v4.html](docs/architecture_v4.html). Concepts of the CSV become
+differentiable predicates on the skeleton (one learned threshold per concept, shared by all
+classes) or latent concepts from HyperGCN layer 6; a logic program initialised from the CSV
+sits in the forward path; automatic counterfactual skeletons test whether the network depends
+on each literal. Colab notebook: [ccp_colab.ipynb](ccp_colab.ipynb).
+
+```
+sip/geo_torch.py         41 per-frame differentiable geometric signals
+sip/concept_bank.py      CSV column -> geo (signal, direction, quantifier, joints) | latent; x_* extras
+sip/ccp.py               ConceptLayer, BeforeLayer, LogicProgram, CCP, calibration, rule export
+sip/counterfactual.py    concept-removing skeleton edits + same-size random control
+scripts/train_ccp.py     stage 1 concepts -> stage 2 program -> stage 3 joint + L_cf
+scripts/eval_ccp.py      TEST: accuracy, concept AUROC, rules, knowledge revision,
+                         counterfactual faithfulness, robustness -> report.md
+```
+
+```bash
+python scripts/train_ccp.py $COMMON --out_dir $V4 --stages 1
+python scripts/train_ccp.py $COMMON --out_dir $V4 --stages 2 --init_ckpt $V4/ccp_stage1.pt
+python scripts/train_ccp.py $COMMON --out_dir $V4 --stages 3 --init_ckpt $V4/ccp_stage2.pt
+python scripts/eval_ccp.py  $COMMON --ccp_ckpt $V4/ccp_stage3.pt --out_dir $V4/eval --robust
+```
+
+## v3 — Symbolic Intervention Probing (superseded)
 
 Symbolic knowledge is used as an **external probe / intervention tool** on a frozen
 HyperGCN, never as a component in the forward path. Rules are an **output** of the study:

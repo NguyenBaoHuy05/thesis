@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP-HyperGCN v4 Proposal</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --fg: #1b2330;
+    --muted: #5a6577;
+    --line: #d9dee6;
+    --accent: #2b5fa8;
+    --soft: #eef3fa;
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
+    padding: 40px max(16px, 4vw) 72px;
+  }
+  main { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px; }
+  header { display: grid; gap: 6px; }
+  h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 30px; margin: 0; }
+  h2 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 21px; margin: 0; }
+  h3 { font-size: 16px; margin: 8px 0 0; }
+  p { margin: 0; max-width: 75ch; }
+  .sub { color: var(--muted); }
+  section { display: grid; gap: 12px; min-width: 0; }
+  .diagram { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; overflow-x: auto; }
+  pre.mermaid { margin: 0; text-align: center; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; }
+  code { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 13px; background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+  ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 80ch; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 4px; }
+  .new { color: #2f7a4b; font-weight: 600; }
+  .del { color: #b0402c; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>SIP-HyperGCN v4 (đề xuất)</h1>
+    <p class="sub">Causal Concept Programs: mạng suy luận qua chương trình logic trên các concept có neo hình học, và mỗi luật phải vượt qua kiểm tra phản thực tế sinh tự động trên khung xương.</p>
+  </header>
+
+  <section>
+    <h2>0. Thay đổi so với v3</h2>
+    <div class="tbl"><table>
+      <tr><th>v3</th><th>v4</th><th>Vì sao</th></tr>
+      <tr><td class="del">LEACE trên đặc trưng pool, áp từng vị trí</td><td class="new">Phản thực tế trên input (khung xương)</td><td>Không lệch phân phối; control so được độ lớn chỉnh sửa</td></tr>
+      <tr><td class="del">20 measure, ngưỡng stump theo từng lớp</td><td class="new">Concept từ CSV, ngưỡng học được và dùng chung cho mọi lớp</td><td>Không còn "con số tự do" theo lớp; mỗi ngưỡng có đơn vị vật lý</td></tr>
+      <tr><td class="del">Luật trích ra sau khi huấn luyện</td><td class="new">Chương trình logic nằm trong forward path</td><td>Neuro-symbolic thật sự: quyết định đi qua luật</td></tr>
+      <tr><td class="del">CSV chỉ dùng để đối chiếu cuối cùng</td><td class="new">CSV khởi tạo chương trình, mô hình tự sửa lại</td><td>Có thể chỉ ra chỗ CSV sai</td></tr>
+      <tr><td>Mean-ablation vùng cơ thể</td><td>Giữ nguyên làm tầng "ở đâu"</td><td>Phần đáng tin nhất của v3</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>1. Kiến trúc tổng thể (forward và loss)</h2>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  X["Khung xương x<br/>(C, T, V=25, M=2)"]
+
+  subgraph NEURAL["Nhánh neural"]
+    BB["HyperGCN backbone<br/>l1..l9"]
+    HN["Head FC<br/>logits_net"]
+  end
+
+  subgraph CONCEPT["Tầng concept (theo thời gian)"]
+    PG["Vị từ hình học khả vi<br/>p_c(t) = σ((τ_c - g_c(x_t)) / T)<br/>τ_c học được, dùng chung cho mọi lớp"]
+    PL["Concept ẩn<br/>(hình dạng bàn tay...)<br/>đầu chiếu từ đặc trưng l6"]
+    TQ["Lượng từ thời gian mềm<br/>∃t: softmax-pool<br/>before(a, b), during(a, b)"]
+  end
+
+  subgraph LOGIC["Tầng chương trình logic"]
+    PR["Chương trình mỗi lớp k<br/>AND/OR mềm có trọng số<br/>w_kc ≥ 0, khởi tạo từ CSV"]
+    LL["logits_logic"]
+  end
+
+  F["Kết hợp có cổng<br/>logits = logits_logic + α·logits_net"]
+  Y["Dự đoán ŷ"]
+
+  X --> BB --> HN
+  X --> PG
+  BB --> PL
+  PG --> TQ
+  PL --> TQ
+  TQ -->|"giá trị chân lý z_c ∈ [0,1]"| PR --> LL --> F
+  HN --> F --> Y
+
+  CSV[("concepts CSV<br/>ntu_rgbd_60_120.csv")]
+  CSV -.->|"khởi tạo w_kc"| PR
+  CSV -.->|"nhãn concept mức lớp (MIL)"| TQ
+
+  subgraph LOSS["Hàm mất mát"]
+    L1["L_cls: CE(ŷ, y)"]
+    L2["L_concept: MIL<br/>∃t p_c(t) khớp CSV[y, c]"]
+    L3["L_sparse: ‖w‖₁<br/>chương trình gọn"]
+    L4["L_cf: nhất quán phản thực tế<br/>(mục 2)"]
+    L5["L_gate: phạt α lớn<br/>ép quyết định đi qua logic"]
+  end
+  Y -.-> L1
+  TQ -.-> L2
+  PR -.-> L3
+  F -.-> L5
+    </pre></div>
+    <ul>
+      <li><code>g_c(x_t)</code> là đại lượng hình học của concept <code>c</code> tại frame <code>t</code> (khoảng cách tay–đầu, độ cao tay so với vai, góc thân...), tái sử dụng công thức trong <code>sip/measures.py</code> nhưng tính theo từng frame.</li>
+      <li>Mỗi concept chỉ có một ngưỡng <code>τ_c</code> và một độ mềm <code>T</code>, học chung cho 60 lớp.</li>
+      <li>Concept không đo được từ 25 khớp được học từ đặc trưng HyperGCN. Báo cáo tách riêng concept đo được và concept ẩn.</li>
+      <li>Cổng <code>α</code> bị phạt để quyết định phải đi qua tầng logic. Mục tiêu là <code>logits_logic</code> tự đạt gần accuracy của mạng.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>2. Sinh khung xương phản thực tế tự động</h2>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  X["Mẫu x thuộc lớp k"]
+  C["Concept c mà<br/>chương trình lớp k cần"]
+  OPT["Tối ưu Δx:<br/>min ‖Δx‖² + λ_b·bone(x+Δx) + λ_j·joint_limit(x+Δx)<br/>sao cho ∃t p_c(t; x+Δx) &lt; 0.5<br/>và các concept khác giữ nguyên"]
+  XCF["x_cf: gần như y nguyên,<br/>chỉ mất concept c"]
+  NET["HyperGCN"]
+  PRG["Chương trình logic"]
+  M1["Faithfulness:<br/>Δ p(k) của mạng khi gỡ c"]
+  M2["Nhất quán:<br/>logic và mạng có cùng phản ứng?"]
+  LCF["L_cf: ép mạng giảm điểm lớp k<br/>khi concept cần thiết bị gỡ"]
+
+  X --> OPT
+  C --> OPT
+  OPT --> XCF
+  XCF --> NET --> M1
+  XCF --> PRG --> M2
+  M1 --> LCF
+  M2 --> LCF
+  RND["Control: Δx ngẫu nhiên<br/>cùng chuẩn ‖Δx‖, cùng tập khớp"] --> NET
+    </pre></div>
+    <ul>
+      <li>Vì vị từ khả vi theo tọa độ khớp, phép chỉnh sửa được tìm bằng gradient. Không cần thiết kế phép biến đổi riêng cho từng concept.</li>
+      <li>Ràng buộc độ dài xương và giới hạn khớp giữ cho khung xương hợp lệ.</li>
+      <li>Control ngẫu nhiên có <strong>cùng độ lớn chỉnh sửa</strong>, khắc phục lỗi của v3.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Sửa tri thức: chương trình học được so với CSV</h2>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  CSV[("CSV ban đầu<br/>lớp k: tập concept")]
+  PRG["Chương trình học được<br/>w_kc sau huấn luyện"]
+  CF["Kết quả phản thực tế<br/>(mục 2)"]
+  DIFF{"So sánh"}
+  A["Xác nhận<br/>CSV có, w lớn, mạng phụ thuộc"]
+  R["Loại bỏ<br/>CSV có, w → 0<br/>(vd. brush_teeth: hip_static_stand)"]
+  N["Phát hiện mới<br/>CSV không có, w lớn, mạng phụ thuộc"]
+  T["Thứ tự thời gian<br/>before(a, b) học được"]
+
+  CSV --> DIFF
+  PRG --> DIFF
+  CF --> DIFF
+  DIFF --> A
+  DIFF --> R
+  DIFF --> N
+  DIFF --> T
+    </pre></div>
+  </section>
+
+  <section>
+    <h2>4. Các giai đoạn huấn luyện</h2>
+    <div class="diagram"><pre class="mermaid">
+flowchart TB
+  S0["Giai đoạn 0<br/>Bảng 74 concept: đo được hay ẩn,<br/>công thức g_c cho từng concept đo được"]
+  S1["Giai đoạn 1<br/>Học τ_c và concept ẩn bằng L_concept (MIL)<br/>backbone HyperGCN đóng băng"]
+  S2["Giai đoạn 2<br/>Học chương trình logic: L_cls + L_sparse + L_gate<br/>khởi tạo từ CSV"]
+  S3["Giai đoạn 3<br/>Sinh phản thực tế, đo faithfulness<br/>bật L_cf, fine-tune chung"]
+  S4["Giai đoạn 4<br/>Đánh giá + sửa tri thức (mục 3)"]
+  S0 --> S1 --> S2 --> S3 --> S4
+  S3 -.->|"luật không vượt kiểm tra"| S2
+    </pre></div>
+  </section>
+
+  <section>
+    <h2>5. Đo đạc</h2>
+    <div class="tbl"><table>
+      <tr><th>Câu hỏi</th><th>Chỉ số</th></tr>
+      <tr><td>Có giữ được accuracy không?</td><td>Top-1 NTU-60 X-Sub (đầu ra kết hợp và riêng <code>logits_logic</code>) so với 91.07%</td></tr>
+      <tr><td>Luật có trung thực với mạng không?</td><td>Fidelity; mức sụt Δ p(k) khi dùng phản thực tế so với control cùng độ lớn</td></tr>
+      <tr><td>Luật có gọn và dễ đọc không?</td><td>Số literal mỗi lớp; tỉ lệ concept đo được trên concept ẩn</td></tr>
+      <tr><td>Concept có đúng nghĩa không?</td><td>AUC của từng concept so với nhãn CSV trên TEST; kiểm tra thủ công một mẫu nhỏ</td></tr>
+      <tr><td>Có bền vững hơn không?</td><td>Accuracy khi dữ liệu bị nhiễu, che khớp, hoặc cắt frame; so với HyperGCN gốc</td></tr>
+      <tr><td>Phát hiện gì về tri thức?</td><td>Số concept xác nhận / loại bỏ / phát hiện mới; ví dụ minh họa</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>6. Tái sử dụng từ v3</h2>
+    <ul>
+      <li><code>sip/backbone.py</code>: nạp HyperGCN, forward có tap (kiểm tra tương đương = 0).</li>
+      <li><code>sip/measures.py</code>: công thức hình học, chuyển sang tính theo từng frame bằng torch.</li>
+      <li><code>sip/regions.py</code> và <code>run_region_intervention.py</code>: tầng "ở đâu".</li>
+      <li><code>sip/concept_map.py</code>: ánh xạ measure–concept làm điểm xuất phát cho <code>g_c</code>.</li>
+    </ul>
+    <p class="note">Bỏ: <code>sip/leace.py</code>, <code>run_intervention.py</code>, <code>select_measures.py</code>, <code>induce_rules.py</code> (luật theo stump).</p>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", flowchart: { htmlLabels: true, curve: "basis" }, securityLevel: "loose" });
+</script>
+</body>
+</html>
