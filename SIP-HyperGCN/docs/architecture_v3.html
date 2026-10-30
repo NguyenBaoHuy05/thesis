@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP-HyperGCN v3 Architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --fg: #1b2330;
+    --muted: #5a6577;
+    --line: #d9dee6;
+    --accent: #2b5fa8;
+    --soft: #eef3fa;
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.6;
+    padding: 40px max(16px, 4vw) 72px;
+  }
+  main { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px; }
+  header { display: grid; gap: 6px; }
+  h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 30px; margin: 0; }
+  h2 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 21px; margin: 0; }
+  h3 { font-size: 16px; margin: 8px 0 0; }
+  p { margin: 0; max-width: 75ch; }
+  .sub { color: var(--muted); }
+  section { display: grid; gap: 12px; min-width: 0; }
+  .diagram { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; overflow-x: auto; }
+  pre.mermaid { margin: 0; text-align: center; }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; background: var(--panel); border: 1px solid var(--line); font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { background: var(--soft); font-weight: 600; }
+  code { font-family: "IBM Plex Mono", Consolas, monospace; font-size: 13px; background: var(--soft); padding: 1px 5px; border-radius: 3px; }
+  ul { margin: 0; padding-left: 20px; display: grid; gap: 4px; max-width: 80ch; }
+  .note { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 4px; }
+  .new { color: #2f7a4b; font-weight: 600; }
+  .del { color: #b0402c; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>SIP-HyperGCN v3</h1>
+    <p class="sub">Hai tầng can thiệp: vùng cơ thể (ở đâu) và đại lượng quan hệ (cái gì). Không còn ngưỡng cứng; ngưỡng chỉ xuất hiện trong luật và do dữ liệu chọn.</p>
+  </header>
+
+  <section>
+    <h2>0. Thay đổi so với v2</h2>
+    <div class="tbl">
+    <table>
+      <tr><th>Khía cạnh</th><th>v2</th><th>v3</th></tr>
+      <tr><td>Biểu diễn symbolic</td><td>23 vị từ nhị phân</td><td>~18 đại lượng liên tục, mỗi đại lượng gắn với một vùng cơ thể</td></tr>
+      <tr><td>Ngưỡng</td><td>Cắt 2 lần (theo frame + theo mẫu), ~40 con số tự đặt</td><td>Không cắt khi đo. Chỉ cắt 1 lần khi rút luật, ngưỡng học từ TRAIN-FIT</td></tr>
+      <tr><td>Can thiệp</td><td>Chỉ LEACE trên vị từ</td><td>Tầng 1: xóa vùng cơ thể. Tầng 2: LEACE trên đại lượng liên tục (Z nhiều chiều)</td></tr>
+      <tr><td>Kiểm tra chéo</td><td>Không có</td><td>Đại lượng chỉ được nhận nếu vùng chứa nó cũng quan trọng với lớp đó</td></tr>
+      <tr><td>Tầng "ổn định"</td><td>Đổi ngưỡng ±20%</td><td>Bootstrap theo mẫu và theo lớp</td></tr>
+      <tr><td>Luật</td><td><code>hand_near_head ∧ ¬two_person</code></td><td><code>hand_head_dist &lt; 0.43L ∧ person_dist &gt; 2.1L</code> (ngưỡng ghi rõ, do dữ liệu chọn)</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>1. Pipeline tổng thể</h2>
+    <p>HyperGCN đã train được đóng băng. Symbolic chỉ đặt câu hỏi cho mạng qua can thiệp; luật là đầu ra của thí nghiệm.</p>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    subgraph IN[Đầu vào]
+        D[(NTU60 xsub<br/>khung xương N×3×64×25×2)]
+        CK[(Checkpoint HyperGCN<br/>đóng băng)]
+    end
+
+    subgraph S1[Bước 1: Trích xuất]
+        BB[forward_tapped<br/>đặc trưng l1..l9 + đặc trưng theo khớp]
+        MS[measures.py<br/>đại lượng liên tục theo vùng]
+    end
+
+    subgraph S2[Bước 2: Tầng 1 - Vùng cơ thể]
+        RI[Xóa vùng r tại layer l<br/>mean-ablation trên trục khớp V]
+        RC[Ma trận vùng R k,r<br/>lớp k phụ thuộc vùng r]
+    end
+
+    subgraph S3[Bước 3: Tầng 2 - Đại lượng]
+        MI[LEACE với Z liên tục<br/>xóa đại lượng m tại layer l]
+        CC[Ma trận nhân quả D k,m<br/>so với 5 hướng ngẫu nhiên]
+    end
+
+    subgraph S4[Bước 4: Lọc]
+        SF[Lọc đại lượng mạnh 5 tầng<br/>+ kiểm tra chéo với vùng]
+    end
+
+    subgraph S5[Bước 5-6: Luật]
+        IR[Rút luật<br/>ngưỡng học từ TRAIN-FIT]
+        ER[Đánh giá trên TEST<br/>coverage, precision, fidelity, tính cần]
+        CSV[(Concept CSV<br/>tri thức con người)]
+    end
+
+    OUT[(Luật học được<br/>learnable_rules.json)]
+    L5[Bước 7: Thiết kế loss<br/>nhất quán can thiệp]
+
+    D --> BB
+    CK --> BB
+    D --> MS
+    BB --> RI --> RC
+    BB --> MI
+    MS --> MI --> CC
+    RC --> SF
+    CC --> SF
+    SF --> IR
+    RC --> IR
+    MS --> IR
+    IR --> ER
+    CSV -. đối chiếu .-> ER
+    ER --> OUT --> L5
+
+    classDef out fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class OUT,L5 out
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Từ tọa độ đến luật: bỏ ngưỡng chồng ngưỡng</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    subgraph OLD[v2: cắt cứng 2 lần]
+        direction LR
+        A1[Tọa độ] --> A2{khoảng cách &lt; 0.40L?<br/>mỗi frame}
+        A2 --> A3[tỉ lệ frame]
+        A3 --> A4{≥ 0.20?}
+        A4 --> A5[0 / 1]
+    end
+    subgraph NEW[v3: đo liên tục, cắt 1 lần khi rút luật]
+        direction LR
+        B1[Tọa độ] --> B2[khoảng cách / L<br/>mỗi frame]
+        B2 --> B3[thống kê theo thời gian<br/>min, trung vị, q10, q90]
+        B3 --> B4[Z liên tục<br/>dùng cho LEACE và probe]
+        B4 --> B5{ngưỡng θ học từ dữ liệu<br/>chỉ trong luật}
+    end
+    classDef bad fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    classDef good fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class A2,A4 bad
+    class B4,B5 good
+</pre>
+    </div>
+    <ul>
+      <li>Mỗi đại lượng tạo ra một vector Z gồm vài thống kê theo thời gian. LEACE xóa toàn bộ thông tin tuyến tính về vector đó.</li>
+      <li>Chuẩn hóa theo chiều dài cột sống L (trung vị |p20 − p0|) để không phụ thuộc vóc người.</li>
+      <li>Ngưỡng θ trong luật được chọn trên TRAIN-FIT như một decision stump: điểm cắt tách lớp k khỏi các lớp dễ nhầm tốt nhất.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Hai tầng can thiệp</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    Q1[Câu hỏi 1: mạng nhìn ở đâu?] --> T1[Tầng 1: xóa vùng cơ thể<br/>không cần ngưỡng, không cần định nghĩa vị từ]
+    T1 --> R1[Vùng quan trọng của lớp k<br/>ví dụ drink_water: tay phải, đầu]
+    R1 --> Q2[Câu hỏi 2: mạng dùng quan hệ gì trong vùng đó?]
+    Q2 --> T2[Tầng 2: LEACE trên đại lượng thuộc vùng đó]
+    T2 --> R2[Đại lượng quan trọng<br/>ví dụ hand_head_dist]
+    R2 --> X{Kiểm tra chéo:<br/>vùng chứa đại lượng<br/>cũng quan trọng với lớp k?}
+    X -- có --> OK[Nhận: đại lượng đúng chỗ]
+    X -- không --> NO[Loại: chỉ tương quan<br/>với thứ khác mà mạng dùng]
+    classDef ok fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    classDef bad fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    class OK ok
+    class NO bad
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Điểm can thiệp trong HyperGCN</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    X[Input<br/>N,3,T,V,M] --> E[Joint embedding<br/>+ pos_emb + data_bn]
+    E --> RG0((Vùng<br/>l0))
+    RG0 --> L1[l1 · C=128] --> L2[l2] --> L3[l3]
+    L3 --> I3((E3)) --> L4[l4 · C=256<br/>stride 2] --> L5[l5] --> L6[l6]
+    L6 --> I6((E6)) --> L7[l7 · stride 2] --> L8[l8] --> L9[l9]
+    L9 --> I9((E9)) --> P[GAP<br/>mean T,V rồi M] --> FC[FC → 60 lớp]
+    L1 -. residual x1 .-> L3
+    L4 -. residual x4 .-> L6
+    L7 -. residual x7 .-> L9
+    RD[5 hướng ngẫu nhiên<br/>đối chứng] -.-> I3
+    RD -.-> I6
+    RD -.-> I9
+    classDef reg fill:#fdf3dc,stroke:#b8860b,color:#1b2330
+    classDef cut fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    class RG0 reg
+    class I3,I6,I9 cut
+</pre>
+    </div>
+    <ul>
+      <li><b>E3, E6, E9</b> (đỏ): mỗi điểm làm được cả hai kiểu can thiệp. Kiểu 1: LEACE dọc trục kênh C cho đại lượng. Kiểu 2: mean-ablation các khớp của vùng trên trục V.</li>
+      <li><b>Vùng l0</b> (vàng): xóa vùng ngay sau embedding, khi các khớp chưa bị trộn qua graph conv. Đây là phép xóa vùng "sạch" nhất.</li>
+      <li>Ở các layer sâu, mỗi khớp đã mang thông tin của khớp lân cận và của hyperedge. Vì vậy xóa vùng ở l6, l9 chỉ đo được "vị trí lưu trữ", không còn đo được "nguồn thông tin".</li>
+      <li>Can thiệp ở layer k cũng áp lên nhánh residual xuất phát từ k, nên thông tin không đi tắt qua skip connection.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. Vùng cơ thể (25 khớp NTU, chỉ số 0-based)</h2>
+    <div class="tbl">
+    <table>
+      <tr><th>Vùng</th><th>Khớp</th><th>Ví dụ lớp liên quan</th></tr>
+      <tr><td>head</td><td>2 neck, 3 head</td><td>nod head, shake head</td></tr>
+      <tr><td>torso</td><td>0 spine base, 1 spine mid, 20 spine shoulder</td><td>bow, sit down, fall</td></tr>
+      <tr><td>left_arm</td><td>4, 5, 6, 7, 21, 22</td><td>drink water, wave (tay trái)</td></tr>
+      <tr><td>right_arm</td><td>8, 9, 10, 11, 23, 24</td><td>drink water, phone call, wave</td></tr>
+      <tr><td>left_leg</td><td>12, 13, 14, 15</td><td>kick, hop, walk</td></tr>
+      <tr><td>right_leg</td><td>16, 17, 18, 19</td><td>kick, hop, walk</td></tr>
+      <tr><td>other_person</td><td>toàn bộ khớp của người thứ 2 (trục M)</td><td>các lớp tương tác 50–60</td></tr>
+    </table>
+    </div>
+    <p class="sub">Mean-ablation: thay đặc trưng của các khớp trong vùng bằng giá trị trung bình trên TRAIN-FIT. Làm vậy giữ được phân phối đầu vào của layer sau, không đẩy dữ liệu ra ngoài phân phối như khi đặt bằng 0.</p>
+  </section>
+
+  <section>
+    <h2>6. Đại lượng liên tục (thay cho 23 vị từ nhị phân)</h2>
+    <div class="tbl">
+    <table>
+      <tr><th>Đại lượng</th><th>Vùng</th><th>Công thức mỗi frame</th><th>Thống kê theo thời gian</th></tr>
+      <tr><td>hand_head_dist</td><td>arm, head</td><td>min tay trái/phải đến đầu, chia L</td><td>min, q10, trung vị</td></tr>
+      <tr><td>hand_chest_dist</td><td>arm, torso</td><td>min tay đến ngực, chia L</td><td>min, q10, trung vị</td></tr>
+      <tr><td>hands_dist</td><td>left_arm, right_arm</td><td>|tay trái − tay phải| / L</td><td>min, q10, trung vị</td></tr>
+      <tr><td>hand_height_head</td><td>arm, head</td><td>max(y tay) − y đầu, chia L</td><td>max, q90, trung vị</td></tr>
+      <tr><td>hand_height_shoulder</td><td>arm</td><td>max(y tay − y vai cùng bên), chia L</td><td>max, q90, trung vị</td></tr>
+      <tr><td>hand_floor</td><td>arm, leg</td><td>min(y tay) − trung bình y gối, chia L</td><td>min, q10</td></tr>
+      <tr><td>arm_reach_fwd</td><td>arm</td><td>(cổ tay − vai) theo hướng trước, chia L</td><td>max, q90</td></tr>
+      <tr><td>elbow_angle</td><td>arm</td><td>góc khuỷu tay lớn nhất (độ)</td><td>max, trung vị</td></tr>
+      <tr><td>wrist_speed</td><td>arm</td><td>tốc độ cổ tay so với thân, chia L mỗi frame</td><td>trung bình, q90</td></tr>
+      <tr><td>hand_symmetry</td><td>left_arm, right_arm</td><td>cos(v trái, v phải lấy đối xứng)</td><td>trung bình trên frame có chuyển động</td></tr>
+      <tr><td>torso_pitch</td><td>torso</td><td>góc (p20 − p0) so với trục đứng (độ)</td><td>max, trung vị</td></tr>
+      <tr><td>hip_height</td><td>torso, leg</td><td>(y p0 − y cổ chân trung bình) / L</td><td>min, trung vị</td></tr>
+      <tr><td>knee_angle</td><td>leg</td><td>góc gối nhỏ nhất (độ)</td><td>min, trung vị</td></tr>
+      <tr><td>foot_height_diff</td><td>leg</td><td>|y bàn chân trái − y bàn chân phải| / L</td><td>max, q90</td></tr>
+      <tr><td>leg_alternation</td><td>leg</td><td>(cổ chân trái − cổ chân phải) theo hướng trước, chia L</td><td>độ lệch chuẩn</td></tr>
+      <tr><td>body_disp_h</td><td>torso</td><td>dịch chuyển ngang của p20 giữa đầu và cuối chuỗi, chia L</td><td>một giá trị</td></tr>
+      <tr><td>body_disp_v</td><td>torso</td><td>dịch chuyển dọc của p0 giữa đầu và cuối chuỗi, chia L</td><td>một giá trị (có dấu)</td></tr>
+      <tr><td>person_dist</td><td>other_person</td><td>|p20 người A − p20 người B| / L</td><td>min, trung vị; NaN nếu chỉ có 1 người</td></tr>
+      <tr><td>contact_dist</td><td>other_person, arm</td><td>min khoảng cách tay người này đến khớp người kia, chia L</td><td>min, q10</td></tr>
+    </table>
+    </div>
+    <p class="sub">Mẫu chỉ có 1 người: các đại lượng tương tác được điền giá trị "xa" cố định kèm một cờ có/không có người thứ 2, để LEACE không gặp NaN.</p>
+  </section>
+
+  <section>
+    <h2>7. Chia dữ liệu chống rò rỉ</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    TR[(NTU train)] --> FIT[TRAIN-FIT · 80%]
+    TR --> VAL[VAL · 20%<br/>chia đều theo lớp, seed cố định]
+    TE[(NTU test)]
+    FIT --> U1[Fit LEACE, mean-ablation, probe<br/>học ngưỡng θ cho luật]
+    VAL --> U2[Đo nhân quả vùng + đại lượng<br/>lọc đại lượng mạnh, rút luật]
+    TE --> U3[Chỉ đánh giá cuối:<br/>xác nhận nhân quả, chỉ số luật]
+    classDef fit fill:#e8eef8,stroke:#2b5fa8,color:#1b2330
+    classDef val fill:#fdf3dc,stroke:#b8860b,color:#1b2330
+    classDef test fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    class FIT,U1 fit
+    class VAL,U2 val
+    class TE,U3 test
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>8. Lọc đại lượng mạnh (5 tầng + kiểm tra chéo)</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    M[Đại lượng m] --> T1{1. Có căn cứ<br/>tính trực tiếp từ tọa độ}
+    T1 --> T2{2. Biến thiên trong lớp<br/>phương sai trong lớp / tổng ≥ 0.2}
+    T2 --> T3{3. Được mã hóa<br/>probe R² vượt baseline nhãn lớp}
+    T3 --> T4{4. Nhân quả<br/>xóa m sụt hơn random, p &lt; 0.05}
+    T4 --> T5{5. Ổn định<br/>bootstrap mẫu và lớp ≥ 80%}
+    T5 --> T6{Kiểm tra chéo<br/>vùng của m quan trọng?}
+    T6 --> S[Đại lượng mạnh]
+    T2 -. không .-> X[Loại]
+    T3 -. không .-> X
+    T4 -. không .-> X
+    T5 -. không .-> X
+    T6 -. không .-> X
+    classDef ok fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class S ok
+</pre>
+    </div>
+    <ul>
+      <li>Layer khảo sát cho mỗi đại lượng được chọn theo kết quả probe, trước khi nhìn kết quả can thiệp.</li>
+      <li>Baseline nhãn lớp: dự đoán đại lượng chỉ từ trung bình của lớp. Probe phải vượt baseline này, nếu không đại lượng chỉ là bản sao của nhãn lớp.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>9. Rút luật và đánh giá</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    SM[Đại lượng mạnh] --> CAND[Ứng viên cho lớp k<br/>excess D k,m ≥ 0.02, FDR q &lt; 0.05<br/>và vùng của m quan trọng với k]
+    CAND --> TH[Học ngưỡng θ trên TRAIN-FIT<br/>stump tách k khỏi 3 lớp dễ nhầm nhất]
+    TH --> LIT[Literal: m &lt; θ hoặc m &gt; θ]
+    LIT --> GR[Ghép tham lam<br/>tăng precision, coverage ≥ 0.3, tối đa 4 literal]
+    GR --> RULE[Luật lớp k]
+    RULE --> LB{Học được?<br/>dữ liệu ủng hộ · mạng biểu diễn được<br/>· không trùng lớp khác}
+    LB --> EV[Đánh giá TEST<br/>coverage, precision, fidelity,<br/>độ phân biệt, tính cần]
+    EV --> CF{Xác nhận nhân quả trên TEST}
+    CF --> OUT[(learnable_rules.json)]
+    EV -.-> KC[Đối chiếu concept CSV<br/>lệch = phát hiện, không phải lỗi]
+    classDef ok fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class OUT ok
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>10. Thay đổi file</h2>
+    <div class="tbl">
+    <table>
+      <tr><th>File</th><th>Trạng thái</th><th>Nội dung</th></tr>
+      <tr><td><code>sip/measures.py</code></td><td class="new">mới</td><td>~18 đại lượng liên tục, thống kê theo thời gian, gắn vùng. Thay cho <code>predicates.py</code></td></tr>
+      <tr><td><code>sip/regions.py</code></td><td class="new">mới</td><td>Định nghĩa vùng, mean-ablation trên trục V (và trục M cho người thứ 2)</td></tr>
+      <tr><td><code>sip/predicates.py</code></td><td class="del">bỏ</td><td>Thay bằng <code>measures.py</code></td></tr>
+      <tr><td><code>sip/backbone.py</code></td><td>sửa</td><td>Thêm điểm can thiệp l0 sau embedding</td></tr>
+      <tr><td><code>sip/leace.py</code></td><td>giữ</td><td>Đã hỗ trợ Z liên tục nhiều chiều</td></tr>
+      <tr><td><code>sip/probe.py</code></td><td>sửa</td><td>Probe hồi quy (R²), baseline trung bình theo lớp</td></tr>
+      <tr><td><code>sip/causal.py</code></td><td>sửa</td><td>Thêm ma trận vùng R[k, r]</td></tr>
+      <tr><td><code>sip/predicate_filter.py</code></td><td>sửa → <code>measure_filter.py</code></td><td>Tầng 2 theo phương sai, tầng 5 theo bootstrap, thêm kiểm tra chéo vùng</td></tr>
+      <tr><td><code>sip/rule_induction.py</code></td><td>sửa</td><td>Học ngưỡng θ cho từng literal, điều kiện vùng</td></tr>
+      <tr><td><code>sip/rule_eval.py</code></td><td>sửa</td><td>Áp literal có ngưỡng trên TEST</td></tr>
+      <tr><td><code>sip/concept_map.py</code></td><td>sửa</td><td>Ánh xạ đại lượng và vùng sang concept CSV</td></tr>
+      <tr><td><code>scripts/run_region_intervention.py</code></td><td class="new">mới</td><td>Tầng 1: xóa từng vùng tại l0, l3, l6, l9</td></tr>
+      <tr><td><code>scripts/run_intervention.py</code></td><td>sửa</td><td>LEACE với Z liên tục</td></tr>
+      <tr><td>Các script còn lại</td><td>sửa nhẹ</td><td>Đổi tên predicate → measure, thêm đầu vào ma trận vùng</td></tr>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>11. Lệnh chạy dự kiến</h2>
+    <div class="note">
+      <ol style="margin:0; padding-left:20px; display:grid; gap:4px">
+        <li><code>extract_features.py</code> (train, test): đặc trưng và đại lượng</li>
+        <li><code>run_region_intervention.py</code> (VAL, TEST): tầng 1</li>
+        <li><code>run_intervention.py</code> (VAL, TEST): tầng 2</li>
+        <li><code>analyze_intervention.py</code>: ma trận vùng R và ma trận nhân quả D</li>
+        <li><code>select_measures.py</code>: đại lượng mạnh</li>
+        <li><code>induce_rules.py</code>: luật kèm ngưỡng học được</li>
+        <li><code>evaluate_rules.py</code>: báo cáo luật và <code>learnable_rules.json</code></li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>12. Rủi ro đã biết</h2>
+    <ul>
+      <li><b>Khớp bị trộn ở layer sâu:</b> xóa vùng ở l6 và l9 không còn sạch, nên kết luận "ở đâu" chủ yếu dựa vào l0 và l3.</li>
+      <li><b>Đại lượng tương quan nhau</b> (ví dụ hand_height_head và hand_height_shoulder): xóa một đại lượng có thể vẫn để lại thông tin trong đại lượng kia. Cần báo cáo thêm phép xóa theo nhóm đại lượng của cùng một vùng.</li>
+      <li><b>Chi phí:</b> (7 vùng × 4 layer + 18 đại lượng × 3 layer + 5 × 3 random) lượt forward từng phần mỗi batch, chạy 2 lần (VAL, TEST).</li>
+      <li><b>Ngưỡng θ trong luật</b> học trên TRAIN-FIT có thể quá khớp; được kiểm tra lại trên TEST.</li>
+    </ul>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis', htmlLabels: true } });
+</script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SIP-HyperGCN Architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --fg: #1b2330;
+    --muted: #5a6577;
+    --line: #d9dee6;
+  }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; font-size: 15px; line-height: 1.5;
+    padding: 40px max(16px, 4vw) 64px;
+  }
+  main { max-width: 1000px; margin: 0 auto; display: grid; gap: 32px; }
+  h1 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 30px; margin: 0; }
+  h2 { font-family: "IBM Plex Serif", Georgia, serif; font-size: 20px; margin: 0; }
+  .sub { color: var(--muted); margin: 6px 0 0; }
+  section { display: grid; gap: 10px; }
+  .diagram { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 20px; overflow-x: auto; }
+  pre.mermaid { margin: 0; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>SIP-HyperGCN v2</h1>
+    <p class="sub">Luật là đầu ra của can thiệp, không dùng luật CLIR</p>
+  </header>
+
+  <section>
+    <h2>1. Pipeline</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    D[(NTU data)] --> BB[HyperGCN]
+    CK[(Checkpoint)] --> BB
+    D --> PR[Vị từ hình học]
+    BB --> FE[(Đặc trưng)]
+    PR --> FE
+    FE --> IV[Can thiệp LEACE]
+    IV --> CA[Ma trận nhân quả]
+    FE --> SP[Lọc vị từ mạnh]
+    CA --> SP
+    SP --> RI[Rút luật]
+    CA --> RI
+    RI --> RE[Đánh giá luật]
+    CSV[(Concept CSV)] -.-> RE
+    RE --> LR[(Luật học được)]
+    LR --> L5[Thiết kế loss]
+    classDef out fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class LR,L5 out
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Chia dữ liệu</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    TR[(Train)] --> FIT[TRAIN-FIT 80%]
+    TR --> VAL[VAL 20%]
+    TE[(Test)]
+    FIT --> U1[Fit LEACE, probe, support]
+    VAL --> U2[Chọn vị từ, rút luật]
+    TE --> U3[Đánh giá cuối]
+    classDef fit fill:#e8eef8,stroke:#2b5fa8,color:#1b2330
+    classDef val fill:#fdf3dc,stroke:#b8860b,color:#1b2330
+    classDef test fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    class FIT,U1 fit
+    class VAL,U2 val
+    class TE,U3 test
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Điểm can thiệp</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    X[Input] --> E[Embed]
+    E --> L1[l1] --> L2[l2] --> L3[l3]
+    L3 --> I3((E3)) --> L4[l4] --> L5[l5] --> L6[l6]
+    L6 --> I6((E6)) --> L7[l7] --> L8[l8] --> L9[l9]
+    L9 --> I9((E9)) --> P[GAP] --> FC[FC]
+    L1 -. res .-> L3
+    L4 -. res .-> L6
+    L7 -. res .-> L9
+    RD[5 hướng ngẫu nhiên] -.-> I3
+    RD -.-> I6
+    RD -.-> I9
+    classDef cut fill:#fde8e4,stroke:#c8553d,color:#1b2330
+    class I3,I6,I9 cut
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Lọc vị từ mạnh</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    P[Vị từ] --> T1{Có căn cứ}
+    T1 --> T2{Biến thiên trong lớp}
+    T2 --> T3{Được mã hóa}
+    T3 --> T4{Nhân quả}
+    T4 --> T5{Ổn định}
+    T5 --> S[Vị từ mạnh]
+    T2 -. không .-> X[Loại]
+    T3 -. không .-> X
+    T4 -. không .-> X
+    T5 -. không .-> X
+    classDef ok fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class S ok
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Rút và đánh giá luật</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart LR
+    SP[Vị từ mạnh] --> POS[Literal dương]
+    CA[Nhân quả VAL] --> POS
+    CF[Lớp dễ nhầm] --> NEG[Literal âm]
+    POS --> R[Luật lớp k]
+    NEG --> R
+    R --> LB{Học được?}
+    LB --> TS{Xác nhận trên TEST}
+    TS --> OUT[(Luật học được)]
+    TS -.-> CSV[Đối chiếu CSV]
+    classDef ok fill:#e6f2ea,stroke:#3d8a5a,color:#1b2330
+    class OUT ok
+</pre>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. Module</h2>
+    <div class="diagram">
+<pre class="mermaid">
+flowchart TB
+    HG[(hypergcn)] --> backbone
+    subgraph A[Trích xuất và can thiệp]
+        backbone --> extract
+        backbone --> intervene
+    end
+    subgraph B[Vị từ và nhân quả]
+        predicates
+        concept_map
+        causal
+        predicate_filter
+    end
+    subgraph C[Luật]
+        rule_induction
+        rule_eval
+    end
+    leace --> intervene
+    probe --> predicate_filter
+    predicates --> extract
+    predicates --> intervene
+    intervene --> causal
+    causal --> predicate_filter
+    predicate_filter --> rule_induction
+    causal --> rule_induction
+    rule_induction --> rule_eval
+    concept_map --> rule_eval
+</pre>
+    </div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', flowchart: { curve: 'basis' } });
+</script>
+</body>
+</html>
