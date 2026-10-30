@@ -75,6 +75,8 @@ def get_parser():
     p.add_argument("--cf_steps", type=int, default=10)
     p.add_argument("--cf_min_w", type=float, default=0.5, help="only literals with w+ >= this are edited")
     p.add_argument("--cf_margin", type=float, default=1.0)
+    p.add_argument("--no_cache", action="store_true",
+                   help="recompute HyperGCN + geo signals every epoch even while the backbone is frozen")
     p.add_argument("--max_train_batches", type=int, default=None, help="debug: batches per epoch")
     p.add_argument("--max_val_batches", type=int, default=None)
     p.add_argument("--log_every", type=int, default=50)
@@ -95,6 +97,59 @@ def make_loaders(arg):
                                                     num_workers=arg.num_worker, drop_last=sh,
                                                     pin_memory=True)
     return mk(fit, True), mk(val, False)
+
+
+class FeatureCache:
+    """HyperGCN outputs + geo signals of a whole loader, computed once and kept on the GPU.
+    Valid only while HyperGCN is frozen and the loader is deterministic (center crop, no
+    rotation): stages 1-2, and 3 with --freeze_backbone. Iterating yields (None, y, pre)."""
+
+    def __init__(self, model, loader, device, shuffle, max_batches=None, name=""):
+        t0 = time.time()
+        buf = dict(y=[], logits=[], feat=[], S=[], Mk=[], valid_all=[], valid=[])
+        with torch.no_grad():
+            for b, (data, label, _) in enumerate(loader):
+                if max_batches is not None and b >= max_batches:
+                    break
+                x = data.float().to(device)
+                logits, feat6 = backbone_pass(model, x)
+                S, Mk, info = geo_signals(x)
+                N = x.shape[0]
+                buf["y"].append(label.long().to(device))
+                buf["logits"].append(logits)
+                # ConceptLayer only uses the joint mean of feat6 -> store (N, M, C, T6, 1) in fp16
+                buf["feat"].append(feat6.mean(-1, keepdim=True).half().view(N, -1, *feat6.shape[1:3], 1))
+                buf["S"].append(S)
+                buf["Mk"].append(Mk)
+                buf["valid_all"].append(info["valid_all"])
+                buf["valid"].append(info["valid"])
+        self.t = {k: torch.cat(v) for k, v in buf.items()}
+        self.n = len(self.t["y"])
+        self.batch_size, self.shuffle = loader.batch_size, shuffle
+        mb = sum(v.numel() * v.element_size() for v in self.t.values()) / 2 ** 20
+        print("[cache] {}: {} clips, {:.0f} MB on {}, {:.0f}s".format(name, self.n, mb, device, time.time() - t0))
+
+    def __len__(self):
+        if self.shuffle:   # drop_last, as the DataLoader it replaces
+            return self.n // self.batch_size
+        return (self.n + self.batch_size - 1) // self.batch_size
+
+    def __iter__(self):
+        dev = self.t["y"].device
+        order = torch.randperm(self.n, device=dev) if self.shuffle else torch.arange(self.n, device=dev)
+        for b in range(len(self)):
+            idx = order[b * self.batch_size:(b + 1) * self.batch_size]
+            t = {k: v[idx] for k, v in self.t.items()}
+            feat6 = t["feat"].flatten(0, 1).float()
+            geo = (t["S"], t["Mk"], dict(valid_all=t["valid_all"], valid=t["valid"]))
+            yield None, t["y"], dict(logits_net=t["logits"], feat6=feat6, geo=geo)
+
+
+def unpack(batch, device):
+    data, label, extra = batch
+    if isinstance(extra, dict):   # FeatureCache
+        return None, label, extra
+    return data.float().to(device), label.long().to(device), None
 
 
 def save(path, ccp, model, stage, epoch, metrics, arg, c6, backbone_trained):
@@ -136,7 +191,11 @@ def cf_loss(model, ccp, x, y, out, arg, editable):
         cf_edit=float(gen["edit"][ok].mean()))
 
 
-def forward(model, ccp, x, backbone_grad):
+def forward(model, ccp, x, backbone_grad, pre=None):
+    if pre is not None:
+        out = ccp(None, pre["feat6"], pre["logits_net"], geo=pre["geo"])
+        out["logits_net"] = pre["logits_net"]
+        return out
     with torch.set_grad_enabled(backbone_grad and torch.is_grad_enabled()):
         logits_net, feat6 = backbone_pass(model, x)
     out = ccp(x, feat6, logits_net, geo=geo_signals(x))
@@ -150,12 +209,11 @@ def evaluate(model, ccp, loader, arg, stage):
     n = 0
     acc = dict(logic=0, fused=0, net=0)
     closs = 0.0
-    for b, (data, label, _) in enumerate(loader):
+    for b, batch in enumerate(loader):
         if arg.max_val_batches is not None and b >= arg.max_val_batches:
             break
-        x = data.float().to(arg.device)
-        y = label.long().to(arg.device)
-        out = forward(model, ccp, x, False)
+        x, y, pre = unpack(batch, arg.device)
+        out = forward(model, ccp, x, False, pre)
         for k, key in (("logic", "logic"), ("fused", "fused"), ("net", "logits_net")):
             acc[k] += int((out[key].argmax(1) == y).sum())
         closs += float(ccp.concept_loss(out["logit_z"], y)) * len(y)
@@ -199,12 +257,11 @@ def run_stage(stage, model, ccp, fit_loader, val_loader, arg, c6, history):
         ccp.train()
         t0 = time.time()
         run = dict(loss=0.0, n=0, correct=0)
-        for b, (data, label, _) in enumerate(fit_loader):
+        for b, batch in enumerate(fit_loader):
             if b >= n_batch:
                 break
-            x = data.float().to(arg.device)
-            y = label.long().to(arg.device)
-            out = forward(model, ccp, x, backbone_trained)
+            x, y, pre = unpack(batch, arg.device)
+            out = forward(model, ccp, x, backbone_trained, pre)
             lc = ccp.concept_loss(out["logit_z"], y)
             extra = {}
             if stage == 1:
@@ -283,10 +340,23 @@ def main():
         calibrate(ccp, fit_loader, arg.device, n_batches=arg.calib_batches)
 
     history = []
+    caches = None
     for stage in sorted(arg.stages):
         print("=" * 20, "stage", stage, "=" * 20)
-        path = run_stage(stage, model, ccp, fit_loader, val_loader, arg, c6, history)
+        frozen = stage < 3 or arg.freeze_backbone
+        fit_l, val_l = fit_loader, val_loader
+        if frozen and not arg.no_cache:
+            if caches is None:
+                val_c = FeatureCache(model, val_loader, arg.device, False, arg.max_val_batches, "VAL")
+                # a random temporal crop changes every epoch -> TRAIN-FIT cannot be cached
+                fit_c = None if arg.train_crop else FeatureCache(
+                    model, fit_loader, arg.device, True, arg.max_train_batches, "TRAIN-FIT")
+                caches = (fit_c, val_c)
+            fit_l, val_l = caches[0] or fit_loader, caches[1]
+        path = run_stage(stage, model, ccp, fit_l, val_l, arg, c6, history)
         load_into(path, ccp, model, arg.device)
+        if not frozen:
+            caches = None   # backbone weights changed
         if stage >= 2:
             rules = export_rules(ccp)
             with open(os.path.join(arg.out_dir, "rules_stage{}.json".format(stage)), "w", encoding="utf-8") as f:
