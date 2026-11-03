@@ -167,6 +167,11 @@ def main():
                 sums[k] = sums.get(k, 0.0) + v
             hits += (out["logits"].argmax(1) == y).sum().item()
             count += y.numel()
+            if not arg.smoke and (it + 1) % tcfg["log_every"] == 0:   # one live line, not kept in log.txt
+                per_iter = (time.time() - t0) / (it + 1)
+                print("  epoch {} iter {}/{} | ce {:.3f} | train {:.4f} | {:.2f} s/iter | {:.1f} min left in epoch".format(
+                    epoch + 1, it + 1, len(train_loader), sums["ce"] / (it + 1), hits / count, per_iter,
+                    per_iter * (len(train_loader) - it - 1) / 60), end="\r", flush=True)
 
         if arg.smoke:
             per_iter = (time.time() - t_smoke) / (tcfg["smoke_iters"] - 5)

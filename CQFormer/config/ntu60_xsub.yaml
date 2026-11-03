@@ -35,6 +35,7 @@ train:
   test_batch_size: 128
   num_worker: 8
   smoke_iters: 30
+  log_every: 20
   base_lr: 1.0e-3
   min_lr: 1.0e-5
   warmup_lr: 1.0e-6
