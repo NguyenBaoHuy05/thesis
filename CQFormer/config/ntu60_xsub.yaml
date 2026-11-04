@@ -36,6 +36,7 @@ train:
   num_worker: 8
   smoke_iters: 30
   log_every: 20
+  test_tail: 50   # last epochs whose test accuracy is logged, never used to pick anything
   base_lr: 1.0e-3
   min_lr: 1.0e-5
   warmup_lr: 1.0e-6
