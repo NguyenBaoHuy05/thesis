@@ -1,0 +1,49 @@
+# Short run for screening ideas: ntu60_xsub.yaml with fewer epochs and a shorter warmup.
+# Use ntu60_xsub.yaml for the final comparison with SkateFormer.
+num_classes: 60
+concepts_csv: concepts/ntu_rgbd_60_120.csv
+
+feeder:
+  p_interval: [0.5, 1]
+  test_p_interval: [0.95]
+  window_size: 64
+  thres: 64
+  uniform: true
+  aug_method: a123489
+  intra_p: 0.5
+  inter_p: 0.2
+
+model:
+  dim: 192
+  depth: 6
+  heads: 6
+  mlp_ratio: 4.0
+  num_frames: 64
+  patch_t: 4
+  local_window: 2
+  attn_drop: 0.1
+  drop_path: 0.2
+  free_per_set: 16
+  motifs: 256
+  order_filters: 256
+  motif_kernel: 5
+  head_drop: 0.3
+
+train:
+  num_epoch: 100
+  batch_size: 128
+  test_batch_size: 128
+  num_worker: 8
+  smoke_iters: 30
+  log_every: 20
+  test_tail: 10   # last epochs whose weights are kept and whose test accuracy is logged
+  base_lr: 1.0e-3
+  min_lr: 1.0e-5
+  warmup_lr: 1.0e-6
+  warm_up_epoch: 10
+  weight_decay: 0.1
+  grad_max: 1.0
+  label_smoothing: 0.1
+  named_weight: 0.3
+  concept_weight: 1.0
+  l1_weight: 1.0e-3

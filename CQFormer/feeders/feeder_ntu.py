@@ -1,10 +1,8 @@
 """NTU feeder with the augmentation recipe of SkateFormer (feeders/feeder_ntu.py there).
 
-Differences: it always returns joint coordinates in NTU order (the model computes the four
-modalities per joint set), and ``holdout`` carves a validation split out of the training clips
-so that the test split is never used to pick an epoch.
+Difference: it always returns joint coordinates in NTU order (the model computes the four
+modalities per joint set).
 """
-import copy
 import random
 
 import numpy as np
@@ -17,7 +15,7 @@ class Feeder(Dataset):
     def __init__(self, data_path, split='train', p_interval=(0.5, 1), window_size=64, thres=64,
                  uniform=True, aug_method='a123489', intra_p=0.5, inter_p=0.2):
         if split not in {'train', 'test'}:
-            raise ValueError("split must be train or test; use holdout() for validation")
+            raise ValueError("split must be train or test")
         self.split = split
         self.p_interval = list(p_interval)
         self.window_size = window_size
@@ -32,35 +30,13 @@ class Feeder(Dataset):
         data = npz[x_key]
         N, T, _ = data.shape
         self.data = data.reshape((N, T, 2, 25, 3)).transpose(0, 4, 1, 3, 2)  # N C T V M
-        labels = np.where(npz[y_key] > 0)[1]
-        self.indices = np.arange(N)
-        self.label = labels
-
-    def holdout(self, fraction, seed=1, p_interval=(0.95,)):
-        """Split off a stratified validation view. The clips are shared, not copied."""
-        rng = np.random.RandomState(seed)
-        val = []
-        for c in np.unique(self.label):
-            members = np.where(self.label == c)[0]
-            rng.shuffle(members)
-            val.append(members[:max(1, int(round(fraction * len(members))))])
-        val = np.sort(np.concatenate(val))
-        keep = np.setdiff1d(np.arange(len(self.label)), val)
-
-        view = copy.copy(self)
-        view.split = 'val'
-        view.p_interval = list(p_interval)
-        view.indices = self.indices[val]
-        view.label = self.label[val]
-        self.indices = self.indices[keep]
-        self.label = self.label[keep]
-        return view
+        self.label = np.where(npz[y_key] > 0)[1]
 
     def __len__(self):
         return len(self.label)
 
     def __getitem__(self, index):
-        data_numpy = np.array(self.data[self.indices[index]])
+        data_numpy = np.array(self.data[index])
         label = self.label[index]
         valid_frame_num = np.sum(data_numpy.sum(0).sum(-1).sum(-1) != 0)
         num_people = np.sum(data_numpy.sum(0).sum(0).sum(0) != 0)
@@ -94,7 +70,7 @@ class Feeder(Dataset):
                     data_numpy = tools.drop_joint(data_numpy, p=0.5)
             elif p < self.intra_p + self.inter_p:
                 adain_idx = random.choice(np.where(self.label == label)[0])
-                data_adain = np.array(self.data[self.indices[adain_idx]])
+                data_adain = np.array(self.data[adain_idx])
                 f_num = np.sum(data_adain.sum(0).sum(-1).sum(-1) != 0)
                 t_idx = np.round((index_t + 1) * f_num / 2).astype(np.int64)
                 data_adain = data_adain[:, t_idx]

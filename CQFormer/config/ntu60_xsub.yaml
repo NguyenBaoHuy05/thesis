@@ -11,7 +11,6 @@ feeder:
   aug_method: a123489
   intra_p: 0.5
   inter_p: 0.2
-  val_fraction: 0.05
 
 model:
   dim: 192
@@ -36,7 +35,7 @@ train:
   num_worker: 8
   smoke_iters: 30
   log_every: 20
-  test_tail: 50   # last epochs whose test accuracy is logged, never used to pick anything
+  test_tail: 50   # last epochs whose weights are kept and whose test accuracy is logged
   base_lr: 1.0e-3
   min_lr: 1.0e-5
   warmup_lr: 1.0e-6

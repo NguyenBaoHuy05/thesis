@@ -1,11 +1,13 @@
 """Train CQFormer. Resumes from <work_dir>/last.pt.
 
-The epoch is picked on validation only. The test split is read at the very end and, for the last
-``test_tail`` epochs, logged to test_tail.jsonl for comparison with papers that report their best
-test epoch. Nothing in training reads that file.
+Trains on the whole training split, with no validation holdout, like SkateFormer and Hyper-GCN.
+For the last ``test_tail`` epochs the weights are kept in <work_dir>/tail/ and the test accuracy
+is logged to test_tail.jsonl. results.json reports both the last epoch and the best tail epoch;
+the latter is selected on test, so it is the figure comparable to papers reporting their best
+test epoch, not an unbiased estimate.
 
-    python -u train.py --config config/ntu60_xsub.yaml --data_path $D --work_dir $W
-    python -u train.py --config config/ntu60_xsub.yaml --data_path $D --work_dir /content/smoke --smoke
+    python -u train.py --config config/ntu60_xsub_fast.yaml --data_path $D --work_dir $W
+    python -u train.py --config config/ntu60_xsub_fast.yaml --data_path $D --work_dir /content/smoke --smoke
 """
 import argparse
 import json
@@ -117,11 +119,9 @@ def main():
     amp = device.type == "cuda" and torch.cuda.is_bf16_supported()
 
     fcfg = dict(cfg["feeder"])
-    val_fraction = fcfg.pop("val_fraction")
     test_p = fcfg.pop("test_p_interval")
     train_set = Feeder(arg.data_path, split="train", **fcfg)
-    val_set = train_set.holdout(val_fraction, seed=1, p_interval=test_p)
-    log("clips: train {} val {} | bf16 {}".format(len(train_set), len(val_set), amp))
+    log("clips: train {} | bf16 {}".format(len(train_set), amp))
 
     S = load_concept_matrix(cfg["concepts_csv"], cfg["num_classes"])
     model = CQFormer(cfg["num_classes"], S, **cfg["model"]).to(device)
@@ -130,33 +130,78 @@ def main():
     loader_args = dict(num_workers=tcfg["num_worker"], pin_memory=True, worker_init_fn=seed_worker,
                        persistent_workers=tcfg["num_worker"] > 0)
     train_loader = DataLoader(train_set, batch_size=tcfg["batch_size"], shuffle=True, drop_last=True, **loader_args)
-    val_loader = DataLoader(val_set, batch_size=tcfg["test_batch_size"], **loader_args)
 
     optimizer = build_optimizer(model, tcfg)
     total = tcfg["num_epoch"] * len(train_loader)
     warmup = tcfg["warm_up_epoch"] * len(train_loader)
-    start_epoch, best_val = 0, 0.0
-    last_path, best_path = os.path.join(arg.work_dir, "last.pt"), os.path.join(arg.work_dir, "best.pt")
+    start_epoch = 0
+    last_path = os.path.join(arg.work_dir, "last.pt")
     if os.path.exists(last_path) and not arg.smoke:
         ck = torch.load(last_path, map_location=device)
         model.load_state_dict(ck["model"])
         optimizer.load_state_dict(ck["optimizer"])
-        start_epoch, best_val = ck["epoch"] + 1, ck["best_val"]
-        log("resumed at epoch {}, best val {:.4f}".format(start_epoch, best_val))
+        start_epoch = ck["epoch"] + 1
+        log("resumed at epoch {}".format(start_epoch))
         # a new stream, otherwise every session replays the shuffling and augmentation of the first
         random.seed(arg.seed + start_epoch)
         np.random.seed(arg.seed + start_epoch)
         torch.manual_seed(arg.seed + start_epoch)
 
-    def make_test_loader():
-        test_set = Feeder(arg.data_path, split="test", p_interval=test_p, window_size=fcfg["window_size"],
-                          thres=fcfg["thres"], uniform=fcfg["uniform"])
-        # its own generator: reading the test split does not move the training random stream
-        return DataLoader(test_set, batch_size=tcfg["test_batch_size"], generator=torch.Generator(), **loader_args)
-
     test_loader = None
-    tail_path = os.path.join(arg.work_dir, "test_tail.jsonl")
+
+    def get_test_loader():
+        nonlocal test_loader
+        if test_loader is None:
+            test_set = Feeder(arg.data_path, split="test", p_interval=test_p, window_size=fcfg["window_size"],
+                              thres=fcfg["thres"], uniform=fcfg["uniform"])
+            # its own generator: reading the test split does not move the training random stream
+            test_loader = DataLoader(test_set, batch_size=tcfg["test_batch_size"], generator=torch.Generator(),
+                                     **loader_args)
+        return test_loader
+
+    tail_log = os.path.join(arg.work_dir, "test_tail.jsonl")
+    tail_dir = os.path.join(arg.work_dir, "tail")
     tail_from = tcfg["num_epoch"] - tcfg["test_tail"]
+
+    def tail_weights(epoch_number):
+        return os.path.join(tail_dir, "epoch_{:03d}.pt".format(epoch_number))
+
+    def record_tail(epoch):
+        """Keep the weights of this epoch and log its test accuracy."""
+        res = evaluate(model, get_test_loader(), device, amp)
+        os.makedirs(tail_dir, exist_ok=True)
+        save_atomic({"model": model.state_dict(), "epoch": epoch, "test": res}, tail_weights(epoch + 1))
+        with open(tail_log, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"epoch": epoch + 1, **res}) + "\n")
+        log("TEST epoch {}: top-1 {:.4f} | named path only {:.4f}".format(epoch + 1, res["top1"], res["top1_named"]))
+
+    def finish():
+        """Report the last epoch and the best tail epoch, and save their test scores."""
+        tail = {}
+        if os.path.exists(tail_log):
+            with open(tail_log, encoding="utf-8") as f:
+                for line in f:   # a crash can repeat an epoch: its latest line wins
+                    r = json.loads(line)
+                    tail[r["epoch"]] = r
+        results = {"tail": [tail[e] for e in sorted(tail)]}
+        picks = [("last", last_path)]
+        if tail:
+            best = max(results["tail"], key=lambda r: r["top1"])
+            results["best_test_epoch"] = best
+            picks.append(("best", tail_weights(best["epoch"])))
+        for name, path in picks:
+            model.load_state_dict(torch.load(path, map_location=device)["model"])
+            res, scores, labels = evaluate(model, get_test_loader(), device, amp, return_scores=True)
+            results[name] = res
+            np.savez(os.path.join(arg.work_dir, "scores_{}.npz".format(name)), scores=scores, labels=labels)
+            log("TEST {}: top-1 {:.4f} | named path only {:.4f}".format(name, res["top1"], res["top1_named"]))
+        if tail:
+            log("TEST best epoch of the tail, selected on test: {}".format(results["best_test_epoch"]))
+        with open(os.path.join(arg.work_dir, "results.json"), "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+
+    def save_last(epoch):
+        save_atomic({"model": model.state_dict(), "optimizer": optimizer.state_dict(), "epoch": epoch}, last_path)
 
     for epoch in range(start_epoch, 1 if arg.smoke else tcfg["num_epoch"]):
         model.train()
@@ -196,40 +241,21 @@ def main():
             epoch_min = per_iter * len(train_loader) / 60
             log("smoke: {:.3f} s/iter | {:.1f} min/epoch | {:.1f} h per 100 epochs | peak {:.1f} GB | loss {:.3f}".format(
                 per_iter, epoch_min, epoch_min * 100 / 60, torch.cuda.max_memory_allocated() / 2 ** 30, loss.item()))
-            log("val: {}".format(evaluate(model, val_loader, device, amp)))
+            # the end of a real run is hours away: exercise its saving and reporting now
+            record_tail(0)
+            save_last(0)
+            finish()
             return
 
         n = len(train_loader)
-        val = evaluate(model, val_loader, device, amp)
-        log("epoch {}/{} | lr {:.2e} | ce {:.3f} named {:.3f} concept {:.3f} | train {:.4f} | val {:.4f} named {:.4f} | {:.0f}s".format(
+        log("epoch {}/{} | lr {:.2e} | ce {:.3f} named {:.3f} concept {:.3f} | train {:.4f} | {:.0f}s".format(
             epoch + 1, tcfg["num_epoch"], optimizer.param_groups[0]["lr"], sums["ce"] / n, sums["named"] / n,
-            sums["concept"] / n, hits / count, val["top1"], val["top1_named"], time.time() - t0))
-        if val["top1"] > best_val:
-            best_val = val["top1"]
-            save_atomic({"model": model.state_dict(), "epoch": epoch, "val": val}, best_path)
-        if epoch >= tail_from:   # before last.pt: a crash here repeats the epoch instead of losing its line
-            if test_loader is None:
-                test_loader = make_test_loader()
-            with open(tail_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps({"epoch": epoch + 1, **evaluate(model, test_loader, device, amp)}) + "\n")
-        save_atomic({"model": model.state_dict(), "optimizer": optimizer.state_dict(), "epoch": epoch,
-                     "best_val": best_val}, last_path)
+            sums["concept"] / n, hits / count, time.time() - t0))
+        if epoch >= tail_from:   # before last.pt: a crash here repeats the epoch instead of losing it
+            record_tail(epoch)
+        save_last(epoch)
 
-    if test_loader is None:
-        test_loader = make_test_loader()
-    results = {"best_val": best_val}
-    for name, path in (("best", best_path), ("last", last_path)):
-        model.load_state_dict(torch.load(path, map_location=device)["model"])
-        res, scores, labels = evaluate(model, test_loader, device, amp, return_scores=True)
-        results[name] = res
-        np.savez(os.path.join(arg.work_dir, "scores_{}.npz".format(name)), scores=scores, labels=labels)
-        log("TEST {}: top-1 {:.4f} | named path only {:.4f}".format(name, res["top1"], res["top1_named"]))
-    if os.path.exists(tail_path):
-        with open(tail_path, encoding="utf-8") as f:
-            results["best_test_epoch"] = max((json.loads(line) for line in f), key=lambda r: r["top1"])
-        log("TEST best epoch of the tail, selected on test: {}".format(results["best_test_epoch"]))
-    with open(os.path.join(arg.work_dir, "results.json"), "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+    finish()
 
 
 if __name__ == "__main__":
