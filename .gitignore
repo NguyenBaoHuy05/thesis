@@ -5,6 +5,8 @@
 *.skeleton
 *.log
 *.txt
+*.doc
+*.docx
 __pycache__/
 *.py[cod]
 *$py.class
