@@ -1,0 +1,66 @@
+# NeSy on Neuron, ntu120 xsub 110/10. Run from zeroshot/Neuron:
+#   python main_nesy.py --config config/nesy/ntu120_xsub_110_10.yaml
+split: ntu120_seen110_unseen10
+work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/ntu120_seen110_unseen10
+semantic_dir: ./semantics/ntu
+seed: 1
+
+# data (the notebook copies the npz from Drive to /content/data first)
+feeder: feeders.feeder_ntu.Feeder_Shiftgcn_Match
+num_worker: 8
+train_feeder_args:
+  data_path: /content/data/NTU120_CSub.npz
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen110_unseen10
+  zero_setting: ZSL
+  split: train
+  window_size: 64
+  p_interval: [0.5, 1]
+  random_rot: True
+# test: deterministic centre crop, no rotation (Neuron's config used the training augmentation here)
+test_feeder_args:
+  data_path: /content/data/NTU120_CSub.npz
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen110_unseen10
+  zero_setting: GZSL
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  random_rot: False
+
+# model
+model: model.nesy.NeuronNeSy
+weights: /content/drive/MyDrive/BaoHuy/zeroshot/shiftgcn_weights/**/ntu120_ShiftGCN_joint_xsub_seen110_unseen10-*.pt
+model_args:
+  num_point: 25
+  num_person: 2
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: spatial
+  primitive_path: ../primitive.json
+  rules_path: ../kg_rules.json
+  prim_text_path: ./semantics/ntu/primitive_text_clip.pt
+  d_sym: 128
+  kappa_t: 1.0        # soft max over time (on primitive logits)
+  kappa_side: 10.0    # soft max over the left / right rule variants
+  beta_init: 0.1      # weight of s_sym in the fused score (learned); small so z starts close to Neuron
+  two_person_thr: 0.5
+  mask_penalty: 1000.0
+  freeze_bn: True     # keep the frozen encoder's BatchNorm statistics fixed
+
+# optim: Neuron head as in Neuron (SGD), NeSy branch AdamW; same step decay
+base_lr: 0.1
+nesterov: True
+weight_decay: 0.0005
+nesy_lr: 0.001
+nesy_wd: 0.0001
+step: [4, 20]
+lr_decay_rate: 0.1
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+
+# loss = Neuron + lambda_sym * CE(s_sym) + lambda_fuse * CE(z) + lambda_logic * (exclusive + implication)
+lambda_sym: 1.0
+lambda_fuse: 1.0
+lambda_logic: 0.1

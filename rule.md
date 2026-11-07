@@ -1,0 +1,1 @@
+Máy tính ko chạy code, chỉ chạy trên L4 colab

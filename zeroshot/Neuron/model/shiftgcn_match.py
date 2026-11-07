@@ -7,6 +7,7 @@ import math
 
 # Upstream used sys.path.append("./model/Temporal_shift/") + `from cuda.shift import Shift`.
 # On Colab that `cuda` name collides with the cuda-python package, so import by package path.
+# The default Shift backend is pure PyTorch (SHIFT_BACKEND=cuda uses the compiled kernel).
 from .Temporal_shift.cuda.shift import Shift
 import copy
 
@@ -259,6 +260,10 @@ class ModelMatch(nn.Module):
 
     def forward(self, x, spatial_round, temporal_round):
         _, pooling_feature, cube_feature = self.feature_extractor(x)  # n, 256    n, 256, 16, 25
+        return self.neural_logits(cube_feature, spatial_round, temporal_round)
+
+    def neural_logits(self, cube_feature, spatial_round, temporal_round):
+        """Neuron head on the encoder cube (n, 256, 16, 25). Same computation as upstream forward."""
         b, _, _, _ = cube_feature.size()
         # prototype
         sp = self.spatial_prototype.weight.unsqueeze(0).expand(b, -1, -1).permute(0,2,1)
@@ -271,7 +276,7 @@ class ModelMatch(nn.Module):
             batch_indices = torch.arange(b).unsqueeze(1).unsqueeze(2)
             joint_indices = torch.arange(25).unsqueeze(0).unsqueeze(2)
             corr = F.softmax(sp_select, dim=1)
-            mask = torch.ones((b,25,80)).cuda()
+            mask = torch.ones((b,25,80), device=cube_feature.device)
             mask[batch_indices,joint_indices,pro_indices] = 1e-12
             corr = corr * mask
             sp = torch.einsum('ncj,njv->nvc', cube_feature.mean(2), corr) # n 75(a)  256

@@ -1,13 +1,17 @@
-# nesy: thesis zero-shot code, built on Neuron
+# Thesis: NeSy zero-shot model on Neuron
 
-This folder is a copy of [Neuron](https://github.com/cseeyangchen/Neuron) at commit `1400f25` (CVPR 2025, Chen et al.). The thesis NeSy zero-shot model is built on top of it.
+Copy of [Neuron](https://github.com/cseeyangchen/Neuron) (CVPR 2025) with a neuro-symbolic branch on top.
 
-Changes from upstream so far (torch 2.x / numpy 2.x compatibility only, no change in computation):
-- `model/shiftgcn_match.py`: `np.int` -> `int`
-- `feeders/tools.py`: `np.random.rand(1)` -> `np.random.rand()` in `valid_crop_resize`
-- `model/Temporal_shift/cuda/*`: `AT_ASSERTM` -> `TORCH_CHECK`, `x.type()` -> `x.scalar_type()`, `x.data<T>()` -> `x.data_ptr<T>()`
-- `model/Temporal_shift/cuda/shift.py`: added a pure-PyTorch Shift (default, so no CUDA build is needed). Set `SHIFT_BACKEND=cuda` to use the compiled kernel.
-- `model/shiftgcn_match.py`: imports Shift by package path, because the old `sys.path` + `from cuda.shift` import collides with the `cuda-python` package on Colab.
+New files:
+- `model/nesy.py`: `NeuronNeSy` = Neuron head (unchanged) + primitive grounding (71 named primitives from `../primitive.json`, joint-masked attention, left/right variants) + rule reasoning (`../kg_rules.json`: require / forbid / sequence, DNF over sides) + fusion and person-count mask.
+- `kg.py`: KG loading and CLIP text of the primitives.
+- `main_nesy.py`, `config/nesy/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `neuron_or` only). Colab notebook: `../neuron_nesy.ipynb`.
+
+Changes to upstream files (no change in computation):
+- `model/shiftgcn_match.py`: Shift imported by package path (the old `sys.path` + `from cuda.shift` import collides with `cuda-python` on Colab); `np.int` -> `int`; `ModelMatch.forward` split into encoder + `neural_logits(cube, ...)`; mask created on the input's device instead of `.cuda()`.
+- `model/Temporal_shift/cuda/shift.py`: pure-PyTorch Shift (default, no CUDA build). `SHIFT_BACKEND=cuda` uses the compiled kernel.
+- `feeders/tools.py`: `np.random.rand(1)` -> `np.random.rand()` (numpy 2.x).
+- `.gitignore`: `config/` and `semantics/` are tracked (needed on Colab); CUDA build artifacts are ignored.
 
 The original Neuron README follows.
 

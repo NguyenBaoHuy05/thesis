@@ -1,7 +1,10 @@
-# config
-config/
-!config/ntu60_xsub_55_5split/joint_shiftgcn_ViTL14@336px_match.yaml
-!config/pkuv1_xsub_46_5split/joint_shiftgcn_ViTL14@336px_match.yaml
+# config: tracked (upstream ignored config/, which also hid config/nesy/ needed on Colab)
+# build artifacts of the CUDA shift kernel (py3.8); the default Shift backend is pure PyTorch
+model/Temporal_shift/cuda/build/
+model/Temporal_shift/cuda/dist/
+model/Temporal_shift/cuda/*.egg-info/
+torchlight/build/
+__pycache__/
 # data
 data/nturgbd_raw/
 data/pkummd_raw/
@@ -34,12 +37,8 @@ Pretrain_Shift_GCN/work_dir/
 Pretrain_Shift_GCN/*.pt
 Pretrain_Shift_GCN/main_disentangle.py
 Pretrain_Shift_GCN/main_feature_store.py
-# semantics
-semantics/
-!semantics/ntu/spatial/*.json
-!semantics/ntu/temporal/*.json
-!semantics/pku/spatial/*.json
-!semantics/pku/temporal/*.json
+# semantics: tracked (32 MB; the .tar CLIP features are needed on Colab and a parent-dir
+# ignore cannot be undone by the upstream !semantics/... lines)
 # others
 visualization/
 weights/
