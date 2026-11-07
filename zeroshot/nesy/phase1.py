@@ -67,6 +67,25 @@ def coverage(R, seen, unseen, prims):
     return rows
 
 
+def kg_ceiling(R, classes, dontcare=0.5, eps=1e-3):
+    """Upper bound of the rule branch with PERFECT primitives. Each class c gets an oracle primitive
+    vector: 1-eps where c requires, eps where c forbids, `dontcare` elsewhere (0.5 = unknown,
+    0 = assume absent). Scores are the same mean log-truth as s_rule (w_k = 1).
+    Returns (accuracy with ties split evenly, per-class rows listing the classes tied with or above it)."""
+    classes = list(classes)
+    Rc = R[classes]
+    Rp, Rn = (Rc > 0).astype(np.float64), (Rc < 0).astype(np.float64)
+    P = np.where(Rc > 0, 1 - eps, np.where(Rc < 0, eps, dontcare)).clip(eps, 1 - eps)
+    S = (np.log(P) @ Rp.T + np.log(1 - P) @ Rn.T) / (Rp + Rn).sum(1).clip(min=1)
+    rows, acc = [], 0.0
+    for i, c in enumerate(classes):
+        tie = S[i] >= S[i, i] - 1e-9
+        acc += 1.0 / tie.sum() if S[i].max() <= S[i, i] + 1e-9 else 0.0
+        rows.append(dict(cls=c, n_tied_or_above=int(tie.sum()) - 1,
+                         confused_with=[classes[j] for j in np.where(tie)[0] if j != i]))
+    return acc / len(classes), rows
+
+
 # ----------------------------------------------------------------------------- model
 class NeSyZSL(nn.Module):
     def __init__(self, text_proto, R, imp, d_in=256, hidden=1024, dropout=0.3,
@@ -179,7 +198,7 @@ def train(model, X, y, classes, epochs=30, warmup=5, lr=1e-3, wd=1e-4, bs=256,
             loss.backward()
             opt.step()
             for k, v in L.items():
-                tot[k] = tot.get(k, 0.0) + float(v) * len(idx)
+                tot[k] = tot.get(k, 0.0) + float(v.detach()) * len(idx)
         sched.step()
         rec = dict(epoch=ep + 1, stage=stage, **{f'L_{k}': v / len(X) for k, v in tot.items()})
         if eval_fn is not None:
@@ -199,7 +218,9 @@ class Standardize:
 
 def run_split(npz, task, text_proto, R, imp, mode='fused', seed=0, device='cuda', val_frac=0.1,
               model_kw=None, train_kw=None, log=print):
-    """mode: 'emb' | 'rule' | 'fused'. Returns (result dict, validation history)."""
+    """mode: 'emb' | 'rule' | 'fused'. Returns (result dict, validation history, scores).
+    scores keeps the branch scores (s_emb / s_rule / z) on validation (at the chosen epoch) and on the
+    test set, for post-hoc fusion of separately trained branches (see posthoc_fusion)."""
     model_kw, train_kw = dict(model_kw or {}), dict(train_kw or {})
     model_kw.update(use_emb=mode in ('emb', 'fused'), use_rule=mode in ('rule', 'fused'))
     unseen = sorted(UNSEEN[task])
@@ -224,11 +245,14 @@ def run_split(npz, task, text_proto, R, imp, mode='fused', seed=0, device='cuda'
     cls_fit, cls_vu = tf(np.array(v_seen)), tf(np.array(v_unseen))
     cls_vall = tf(np.array(sorted(v_seen + v_unseen)))
 
+    keep = ('z', 's_emb', 's_rule')
+    val_scores = []
+
     def val_fn(model, ep):
-        z_u = predict(model, Xvu, cls_vu)['z']
-        z_a = predict(model, Xv, cls_vall)['z']
-        gam, S, U, H = best_gamma(z_a, yv, cls_vall, set(v_seen))
-        return dict(val_zsl=zsl_acc(z_u, yvu, cls_vu), val_H=H, val_gamma=gam)
+        o_u, o_a = predict(model, Xvu, cls_vu), predict(model, Xv, cls_vall)
+        val_scores.append(dict(u={k: o_u[k] for k in keep if k in o_u}, a={k: o_a[k] for k in keep if k in o_a}))
+        gam, S, U, H = best_gamma(o_a['z'], yv, cls_vall, set(v_seen))
+        return dict(val_zsl=zsl_acc(o_u['z'], yvu, cls_vu), val_H=H, val_gamma=gam)
 
     torch.manual_seed(seed)
     model = NeSyZSL(text_proto, R, imp, **model_kw).to(device)
@@ -247,7 +271,8 @@ def run_split(npz, task, text_proto, R, imp, mode='fused', seed=0, device='cuda'
                                                             'warmup': min(train_kw.get('warmup', 5), epochs)})
     cls_u, cls_all = tf(np.array(unseen)), tf(np.arange(len(seen) + len(unseen)))
     zsl_out = predict(model, tf(norm(npz['zsl_data'])), cls_u)
-    gz = predict(model, tf(norm(npz['gzsl_data'])), cls_all)['z']
+    gz_out = predict(model, tf(norm(npz['gzsl_data'])), cls_all)
+    gz = gz_out['z']
     S, U, H = gzsl_eval(gz, tf(npz['gzsl_label']), cls_all, set(seen), best['val_gamma'])
     res = dict(task=task, mode=mode, seed=seed, epochs=epochs,
                zsl=zsl_acc(zsl_out['z'], tf(npz['zsl_label']), cls_u),
@@ -258,4 +283,27 @@ def run_split(npz, task, text_proto, R, imp, mode='fused', seed=0, device='cuda'
     if model.use_rule:
         res['beta'] = float(model.log_beta.exp())
     log(f'[{task} {mode} seed{seed}] test: ZSL {res["zsl"]:.4f} | GZSL S {S:.4f} U {U:.4f} H {H:.4f}')
-    return res, hist
+    scores = dict(val_u=val_scores[epochs - 1]['u'], val_a=val_scores[epochs - 1]['a'],
+                  test_u={k: zsl_out[k] for k in keep if k in zsl_out},
+                  test_a={k: gz_out[k] for k in keep if k in gz_out},
+                  y_vu=yvu.cpu(), y_v=yv.cpu(), y_zsl=torch.as_tensor(npz['zsl_label']),
+                  y_gzsl=torch.as_tensor(npz['gzsl_label']), cls_vu=cls_vu.cpu(), cls_vall=cls_vall.cpu(),
+                  cls_u=cls_u.cpu(), cls_all=cls_all.cpu(), v_seen=set(v_seen), seen=set(seen))
+    return res, hist, scores
+
+
+def posthoc_fusion(sc_emb, sc_rule, betas=(0, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5)):
+    """z = s_emb + beta * s_rule from two separately trained models (same seed, hence same validation
+    split). beta is chosen on validation ZSL (beta = 0 is the embedding branch alone), then gamma on
+    validation H for that beta. Returns (chosen row, table over all betas)."""
+    assert torch.equal(sc_emb['cls_vu'], sc_rule['cls_vu']), 'the two runs must share the validation split'
+    table = []
+    for b in betas:
+        fuse = lambda part: sc_emb[part]['s_emb'] + b * sc_rule[part]['s_rule']
+        vz = zsl_acc(fuse('val_u'), sc_emb['y_vu'], sc_emb['cls_vu'])
+        gam, *_ , vH = best_gamma(fuse('val_a'), sc_emb['y_v'], sc_emb['cls_vall'], sc_emb['v_seen'])
+        tz = zsl_acc(fuse('test_u'), sc_emb['y_zsl'], sc_emb['cls_u'])
+        S, U, H = gzsl_eval(fuse('test_a'), sc_emb['y_gzsl'], sc_emb['cls_all'], sc_emb['seen'], gam)
+        table.append(dict(beta=b, val_zsl=vz, val_H=vH, zsl=tz, gzsl_S=S, gzsl_U=U, gzsl_H=H, gamma=gam))
+    chosen = max(table, key=lambda r: (r['val_zsl'], -r['beta']))   # tie -> smaller beta
+    return chosen, table
