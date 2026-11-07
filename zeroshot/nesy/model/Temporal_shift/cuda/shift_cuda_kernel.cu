@@ -410,12 +410,12 @@ at::Tensor shift_cuda_forward(
   const dim3 blocks((input.size(0)*input.size(1)*input.size(2)*input.size(3)/stride+1024-1)/1024);
   const int threads = 1024;
 
-  AT_DISPATCH_FLOATING_TYPES(input.type(), "shift_forward_cuda", ([&] {
+  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "shift_forward_cuda", ([&] {
     shift_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
-      input.data<scalar_t>(),
-      output.data<scalar_t>(),
-      xpos.data<scalar_t>(),
-      ypos.data<scalar_t>(),
+      input.data_ptr<scalar_t>(),
+      output.data_ptr<scalar_t>(),
+      xpos.data_ptr<scalar_t>(),
+      ypos.data_ptr<scalar_t>(),
       input.size(0),
       input.size(1),
       input.size(2),
@@ -447,12 +447,12 @@ std::vector<at::Tensor> shift_cuda_backward(
 
   if(stride==1)
   {
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "Shift_Bottom_Backward_Stride1_", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "Shift_Bottom_Backward_Stride1_", ([&] {
       Shift_Bottom_Backward_Stride1<scalar_t><<<blocks, threads>>>(
-        grad_output.data<scalar_t>(),
-        grad_input.data<scalar_t>(),
-        xpos.data<scalar_t>(),
-        ypos.data<scalar_t>(),
+        grad_output.data_ptr<scalar_t>(),
+        grad_input.data_ptr<scalar_t>(),
+        xpos.data_ptr<scalar_t>(),
+        ypos.data_ptr<scalar_t>(),
         input.size(0),
         input.size(1),
         input.size(2),
@@ -461,12 +461,12 @@ std::vector<at::Tensor> shift_cuda_backward(
   }
   else
   {
-    AT_DISPATCH_FLOATING_TYPES(input.type(), "Shift_Bottom_Backward_", ([&] {
+    AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "Shift_Bottom_Backward_", ([&] {
       Shift_Bottom_Backward<scalar_t><<<blocks, threads>>>(
-        grad_output.data<scalar_t>(),
-        grad_input.data<scalar_t>(),
-        xpos.data<scalar_t>(),
-        ypos.data<scalar_t>(),
+        grad_output.data_ptr<scalar_t>(),
+        grad_input.data_ptr<scalar_t>(),
+        xpos.data_ptr<scalar_t>(),
+        ypos.data_ptr<scalar_t>(),
         input.size(0),
         input.size(1),
         input.size(2),
@@ -482,15 +482,15 @@ std::vector<at::Tensor> shift_cuda_backward(
 
   const dim3 blocks_output((output.size(0)*output.size(1)*output.size(2)*output.size(3)+1024-1)/1024);
 
-  AT_DISPATCH_FLOATING_TYPES(input.type(), "Shift_Position_Backward_", ([&] {
+  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "Shift_Position_Backward_", ([&] {
     Shift_Position_Backward<scalar_t><<<blocks_output, threads>>>(
-      input.data<scalar_t>(),
-      grad_output.data<scalar_t>(),
-      grad_input.data<scalar_t>(),
-      xpos.data<scalar_t>(),
-      ypos.data<scalar_t>(),
-      grad_xpos_bchw.data<scalar_t>(),
-      grad_ypos_bchw.data<scalar_t>(),
+      input.data_ptr<scalar_t>(),
+      grad_output.data_ptr<scalar_t>(),
+      grad_input.data_ptr<scalar_t>(),
+      xpos.data_ptr<scalar_t>(),
+      ypos.data_ptr<scalar_t>(),
+      grad_xpos_bchw.data_ptr<scalar_t>(),
+      grad_ypos_bchw.data_ptr<scalar_t>(),
       input.size(0),
       input.size(1),
       input.size(2),
@@ -512,10 +512,10 @@ std::vector<at::Tensor> shift_cuda_backward(
 
   const dim3 blocks_norm((output.size(1)+1024-1)/1024);
 
-  AT_DISPATCH_FLOATING_TYPES(input.type(), "applyShiftConstraint_", ([&] {
+  AT_DISPATCH_FLOATING_TYPES(input.scalar_type(), "applyShiftConstraint_", ([&] {
     applyShiftConstraint<scalar_t><<<blocks_norm, threads>>>(
-      grad_xpos.data<scalar_t>(),
-      grad_ypos.data<scalar_t>(),
+      grad_xpos.data_ptr<scalar_t>(),
+      grad_ypos.data_ptr<scalar_t>(),
       output.size(1));
   }));
 

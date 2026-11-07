@@ -1,3 +1,18 @@
+# nesy: thesis zero-shot code, built on Neuron
+
+This folder is a copy of [Neuron](https://github.com/cseeyangchen/Neuron) at commit `1400f25` (CVPR 2025, Chen et al.). The thesis NeSy zero-shot model is built on top of it.
+
+Changes from upstream so far (torch 2.x / numpy 2.x compatibility only, no change in computation):
+- `model/shiftgcn_match.py`: `np.int` -> `int`
+- `feeders/tools.py`: `np.random.rand(1)` -> `np.random.rand()` in `valid_crop_resize`
+- `model/Temporal_shift/cuda/*`: `AT_ASSERTM` -> `TORCH_CHECK`, `x.type()` -> `x.scalar_type()`, `x.data<T>()` -> `x.data_ptr<T>()`
+- `model/Temporal_shift/cuda/shift.py`: added a pure-PyTorch Shift (default, so no CUDA build is needed). Set `SHIFT_BACKEND=cuda` to use the compiled kernel.
+- `model/shiftgcn_match.py`: imports Shift by package path, because the old `sys.path` + `from cuda.shift` import collides with the `cuda-python` package on Colab.
+
+The original Neuron README follows.
+
+---
+
 # Neuron
 This repo is the official implementation for [Neuron: Learning context-aware evolving representations for zero-shot skeleton action recognition](https://openaccess.thecvf.com/content/CVPR2025/html/Chen_Neuron_Learning_Context-Aware_Evolving_Representations_for_Zero-Shot_Skeleton_Action_Recognition_CVPR_2025_paper.html). The paper is accepted to **CVPR 2025**.
 

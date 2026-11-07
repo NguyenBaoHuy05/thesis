@@ -5,10 +5,9 @@ from torch.autograd import Variable
 import numpy as np
 import math
 
-import sys
-sys.path.append("./model/Temporal_shift/")
-
-from cuda.shift import Shift
+# Upstream used sys.path.append("./model/Temporal_shift/") + `from cuda.shift import Shift`.
+# On Colab that `cuda` name collides with the cuda-python package, so import by package path.
+from .Temporal_shift.cuda.shift import Shift
 import copy
 
 
@@ -106,13 +105,13 @@ class Shift_gcn(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 bn_init(m, 1)
 
-        index_array = np.empty(25*in_channels).astype(np.int)
+        index_array = np.empty(25*in_channels).astype(int)
         for i in range(25):
             for j in range(in_channels):
                 index_array[i*in_channels + j] = (i*in_channels + j + j*in_channels)%(in_channels*25)
         self.shift_in = nn.Parameter(torch.from_numpy(index_array),requires_grad=False)
 
-        index_array = np.empty(25*out_channels).astype(np.int)
+        index_array = np.empty(25*out_channels).astype(int)
         for i in range(25):
             for j in range(out_channels):
                 index_array[i*out_channels + j] = (i*out_channels + j - j*out_channels)%(out_channels*25)
