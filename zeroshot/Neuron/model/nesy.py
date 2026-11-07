@@ -168,6 +168,10 @@ class NeuronNeSy(ModelMatch):
     def forward(self, x, spatial_round, temporal_round, classes):
         """x: (n, 3, T, V, M); *_round: Neuron class semantics for `classes` (global ids, LongTensor)."""
         _, _, cube = self.feature_extractor(x)                                        # (n, 256, 16, 25)
+        return self.forward_cube(cube, spatial_round, temporal_round, classes)
+
+    def forward_cube(self, cube, spatial_round, temporal_round, classes):
+        """Same as forward, from a (cached) encoder cube (n, 256, 16, 25)."""
         spa, tem = self.neural_logits(cube, spatial_round, temporal_round)
         p_logit = self.ground(cube)                                                    # (n, 2, K, T)
         s_sym = self.reason(p_logit, classes)
@@ -187,13 +191,17 @@ class NeuronNeSy(ModelMatch):
                     logic=lambda_logic * self.reason.logic_loss(out['p_logit']))
 
     @torch.no_grad()
-    def person_conflict(self, x, classes):
+    def second_person(self, x):
+        """(n,) bool from the skeleton x (n, 3, T, V, M): person 2 has non-zero joints in > thr of the frames."""
+        return (x[..., 1].abs().sum((1, 3)) > 0).float().mean(1) > self.two_person_thr
+
+    @torch.no_grad()
+    def person_conflict(self, present, classes):
         """(n, C) bool: the class rule requires two persons but the sample has one, or forbids two persons but
-        the sample has two. Person 2 counts as present if its joints are non-zero in > thr of the frames."""
-        present = (x[..., 1].abs().sum((1, 3)) > 0).float().mean(1) > self.two_person_thr   # (n,)
+        the sample has two. present: (n,) bool from second_person."""
         rule = self.person_rule[classes]                                                     # (C,)
         return ((rule > 0)[None] & ~present[:, None]) | ((rule < 0)[None] & present[:, None])
 
     @torch.no_grad()
-    def final_scores(self, out, x, classes):
-        return out['z'] - self.mask_penalty * self.person_conflict(x, classes).float()
+    def final_scores(self, out, present, classes):
+        return out['z'] - self.mask_penalty * self.person_conflict(present, classes).float()

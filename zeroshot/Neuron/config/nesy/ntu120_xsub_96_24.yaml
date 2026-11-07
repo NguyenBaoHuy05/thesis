@@ -8,6 +8,15 @@ seed: 1
 # data (the notebook copies the npz from Drive to /content/data first)
 feeder: feeders.feeder_ntu.Feeder_Shiftgcn_Match
 num_worker: 8
+# cache: the frozen encoder runs once; each training sample gets ONE fixed augmentation (the crop + rotation
+# below, seeded per sample), test uses the centre crop. online: new random augmentation every epoch (slow).
+feature_mode: cache
+# Cubes are fp16 (256 x 16 x 25 per sample): ~11 GB per NTU60 split, ~22 GB per NTU120 split.
+# Local disk: re-encoded in each new Colab session (~5-11 min). Use a Drive folder to keep them across sessions.
+cache_dir: /content/cube_cache
+cache_device: auto     # GPU if the cubes take < gpu_cache_gb, else CPU RAM
+gpu_cache_gb: 14
+extract_batch_size: 256
 train_feeder_args:
   data_path: /content/data/NTU120_CSub.npz
   ntu_task: ntu120_xsub
@@ -59,6 +68,10 @@ lr_decay_rate: 0.1
 batch_size: 64
 test_batch_size: 64
 num_epoch: 30
+
+# checkpoints in work_dir: last.pt every epoch (resume=True continues from it), best.pt at max best_metric
+best_metric: zsl_final
+resume: True
 
 # loss = Neuron + lambda_sym * CE(s_sym) + lambda_fuse * CE(z) + lambda_logic * (exclusive + implication)
 lambda_sym: 1.0

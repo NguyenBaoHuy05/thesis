@@ -5,7 +5,7 @@ Copy of [Neuron](https://github.com/cseeyangchen/Neuron) (CVPR 2025) with a neur
 New files:
 - `model/nesy.py`: `NeuronNeSy` = Neuron head (unchanged) + primitive grounding (71 named primitives from `../primitive.json`, joint-masked attention, left/right variants) + rule reasoning (`../kg_rules.json`: require / forbid / sequence, DNF over sides) + fusion and person-count mask.
 - `kg.py`: KG loading and CLIP text of the primitives.
-- `main_nesy.py`, `config/nesy/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `neuron_or` only). Colab notebook: `../neuron_nesy.ipynb`.
+- `main_nesy.py`, `config/nesy/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `neuron_or` only). Default `feature_mode: cache`: the frozen encoder runs once, each training sample gets one fixed augmentation (seeded per sample), test uses the centre crop. Checkpoints: `last.pt` every epoch (auto-resume), `best.pt` at max `best_metric`. Colab notebook: `../neuron_nesy.ipynb`.
 
 Changes to upstream files (no change in computation):
 - `model/shiftgcn_match.py`: Shift imported by package path (the old `sys.path` + `from cuda.shift` import collides with `cuda-python` on Colab); `np.int` -> `int`; `ModelMatch.forward` split into encoder + `neural_logits(cube, ...)`; mask created on the input's device instead of `.cuda()`.
