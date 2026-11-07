@@ -5,9 +5,11 @@ For every sample this gives
   cube   (P=8, T=16, 256): last-layer features averaged over persons, joints grouped into body parts.
 Preprocessing (center crop 95% of the valid frames + bilinear resize to 64 frames, as in Shift-GCN
 pretraining test) runs batched on the GPU; gpu_preprocess reproduces feeders/tools.valid_crop_resize.
-No disk cache: one NTU120 split takes a few minutes. Requires the nesy folder on sys.path.
+Features are built in GPU memory; encode_task(cache_dir=...) optionally saves them as .npy (e.g. on
+Drive) and loads them next time. Requires the nesy folder on sys.path.
 """
 import glob
+import os
 import time
 
 import numpy as np
@@ -90,22 +92,62 @@ def encode(model, X, idx, bs=512, device='cuda'):
     return pooled, cube
 
 
-def encode_task(skel, weights_dir, task, unseen, kind='cube', log=print):
-    """skel: dict with x_train, y_train (one-hot), x_test, y_test (CTR-GCN npz in RAM).
-    Returns dict Xtr, ytr (seen classes only, original order), Xte, yte (all test samples) on GPU.
-    kind: 'cube' (P, 16, 256) fp16 | 'pooled' (256,) | 'both' (adds Ptr / Pte = pooled)."""
+def _save(t, path, chunk=8192):
+    """GPU tensor -> .npy, written in chunks (no full copy in RAM)."""
+    arr = np.lib.format.open_memmap(path, mode='w+', dtype=str(t.dtype).replace('torch.', ''), shape=tuple(t.shape))
+    for i in range(0, len(t), chunk):
+        arr[i:i + chunk] = t[i:i + chunk].cpu().numpy()
+    arr.flush()
+    del arr
+
+
+def _load(path, device='cuda', chunk=8192):
+    arr = np.load(path, mmap_mode='r')
+    t = torch.empty(arr.shape, dtype=getattr(torch, str(arr.dtype)), device=device)
+    for i in range(0, len(arr), chunk):
+        t[i:i + chunk] = torch.from_numpy(np.ascontiguousarray(arr[i:i + chunk])).to(device)
+    return t
+
+
+def encode_task(skel, weights_dir, task, unseen, kind='cube', cache_dir=None, log=print):
+    """skel: dict with x_train, y_train (one-hot), x_test, y_test (CTR-GCN npz in RAM); may be None when
+    cache_dir already holds this task. Returns dict Xtr, ytr (seen classes only, original order),
+    Xte, yte (all test samples) on GPU. kind: 'cube' (P, 16, 256) fp16 | 'pooled' (256,) | 'both'
+    (adds Ptr / Pte = pooled). cache_dir: if set, features are saved there (.npy) and loaded next time."""
+    t0, out = time.time(), {}
+    paths = {f'{n}{k}': f'{cache_dir}/{task}_{n}{k}.npy' for n in ('cube_', 'pooled_', 'y_') for k in ('tr', 'te')} \
+        if cache_dir else {}
+    if cache_dir and all(os.path.exists(p) for p in paths.values()):
+        for k in ('tr', 'te'):
+            if kind in ('cube', 'both'):
+                out[f'X{k}'] = _load(paths[f'cube_{k}'])
+            if kind in ('pooled', 'both'):
+                out[f'X{k}' if kind == 'pooled' else f'P{k}'] = _load(paths[f'pooled_{k}'])
+            out[f'y{k}'] = _load(paths[f'y_{k}'])
+        log(f'[{task}] loaded from {cache_dir}, {time.time() - t0:.0f}s')
+        return out
     enc = load_encoder(weights_dir, task)
-    out, t0 = {}, time.time()
     for split, k in (('train', 'tr'), ('test', 'te')):
         y = np.argmax(skel[f'y_{split}'], 1)
         idx = np.where(~np.isin(y, unseen))[0] if split == 'train' else np.arange(len(y))
         pooled, cube = encode(enc, skel[f'x_{split}'], idx)
+        yt = torch.as_tensor(y[idx], device='cuda')
+        if cache_dir:
+            os.makedirs(cache_dir, exist_ok=True)
+            _save(cube, paths[f'cube_{k}'])
+            _save(pooled, paths[f'pooled_{k}'])
+            _save(yt, paths[f'y_{k}'])      # labels last: marks the task as complete
         out[f'X{k}'] = pooled if kind == 'pooled' else cube
         if kind == 'both':
             out[f'P{k}'] = pooled
-        out[f'y{k}'] = torch.as_tensor(y[idx], device='cuda')
+        out[f'y{k}'] = yt
         del pooled, cube
     del enc
     torch.cuda.empty_cache()
-    log(f'[{task}] encoded: train {len(out["ytr"])}, test {len(out["yte"])}, {time.time() - t0:.0f}s')
+    log(f'[{task}] encoded: train {len(out["ytr"])}, test {len(out["yte"])}, {time.time() - t0:.0f}s'
+        + (f', saved to {cache_dir}' if cache_dir else ''))
     return out
+
+
+def cached(cache_dir, task):
+    return bool(cache_dir) and os.path.exists(f'{cache_dir}/{task}_y_te.npy')
