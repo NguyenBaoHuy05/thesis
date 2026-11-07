@@ -105,13 +105,13 @@ class Shift_gcn(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 bn_init(m, 1)
 
-        index_array = np.empty(25*in_channels).astype(int)
+        index_array = np.zeros(25*in_channels, dtype=int)
         for i in range(25):
             for j in range(in_channels):
                 index_array[i*in_channels + j] = (i*in_channels + j + j*in_channels)%(in_channels*25)
         self.shift_in = nn.Parameter(torch.from_numpy(index_array),requires_grad=False)
 
-        index_array = np.empty(25*out_channels).astype(int)
+        index_array = np.zeros(25*out_channels, dtype=int)
         for i in range(25):
             for j in range(out_channels):
                 index_array[i*out_channels + j] = (i*out_channels + j - j*out_channels)%(out_channels*25)
