@@ -5,8 +5,9 @@ work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/ntu120_seen96_unsee
 semantic_dir: ./semantics/ntu
 seed: 1
 
-# data (the notebook copies the npz from Drive to /content/data first)
-feeder: feeders.feeder_ntu.Feeder_Shiftgcn_Match
+# data: the notebook extracts the Drive npz into /content/data/<name>/*.npy first. Feeder_Mmap memory-maps them
+# (RAM ~1-2 GB instead of ~14 / 35 GB); same samples, preprocessing and augmentation as Feeder_Shiftgcn_Match.
+feeder: feeders.feeder_ntu_mmap.Feeder_Mmap
 num_worker: 8
 # cache: the frozen encoder runs once; each training sample gets ONE fixed augmentation (the crop + rotation
 # below, seeded per sample), test uses the centre crop. online: new random augmentation every epoch (slow).
@@ -14,11 +15,11 @@ feature_mode: cache
 # Cubes are fp16 (256 x 16 x 25 per sample): ~11 GB per NTU60 split, ~22 GB per NTU120 split.
 # Local disk: re-encoded in each new Colab session (~5-11 min). Use a Drive folder to keep them across sessions.
 cache_dir: /content/cube_cache
-cache_device: auto     # GPU if the cubes take < gpu_cache_gb, else CPU RAM
+cache_device: auto     # auto: GPU if the cubes fit, else RAM, else disk (memmap in cache_dir, e.g. on T4) | cuda | cpu | disk
 gpu_cache_gb: 14
 extract_batch_size: 256
 train_feeder_args:
-  data_path: /content/data/NTU120_CSub.npz
+  data_path: /content/data/NTU120_CSub
   ntu_task: ntu120_xsub
   zero_spilt_setting: ntu120_seen96_unseen24
   zero_setting: ZSL
@@ -28,7 +29,7 @@ train_feeder_args:
   random_rot: True
 # test: deterministic centre crop, no rotation (Neuron's config used the training augmentation here)
 test_feeder_args:
-  data_path: /content/data/NTU120_CSub.npz
+  data_path: /content/data/NTU120_CSub
   ntu_task: ntu120_xsub
   zero_spilt_setting: ntu120_seen96_unseen24
   zero_setting: GZSL

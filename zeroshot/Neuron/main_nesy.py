@@ -6,7 +6,9 @@ Feature modes
   cache  (default): the frozen encoder runs ONCE. Every training sample gets ONE fixed augmentation (Neuron's
                     random crop + rotation, with the RNGs seeded by seed + sample index, so the view is the same
                     in every run); test samples use the deterministic centre crop. The encoder cubes
-                    (n, 256, 16, 25, fp16) are kept in memory and optionally saved to cache_dir.
+                    (n, 256, 16, 25, fp16) are kept on the GPU, in RAM or memory-mapped on disk
+                    (cache_device; auto picks by free memory, disk fits a T4) and saved to cache_dir for
+                    reuse. Batches are index-sorted, so every place gives the same batches.
   online          : Neuron's way, a new random augmentation every epoch through the encoder (slow).
 
 Checkpoints in work_dir
@@ -29,17 +31,20 @@ import hashlib
 import json
 import os
 import random
+import shutil
 import sys
 import time
 from collections import OrderedDict
 
 import numpy as np
+import psutil
 import torch
 import yaml
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 import kg as kg_lib
+from feeders.feeder_ntu_mmap import count_samples
 
 SPLITS = {  # 0-based class ids, same as feeders/feeder_ntu.py
     'ntu60_seen55_unseen5':    [10, 11, 19, 26, 56],
@@ -119,19 +124,20 @@ def best_gamma(z, y, classes, seen, span=None, n=101):
 
 
 def save_npy(t, path, chunk=4096):
-    """CPU tensor -> .npy, written in chunks."""
+    """Tensor (CPU or GPU) -> .npy, written in chunks."""
     arr = np.lib.format.open_memmap(path, mode='w+', dtype=str(t.dtype).replace('torch.', ''), shape=tuple(t.shape))
     for i in range(0, len(t), chunk):
-        arr[i:i + chunk] = t[i:i + chunk].numpy()
+        arr[i:i + chunk] = t[i:i + chunk].cpu().numpy()
     arr.flush()
     del arr
 
 
-def load_npy(path, chunk=4096):
+def load_npy(path, device='cpu', chunk=4096):
+    """.npy -> tensor on device, read in chunks (no second full copy in RAM)."""
     arr = np.load(path, mmap_mode='r')
-    t = torch.empty(arr.shape, dtype=getattr(torch, str(arr.dtype)))
+    t = torch.empty(arr.shape, dtype=getattr(torch, str(arr.dtype)), device=device)
     for i in range(0, len(arr), chunk):
-        t[i:i + chunk] = torch.from_numpy(np.ascontiguousarray(arr[i:i + chunk]))
+        t[i:i + chunk] = torch.from_numpy(np.ascontiguousarray(arr[i:i + chunk])).to(device)
     return t
 
 
@@ -172,9 +178,10 @@ class Processor:
 
         self.Feeder = import_class(arg.feeder)
         if arg.feature_mode == 'cache':
-            self.cache = {part: self.build_cache(part) for part in ('train', 'test')}
-            self.place_cache()
-            n_tr, n_te = len(self.cache['train']['y']), len(self.cache['test']['y'])
+            n = {part: self.cached_count(part) or count_samples(**self.feeder_args(part)) for part in ('train', 'test')}
+            self.where = self.cache_place(sum(n.values()))
+            self.cache = {part: self.build_cache(part, n[part]) for part in ('train', 'test')}
+            n_tr, n_te = n['train'], n['test']
         elif arg.feature_mode == 'online':
             self.loader = dict(
                 train=DataLoader(self.Feeder(**arg.train_feeder_args), batch_size=arg.batch_size, shuffle=True,
@@ -217,61 +224,102 @@ class Processor:
             g['lr'] = self.arg.nesy_lr * f
 
     # ------------------------------------------------------------------ feature cache
+    def feeder_args(self, part):
+        return self.arg.train_feeder_args if part == 'train' else self.arg.test_feeder_args
+
+    def cache_place(self, n_total):
+        """Where the cubes live: 'cuda' (fastest), 'cpu' (RAM) or 'disk' (memory-mapped .npy in cache_dir).
+        auto: GPU if they fit with room to train, else RAM if it has room, else disk."""
+        gb = n_total * int(np.prod(CUBE_SHAPE)) * 2 / 2 ** 30
+        where = self.arg.cache_device
+        free_gpu = torch.cuda.mem_get_info()[0] / 2 ** 30
+        free_ram = psutil.virtual_memory().available / 2 ** 30
+        if where == 'auto':
+            if gb < min(self.arg.gpu_cache_gb, free_gpu - 4):          # keep ~4 GB for training
+                where = 'cuda'
+            elif gb < free_ram - 6:                                    # keep ~6 GB for workers / Python
+                where = 'cpu'
+            else:
+                where = 'disk'
+        if where == 'disk':
+            assert self.arg.cache_dir, 'cache_device disk needs cache_dir'
+            free_disk = shutil.disk_usage(os.path.dirname(os.path.abspath(self.arg.cache_dir)) or '/').free / 2 ** 30
+            self.log(f'free disk {free_disk:.0f} GB')
+        self.log(f'cache: {gb:.1f} GB of cubes -> {where} (free GPU {free_gpu:.1f} GB, free RAM {free_ram:.1f} GB)')
+        return where
+
+    def cache_paths(self, part):
+        a = self.arg
+        if not a.cache_dir:
+            return {}
+        sig = hashlib.md5(json.dumps(dict(feeder=self.feeder_args(part), weights=os.path.basename(self.weights_path),
+                                          seed=a.seed), sort_keys=True).encode()).hexdigest()[:8]
+        return {k: f'{a.cache_dir}/{a.split}_{part}_{sig}_{k}.npy' for k in ('cube', 'person', 'y')}
+
+    def cached_count(self, part):
+        """Number of samples of a complete cache for this part, or 0 (then the data are not needed)."""
+        paths = self.cache_paths(part)
+        if paths and all(os.path.exists(p) for p in paths.values()):
+            return int(np.load(paths['y'], mmap_mode='r').shape[0])
+        return 0
+
     @torch.no_grad()
-    def extract(self, feeder_args):
-        """Frozen encoder over one feeder, one fixed view per sample -> cube (n, 256, 16, 25) fp16, labels,
-        second-person flag. Everything on CPU."""
-        ds = FixedView(self.Feeder(**feeder_args), self.arg.seed)
+    def extract(self, part, N, paths):
+        """Frozen encoder over one feeder, one fixed view per sample -> cube (N, 256, 16, 25) fp16 written
+        straight to its place (GPU / RAM tensor, or a memory-mapped .npy for 'disk'), labels, second-person flag."""
+        ds = FixedView(self.Feeder(**self.feeder_args(part)), self.arg.seed)
+        assert len(ds) == N, (len(ds), N)
         loader = DataLoader(ds, batch_size=self.arg.extract_batch_size, shuffle=False,
                             num_workers=self.arg.num_worker, pin_memory=True)
-        N = len(ds)
-        out = dict(cube=torch.empty((N, *CUBE_SHAPE), dtype=torch.float16),
-                   y=torch.empty(N, dtype=torch.long), person=torch.empty(N, dtype=torch.bool))
+        small = 'cuda' if self.where == 'cuda' else 'cpu'
+        if self.where == 'disk':
+            os.makedirs(self.arg.cache_dir, exist_ok=True)
+            cube = np.lib.format.open_memmap(paths['cube'], mode='w+', dtype=np.float16, shape=(N, *CUBE_SHAPE))
+        else:
+            cube = torch.empty((N, *CUBE_SHAPE), dtype=torch.float16, device=self.where)
+        out = dict(cube=cube, y=torch.empty(N, dtype=torch.long, device=small),
+                   person=torch.empty(N, dtype=torch.bool, device=small))
         enc = self.model.feature_extractor.eval()
         i = 0
-        for x, y, _ in tqdm(loader, ncols=60, desc='extract', mininterval=30):
+        for x, y, _ in tqdm(loader, ncols=60, desc=f'extract {part}', mininterval=30):
             x = x.float().to(self.dev, non_blocking=True)
             _, _, c = enc(x)
             n = len(x)
-            out['cube'][i:i + n] = c.half().cpu()
-            out['y'][i:i + n] = y.long()
-            out['person'][i:i + n] = self.model.second_person(x).cpu()
+            if self.where == 'disk':
+                cube[i:i + n] = c.half().cpu().numpy()
+            else:
+                cube[i:i + n] = c.half()
+            out['y'][i:i + n] = y.long().to(small)
+            out['person'][i:i + n] = self.model.second_person(x).to(small)
             i += n
         assert i == N
+        if self.where == 'disk':
+            cube.flush()
         del loader, ds
         return out
 
-    def build_cache(self, part):
-        a = self.arg
-        fargs = a.train_feeder_args if part == 'train' else a.test_feeder_args
-        sig = hashlib.md5(json.dumps(dict(feeder=fargs, weights=os.path.basename(self.weights_path), seed=a.seed),
-                                     sort_keys=True).encode()).hexdigest()[:8]
-        paths = {k: f'{a.cache_dir}/{a.split}_{part}_{sig}_{k}.npy' for k in ('cube', 'person', 'y')} \
-            if a.cache_dir else {}
-        t0 = time.time()
+    def build_cache(self, part, N):
+        a, paths, t0 = self.arg, self.cache_paths(part), time.time()
+        small = 'cuda' if self.where == 'cuda' else 'cpu'
         if paths and all(os.path.exists(p) for p in paths.values()):
-            out = {k: load_npy(p) for k, p in paths.items()}
-            self.log(f'cache {part}: loaded {len(out["y"])} samples from {a.cache_dir} ({time.time() - t0:.0f}s)')
+            out = dict(y=load_npy(paths['y'], small), person=load_npy(paths['person'], small))
+            out['cube'] = np.load(paths['cube'], mmap_mode='r') if self.where == 'disk' \
+                else load_npy(paths['cube'], self.where)
+            assert len(out['y']) == N
+            self.log(f'cache {part}: loaded {N} samples from {a.cache_dir} ({time.time() - t0:.0f}s)')
             return out
-        out = self.extract(fargs)
-        msg = f'cache {part}: encoded {len(out["y"])} samples ({time.time() - t0:.0f}s)'
+        out = self.extract(part, N, paths)
+        msg = f'cache {part}: encoded {N} samples ({time.time() - t0:.0f}s)'
         if paths:
-            os.makedirs(a.cache_dir, exist_ok=True)
-            for k in ('cube', 'person', 'y'):          # labels last: marks the cache as complete
-                save_npy(out[k], paths[k])
+            if self.where != 'disk':                   # disk: the cube file was written during extraction
+                save_npy(out['cube'], paths['cube'])
+            save_npy(out['person'], paths['person'])
+            save_npy(out['y'], paths['y'])             # labels last: marks the cache as complete
             msg += f', saved to {a.cache_dir} ({time.time() - t0:.0f}s total)'
+        if self.where == 'disk':
+            out['cube'] = np.load(paths['cube'], mmap_mode='r')
         self.log(msg)
         return out
-
-    def place_cache(self):
-        gb = sum(d['cube'].numel() * 2 for d in self.cache.values()) / 2 ** 30
-        where = self.arg.cache_device
-        if where == 'auto':
-            where = 'cuda' if gb < self.arg.gpu_cache_gb else 'cpu'
-        for d in self.cache.values():
-            for k in d:
-                d[k] = d[k].to(where)
-        self.log(f'cache: {gb:.1f} GB of cubes on {where}')
 
     # ------------------------------------------------------------------ batches
     def batches(self, part, shuffle, epoch=0):
@@ -290,9 +338,15 @@ class Processor:
         else:
             order, stop = torch.arange(N), N
         for i in range(0, stop, bs):
-            idx = order[i:i + bs].to(D['cube'].device)
-            yield (D['cube'][idx].to(self.dev, non_blocking=True).float(), D['y'][idx].to(self.dev),
-                   D['person'][idx].to(self.dev), True)
+            # sorted inside the batch: same samples per batch in every cache_device, sequential-ish disk reads
+            idx = order[i:i + bs].sort().values
+            if self.where == 'disk':
+                cube = torch.from_numpy(D['cube'][idx.numpy()])           # reads only these rows
+            else:
+                cube = D['cube'][idx.to(D['cube'].device)]
+            idx_s = idx.to(D['y'].device)
+            yield (cube.to(self.dev, non_blocking=True).float(), D['y'][idx_s].to(self.dev),
+                   D['person'][idx_s].to(self.dev), True)
 
     def forward(self, inp, is_cube, classes):
         spa, tem = self.semantics(classes)
@@ -420,7 +474,8 @@ def get_parser():
     p.add_argument('--test-feeder-args', action=DictAction, default=dict())
     p.add_argument('--feature-mode', default='cache', choices=['cache', 'online'])
     p.add_argument('--cache-dir', default=None, help='save / reuse encoder cubes here (None: keep in memory only)')
-    p.add_argument('--cache-device', default='auto', choices=['auto', 'cuda', 'cpu'])
+    p.add_argument('--cache-device', default='auto', choices=['auto', 'cuda', 'cpu', 'disk'],
+                   help='disk: memory-mapped .npy in cache_dir (low RAM / VRAM, e.g. T4)')
     p.add_argument('--gpu-cache-gb', type=float, default=14.0, help='auto: cubes go to the GPU below this size')
     p.add_argument('--extract-batch-size', type=int, default=256)
     # model

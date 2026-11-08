@@ -38,7 +38,9 @@ Pretrain_Shift_GCN/*.pt
 Pretrain_Shift_GCN/main_disentangle.py
 Pretrain_Shift_GCN/main_feature_store.py
 # semantics: tracked (32 MB; the .tar CLIP features are needed on Colab and a parent-dir
-# ignore cannot be undone by the upstream !semantics/... lines)
+# ignore cannot be undone by the upstream !semantics/... lines). The repo-root .gitignore has *.tar,
+# so re-include them here.
+!semantics/**/*.tar
 # others
 visualization/
 weights/
