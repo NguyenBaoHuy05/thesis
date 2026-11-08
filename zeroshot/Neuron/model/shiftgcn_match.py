@@ -262,8 +262,9 @@ class ModelMatch(nn.Module):
         _, pooling_feature, cube_feature = self.feature_extractor(x)  # n, 256    n, 256, 16, 25
         return self.neural_logits(cube_feature, spatial_round, temporal_round)
 
-    def neural_logits(self, cube_feature, spatial_round, temporal_round):
-        """Neuron head on the encoder cube (n, 256, 16, 25). Same computation as upstream forward."""
+    def visual_vectors(self, cube_feature):
+        """Visual half of the Neuron head: encoder cube (n, 256, 16, 25) -> 3 spatial and 3 temporal unit vectors
+        (n, 768) each (the 3 update rounds). Split out of neural_logits, same computation."""
         b, _, _, _ = cube_feature.size()
         # prototype
         sp = self.spatial_prototype.weight.unsqueeze(0).expand(b, -1, -1).permute(0,2,1)
@@ -306,6 +307,11 @@ class ModelMatch(nn.Module):
         tp_proj_list = []
         for tp_ele in tp_list:
             tp_proj_list.append(F.normalize(self.temporal_project(tp_ele), p=2, dim=1))
+        return sp_proj_list, tp_proj_list
+
+    def neural_logits(self, cube_feature, spatial_round, temporal_round):
+        """Neuron head on the encoder cube (n, 256, 16, 25). Same computation as upstream forward."""
+        sp_proj_list, tp_proj_list = self.visual_vectors(cube_feature)
 
         # semantic 
         spatial_fg_norm = F.normalize(spatial_round[2], p=2, dim=-1)   # 55(5) 10 768

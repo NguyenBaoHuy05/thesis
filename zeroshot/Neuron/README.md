@@ -1,18 +1,14 @@
-# Thesis: NeSy zero-shot model on Neuron
+# Thesis: Neuron++ zero-shot model on Neuron
 
-Copy of [Neuron](https://github.com/cseeyangchen/Neuron) (CVPR 2025) with a neuro-symbolic branch on top.
+Copy of [Neuron](https://github.com/cseeyangchen/Neuron) (CVPR 2025) with upgrades on top of its head (stage 1: text side, description pooling, losses). The earlier neuro-symbolic branch (primitives + rules) was removed: its rule ceiling (`zsl_oracle` 61% on 55/5) was below Neuron's own accuracy; it is in git history (commit 51002aa).
 
 New files:
-- `model/nesy.py`: `NeuronNeSy` = Neuron head (unchanged) + primitive grounding (71 named primitives from `../primitive.json`, joint-masked attention, left/right variants) + rule reasoning (`../kg_rules.json`: require / forbid / sequence, DNF over sides) + fusion and person-count mask.
-- `kg.py`: KG loading and CLIP text of the primitives.
-- `main_nesy.py`, `config/nesy/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `neuron_or` only). Default `feature_mode: cache`: the frozen encoder runs once, each training sample gets one fixed augmentation (seeded per sample), test uses the centre crop. Checkpoints: `last.pt` every epoch (auto-resume), `best.pt` at max `best_metric`. `cache_device: auto` puts the cubes on GPU, RAM or a memory-mapped file on disk depending on free memory. Colab notebook: `../neuron_nesy.ipynb`.
-- Config options: rule dropout `p_drop` (0.2), person-count mask off (`mask_penalty: 0`), `best.pt` on `zsl_z`; to try: `cache_views: 2` (two fixed augmented views per training sample, alternating by epoch) and `neuron_scale_learn: True` (learned temperature in Neuron's own loss instead of the fixed 0.1).
-- `primitive_labels.py`: truth value of every primitive computed from the skeleton by its geometric `definition` (soft comparisons, per frame and side), on the same crop as each cached cube but without its random rotation. Used for direct grounding supervision (`lambda_prim`, BCE; with `ground_detach: True` the class losses no longer train the grounding) and for `zsl_oracle` (the rules on the test labels = ceiling of the KG) and `prim_auc_unseen` / `prim_auc_seen`. Labels are cached next to the cubes (`*_prim<hash>.npy`, uint8). Check without training: `python primitive_labels.py --config config/nesy/ntu60_xsub_55_5.yaml --n 3000`.
-- KG v2 (`../primitive_v2.json`, `../kg_rules_v2.json`, built by `../kg_tools/make_kg_v2.js`): 82 primitives; the configs use it.
+- `model/neuron_plus.py`: `NeuronPlus` = Neuron's visual head (unchanged) + low-rank text adapter, class graph (propagation of text embeddings, hard negatives), description pooling (mean / max / lse) and the losses `ce`, `xnce` (InfoCPL), `cal` (FS-VAE calibrated alignment), `tri` (TDSM triplet margin). Defaults reproduce Neuron's head and CE.
+- `main_plus.py`, `config/plus/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `zsl_neuron_or` only). Default `feature_mode: cache`: the frozen encoder runs once, each training sample gets one fixed augmentation (seeded per sample), test uses the centre crop. Checkpoints: `last.pt` every epoch (auto-resume), `best.pt` at max `best_metric`. `cache_device: auto` puts the cubes on GPU, RAM or a memory-mapped file on disk depending on free memory. `eval_alphas` adds ZSL columns with test-time class-graph propagation. Colab notebook: `../neuron_plus.ipynb`.
 - `feeders/feeder_ntu_mmap.py`: `Feeder_Mmap`, memory-mapped `.npy` version of `Feeder_Shiftgcn_Match` (same samples and augmentation, RAM ~1-2 GB instead of ~14 GB for NTU60), so it also runs on a T4.
 
 Changes to upstream files (no change in computation):
-- `model/shiftgcn_match.py`: Shift imported by package path (the old `sys.path` + `from cuda.shift` import collides with `cuda-python` on Colab); `np.int` -> `int`; `ModelMatch.forward` split into encoder + `neural_logits(cube, ...)`; mask created on the input's device instead of `.cuda()`.
+- `model/shiftgcn_match.py`: Shift imported by package path (the old `sys.path` + `from cuda.shift` import collides with `cuda-python` on Colab); `np.int` -> `int`; `ModelMatch.forward` split into encoder + `neural_logits(cube, ...)`, and the visual half of the head is `visual_vectors(cube)`; mask created on the input's device instead of `.cuda()`.
 - `model/Temporal_shift/cuda/shift.py`: pure-PyTorch Shift (default, no CUDA build). `SHIFT_BACKEND=cuda` uses the compiled kernel.
 - `feeders/tools.py`: `np.random.rand(1)` -> `np.random.rand()` (numpy 2.x).
 - `.gitignore`: `config/` and `semantics/` are tracked (needed on Colab); CUDA build artifacts are ignored.

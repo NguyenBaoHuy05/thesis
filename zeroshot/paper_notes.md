@@ -143,3 +143,29 @@ Không cần align thêm. Nhãn chỉ dùng để sửa grounding (perception); 
    - (b) primitive tính bằng detector (không học);
    - (c) kết hợp: trung bình hoặc chọn theo độ tin cậy của từng detector.
 3. **Đo riêng độ chính xác primitive** (so với nhãn từ `definition`) trên class unseen, để chứng minh grounding chuyển được sang class mới. Đây là một kết quả NeSy riêng, đưa được vào luận văn.
+
+## Hướng mới (2026-11-08): đồ thị class ngữ nghĩa + loss từ paper
+KG primitive/luật đã xóa (còn trong git, commit 51002aa). Lý do: `zsl_oracle` chỉ 61% (55/5), thấp hơn Neuron ~78%; lỗi nằm ở luật, grounding đã đạt trần (primAUC unseen 0.857 vs seen 0.896).
+Giả định: encoder/Neuron chạy bình thường, chưa truy nguyên khoảng cách OR 0.82 so với 86.9 của paper.
+
+### 5 loss có thể tái dùng
+| Loss | Nguồn | Công thức | Dùng ở đâu |
+|---|---|---|---|
+| Calibrated alignment | FS-VAE eq.6 | mean σ((‖f_t−g_s⁻‖−‖f_t−g_s‖)/τ), đối xứng hai chiều | negative khó lấy từ đồ thị class |
+| Triplet margin | TDSM eq.10 | max(d_pos−d_neg+m, 0), bỏ phần diffusion | negative = láng giềng trong đồ thị |
+| InfoNCE X-sampling | InfoCPL eq.5 | −log e^{f(x_i,y_i)}/Σ_j e^{f(x_j,y_i)} | negative lấy từ cả batch |
+| Symmetric InfoNCE | DynaPURLS 3.3.3 | InfoNCE hai chiều skeleton↔text | loss căn chỉnh chính |
+| CE trên memory bank | DynaPURLS | CE trên mẫu tự tin, class cân bằng, ~10 bước Adam | tinh chỉnh affine lúc test |
+(PCBEAR cosine cubed chỉ cần khi giữ node concept; không dùng.)
+
+### Đồ thị class (node = class hành động)
+- Bước 1 (training-free): A = softmax_top-k(cos(E_i,E_j)/T) trên embedding semantics (seen+unseen); E' = (1−α)E + α·A·E cho class unseen; eval trên cube đã cache. Chỉ đáng đầu tư nếu tăng ở 48/12 / 96/24.
+- Bước 2: calibrated loss, negative khó = top-k láng giềng của class đúng trong A.
+- Rủi ro: CLIP đã mã hoá độ giống text, nên cạnh chỉ có ích nếu mang thông tin ngoài text (cặp dễ nhầm theo skeleton, đồ vật, bộ phận).
+
+### Đã code giai đoạn 1 (2026-11-08, chưa chạy: máy local không có Python)
+- `Neuron/model/neuron_plus.py`, `Neuron/main_plus.py`, `Neuron/config/plus/*.yaml`, `neuron_plus.ipynb`. `ModelMatch.visual_vectors()` tách phần thị giác của head (không đổi tính toán).
+- Phát hiện từ code: CE của Neuron chạy trên cosine × 0.1 nên softmax gần đều, `L_neuron` ≈ ln C là bình thường, không phải lỗi. `ce_scale=10, ce_scale_learn=True` là nâng cấp loss đầu tiên cần đo.
+- Phát hiện: `topk(10)` trên 10 mô tả của Neuron chính là trung bình đơn giản (`agg=mean`).
+- Ablation (RECIPES trong notebook): base → scale → xnce | cal_graph | cal_random | tri_graph → lse → adapter → prop. So cal_graph với cal_random để biết negative từ đồ thị có ích không.
+- Việc tiếp theo: #4 (pooling theo bộ phận × pha), #5 (Skeleton-Cache), #6 (cổng GZSL trung thực), rồi mới tới phần symbolic nhỏ.

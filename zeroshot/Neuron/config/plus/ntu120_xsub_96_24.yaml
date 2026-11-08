@@ -1,0 +1,84 @@
+# Neuron++ (stage 1), ntu120 ntu120_seen96_unseen24. Run from zeroshot/Neuron:
+#   python main_plus.py --config config/plus/ntu120_xsub_96_24.yaml
+# Defaults = the Neuron head with Neuron's own CE (scale 0.1, mean over descriptions), i.e. the baseline.
+# Upgrades are switched on from the command line / notebook EXTRA, see neuron_plus.ipynb.
+split: ntu120_seen96_unseen24
+work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/neuron_plus/base/ntu120_seen96_unseen24
+semantic_dir: ./semantics/ntu
+seed: 1
+
+# data: the notebook extracts the Drive npz into /content/data/<name>/*.npy first (Feeder_Mmap memory-maps them).
+feeder: feeders.feeder_ntu_mmap.Feeder_Mmap
+num_worker: 2
+# cache: the frozen encoder runs once; each training sample gets ONE fixed augmentation, test uses the centre crop.
+# Same cache file names as main_nesy.py, so cubes already in cache_dir are reused.
+feature_mode: cache
+cache_dir: /content/cube_cache
+cache_device: auto     # auto: GPU if the cubes fit, else RAM, else disk (memmap in cache_dir, e.g. on T4)
+gpu_cache_gb: 14
+extract_batch_size: 256
+cache_views: 1
+train_feeder_args:
+  data_path: /content/data/NTU120_CSub
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen96_unseen24
+  zero_setting: ZSL
+  split: train
+  window_size: 64
+  p_interval: [0.5, 1]
+  random_rot: True
+test_feeder_args:
+  data_path: /content/data/NTU120_CSub
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen96_unseen24
+  zero_setting: GZSL
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  random_rot: False
+
+# model
+model: model.neuron_plus.NeuronPlus
+weights: /content/drive/MyDrive/BaoHuy/zeroshot/shiftgcn_weights/**/ntu120_ShiftGCN_joint_xsub_seen96_unseen24-*.pt
+model_args:
+  num_point: 25
+  num_person: 2
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: spatial
+  freeze_bn: True
+  agg: mean              # description pooling: mean (= Neuron) | max | lse (learned temperature)
+  ce_scale: 0.1          # scale of the cosines in the CE: 0.1 = Neuron (softmax near uniform); ~10 with ce_scale_learn
+  ce_scale_learn: False
+  adapter_rank: 0        # >0: low-rank residual adapter on the text embeddings
+  prop_alpha: 0.0        # >0: class-graph propagation of the text embeddings (train and test)
+  graph_k: 5
+  graph_temp: 0.1
+  neg_mode: graph        # negatives of cal / tri: graph | random | all
+  cal_tau: 0.1
+  tri_margin: 0.2
+
+# optim: Neuron head as in Neuron (SGD), new parameters AdamW; same step decay
+base_lr: 0.1
+nesterov: True
+weight_decay: 0.0005
+new_lr: 0.001
+new_wd: 0.0001
+step: [4, 20]
+lr_decay_rate: 0.1
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+
+# losses (see model/neuron_plus.py)
+lambda_ce: 1.0
+lambda_xnce: 0.0
+lambda_cal: 0.0
+lambda_tri: 0.0
+
+# extra ZSL columns with class-graph propagation at test time only (training-free diagnosis)
+eval_alphas: [0.1, 0.2, 0.3, 0.5]
+
+# checkpoints in work_dir: last.pt every epoch (resume=True continues from it), best.pt at max best_metric
+best_metric: zsl_s_neu
+resume: True
