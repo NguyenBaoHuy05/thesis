@@ -6,7 +6,9 @@ text   : Neuron's CLIP features of the LLM descriptions, 3 granularities per bra
   (a) text adapter      : residual low-rank map on every description embedding (adapter_rank > 0), zero-initialised
   (b) class graph       : nodes = classes, edges = cosine between the mean fine-grained embeddings (spatial ||
                           temporal), top-k softmax. prop_alpha > 0 mixes the class mean of the neighbours into
-                          every description embedding:  E'_c,j = norm((1-a) E_c,j + a * sum_v A_cv m_v)
+                          every description embedding:  E'_c,j = norm((1-a) E_c,j + a * sum_v P_cv m_v)
+                          prop_mode: graph (P = the kNN graph) | self (P = I, only smoothing towards the class
+                          mean) | random (k random classes): the last two are controls for the graph.
                           The same graph gives the hard negatives of the losses (neg_mode graph).
   (c) description pooling: agg = mean (Neuron: its top-10 over 10 descriptions is the plain mean) | max | lse
                           (learned-temperature log-sum-exp, soft max over descriptions)
@@ -49,6 +51,25 @@ def class_graph(spatial, temporal, k, temp):
         val, nbr = S.topk(k, dim=1)
         A = torch.zeros_like(S).scatter(1, nbr, F.softmax(val / temp, dim=1))
     return A, nbr
+
+
+def graph_matrix(A, nbr, mode):
+    """Propagation matrix of a mode. graph: the kNN class graph A. self: identity (every class keeps only its own
+    mean, i.e. pure smoothing of the 10 descriptions towards their mean: control for 'is it the graph?').
+    random: k random other classes per class with uniform weights (control for 'is it the semantic neighbours?'),
+    drawn with a fixed generator, so it is the same in every call."""
+    C, k = A.shape[0], nbr.shape[1]
+    if mode == 'graph':
+        return A
+    if mode == 'self':
+        return torch.eye(C, device=A.device)
+    if mode == 'random':
+        g = torch.Generator().manual_seed(0)
+        r = torch.rand(C, C, generator=g)
+        r.fill_diagonal_(-1.0)
+        idx = r.topk(k, dim=1).indices.to(A.device)
+        return torch.zeros_like(A).scatter(1, idx, 1.0 / k)
+    raise ValueError(f'prop mode must be graph, self or random, got {mode}')
 
 
 def propagate(sem, A, alpha):
@@ -127,7 +148,7 @@ class NeuronPlus(ModelMatch):
                  agg='mean', agg_temp=0.1,
                  ce_scale=0.1, ce_scale_learn=False,
                  adapter_rank=0,
-                 prop_alpha=0.0, graph_k=5, graph_temp=0.1,
+                 prop_alpha=0.0, prop_mode='graph', graph_k=5, graph_temp=0.1,
                  neg_mode='graph', cal_tau=0.1, tri_margin=0.2):
         super().__init__(num_class, num_point, num_person, graph, graph_args, in_channels)   # encoder frozen here
         self.freeze_bn = freeze_bn
@@ -144,7 +165,7 @@ class NeuronPlus(ModelMatch):
             for b in ('s', 't'):
                 for r in range(3):
                     self.adapters[f'{b}{r}'] = LowRank(768, adapter_rank)
-        self.prop_alpha, self.graph_k, self.graph_temp = prop_alpha, graph_k, graph_temp
+        self.prop_alpha, self.prop_mode, self.graph_k, self.graph_temp = prop_alpha, prop_mode, graph_k, graph_temp
         self.neg_mode, self.cal_tau, self.tri_margin = neg_mode, cal_tau, tri_margin
 
     # ---------------------------------------------------------------- parameters
@@ -167,19 +188,21 @@ class NeuronPlus(ModelMatch):
         return self
 
     # ---------------------------------------------------------------- text side
-    def prepare(self, spatial_round, temporal_round, alpha=None):
+    def prepare(self, spatial_round, temporal_round, alpha=None, mode=None):
         """Neuron semantics of the classes given (lists of 3 tensors (C, 10, 768)) -> adapted / propagated unit
         vectors (two lists of 3 tensors) and the neighbour ids (C, k) of the class graph."""
         alpha = self.prop_alpha if alpha is None else alpha
+        mode = self.prop_mode if mode is None else mode
         sem = {}
         for b, rounds in (('s', spatial_round), ('t', temporal_round)):
             sem[b] = [F.normalize(_as3(t), dim=-1) for t in rounds]
         A, nbr = class_graph(sem['s'], sem['t'], self.graph_k, self.graph_temp)    # graph from the raw CLIP text
+        P = graph_matrix(A, nbr, mode) if alpha > 0 else None
         for b in ('s', 't'):
             if self.adapters:
                 sem[b] = [F.normalize(self.adapters[f'{b}{r}'](t), dim=-1) for r, t in enumerate(sem[b])]
             if alpha > 0:
-                sem[b] = propagate(sem[b], A, alpha)
+                sem[b] = propagate(sem[b], P, alpha)
         return sem['s'], sem['t'], nbr
 
     def pool(self, cos):
@@ -200,18 +223,18 @@ class NeuronPlus(ModelMatch):
         _, _, cube = self.feature_extractor(x)                                        # (n, 256, 16, 25)
         return self.forward_cube(cube, spatial_round, temporal_round)
 
-    def forward_cube(self, cube, spatial_round, temporal_round, classes=None, extra_alphas=()):
+    def forward_cube(self, cube, spatial_round, temporal_round, classes=None, extra=()):
         """From a (cached) encoder cube. out['spa'] / out['tem']: 3 cosine matrices (n, C) each (coarse -> fine).
-        extra_alphas: also score the fine-grained round with these propagation strengths (diagnosis; the visual
-        head runs once)."""
+        extra: (mode, alpha) pairs: also score the fine-grained round with that propagation (diagnosis; the visual
+        head runs once). Needs no training: any trained model can be probed."""
         sp_v, tp_v = self.visual_vectors(cube)
         sem_s, sem_t, nbr = self.prepare(spatial_round, temporal_round)
         out = dict(spa=self.score(sp_v, sem_s), tem=self.score(tp_v, sem_t), nbr=nbr)
-        if extra_alphas:
+        if extra:
             out['extra'] = {}
-            for a in extra_alphas:
-                s, t, _ = self.prepare(spatial_round, temporal_round, alpha=a)
-                out['extra'][a] = (self.score(sp_v[2:], s[2:])[0] + self.score(tp_v[2:], t[2:])[0]) / 2
+            for mode, a in extra:
+                s, t, _ = self.prepare(spatial_round, temporal_round, alpha=a, mode=mode)
+                out['extra'][(mode, a)] = (self.score(sp_v[2:], s[2:])[0] + self.score(tp_v[2:], t[2:])[0]) / 2
         return out
 
     @staticmethod

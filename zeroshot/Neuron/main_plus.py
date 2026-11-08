@@ -24,8 +24,10 @@ Differences from main_match.py (Neuron):
   - paths come from the config; no interactive prompt; per-epoch metrics go to <work_dir>/metrics.csv.
 GZSL uses calibrated stacking with gamma searched on the test set, as Neuron does (optimistic).
 
-eval_alphas: extra ZSL columns `zsl_prop_a<alpha>`: the same model scored with the class-graph propagation of
-strength alpha at test time only (training-free diagnosis; picking alpha on the test set is optimistic).
+eval_alphas x eval_prop_modes: extra ZSL columns `zsl_prop_<mode>_a<alpha>`: the same model scored with the
+propagation of strength alpha at test time only (training-free diagnosis; picking alpha on the test set is
+optimistic). graph = class graph; self and random are controls (self: only smoothing towards the own class mean;
+random: random neighbours): the graph is only worth keeping if it beats both.
 """
 import argparse
 import csv
@@ -392,17 +394,18 @@ class Processor:
     @torch.no_grad()
     def evaluate(self):
         self.model.eval()
-        alphas = list(self.arg.eval_alphas)
-        names = ['s_neu', 'neu3', 'spa', 'tem'] + [f'prop_a{a}' for a in alphas]
+        extra = [(md, a) for md in self.arg.eval_prop_modes for a in self.arg.eval_alphas]
+        pname = lambda md, a: f'prop_{md}_a{a}'
+        names = ['s_neu', 'neu3', 'spa', 'tem'] + [pname(*e) for e in extra]
         acc = {k: [] for k in names}
         ys = []
         for inp, y, is_cube in self.batches('test', shuffle=False):
-            kw = dict(extra_alphas=alphas) if (alphas and is_cube) else {}
+            kw = dict(extra=extra) if (extra and is_cube) else {}
             out = self.forward(inp, is_cube, self.cls_all, **kw)
             cur = dict(s_neu=self.model.s_neu(out), neu3=(sum(out['spa']) + sum(out['tem'])) / 6,
                        spa=out['spa'][2], tem=out['tem'][2])
-            for a in alphas:
-                cur[f'prop_a{a}'] = out['extra'][a] if 'extra' in out else cur['s_neu']
+            for e in extra:
+                cur[pname(*e)] = out['extra'][e] if 'extra' in out else cur['s_neu']
             for k in names:
                 acc[k].append(cur[k].float())
             ys.append(y)
@@ -414,7 +417,7 @@ class Processor:
         zsl_pred = {k: self.unseen_t[v[u_mask][:, self.unseen_t].argmax(1)] for k, v in S.items()}
         m = {f'zsl_{k}': float((p == yu).float().mean()) for k, p in zsl_pred.items()}
         m['zsl_neuron_or'] = float(((zsl_pred['spa'] == yu) | (zsl_pred['tem'] == yu)).float().mean())
-        for k in ['s_neu'] + [f'prop_a{a}' for a in alphas]:
+        for k in ['s_neu'] + [pname(*e) for e in extra]:
             g, s, u, h = best_gamma(S[k], y, self.cls_all, self.cls_seen)
             m.update({f'gzsl_{k}_S': s, f'gzsl_{k}_U': u, f'gzsl_{k}_H': h, f'gzsl_{k}_gamma': g})
         # per unseen class accuracy of s_neu (which classes fail)
@@ -465,10 +468,11 @@ class Processor:
                           open(f'{self.arg.work_dir}/per_class_best.json', 'w'), indent=1)
                 tag = ' *best'
             self.save_last(epoch + 1, rows, best)
-            prop = ' '.join(f'a{a} {rec[f"zsl_prop_a{a}"]:.4f}' for a in self.arg.eval_alphas)
+            prop = ' '.join(f'{md[0]}[' + ' '.join(f'{rec[f"zsl_prop_{md}_a{a}"]:.3f}' for a in self.arg.eval_alphas) + ']'
+                            for md in self.arg.eval_prop_modes)
             self.log(f'ep {epoch + 1:2d} | ZSL neu {rec["zsl_s_neu"]:.4f} neu3 {rec["zsl_neu3"]:.4f} '
                      f'(spa {rec["zsl_spa"]:.4f} tem {rec["zsl_tem"]:.4f} neuron-OR {rec["zsl_neuron_or"]:.4f})'
-                     + (f' | prop {prop}' if prop else '') + f' | H neu {rec["gzsl_s_neu_H"]:.4f} | '
+                     + (f' | prop a={self.arg.eval_alphas} {prop}' if prop else '') + f' | H neu {rec["gzsl_s_neu_H"]:.4f} | '
                      f'scale {rec["ce_scale"]:.2f} | ' + ' '.join(f'{k} {v:.3f}' for k, v in rec.items()
                                                                   if k.startswith('L_'))
                      + f' | {rec["time_s"]}s{tag}')
@@ -526,7 +530,9 @@ def get_parser():
     p.add_argument('--lambda-tri', type=float, default=0.0)
     # evaluation
     p.add_argument('--eval-alphas', type=float, nargs='*', default=[],
-                   help='extra ZSL columns with class-graph propagation of these strengths at test time only')
+                   help='extra ZSL columns with propagation of these strengths at test time only')
+    p.add_argument('--eval-prop-modes', nargs='*', default=['graph', 'self', 'random'],
+                   choices=['graph', 'self', 'random'], help='propagation modes of the extra columns (self / random: controls)')
     # checkpoints
     p.add_argument('--best-metric', default='zsl_s_neu', help='metrics.csv column used for best.pt')
     p.add_argument('--resume', type=lambda s: s.lower() in ('1', 'true', 'yes'), default=True)

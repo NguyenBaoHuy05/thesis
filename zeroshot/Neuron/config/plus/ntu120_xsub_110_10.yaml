@@ -51,7 +51,8 @@ model_args:
   ce_scale: 0.1          # scale of the cosines in the CE: 0.1 = Neuron (softmax near uniform); ~10 with ce_scale_learn
   ce_scale_learn: False
   adapter_rank: 0        # >0: low-rank residual adapter on the text embeddings
-  prop_alpha: 0.0        # >0: class-graph propagation of the text embeddings (train and test)
+  prop_alpha: 0.0        # >0: propagation of the text embeddings (train and test)
+  prop_mode: graph       # graph | self | random (the last two are controls)
   graph_k: 5
   graph_temp: 0.1
   neg_mode: graph        # negatives of cal / tri: graph | random | all
@@ -76,8 +77,9 @@ lambda_xnce: 0.0
 lambda_cal: 0.0
 lambda_tri: 0.0
 
-# extra ZSL columns with class-graph propagation at test time only (training-free diagnosis)
-eval_alphas: [0.1, 0.2, 0.3, 0.5]
+# extra ZSL columns with propagation at test time only: graph + the self / random controls (training-free)
+eval_alphas: [0.1, 0.3, 0.5, 0.7, 0.9]
+eval_prop_modes: [graph, self, random]
 
 # checkpoints in work_dir: last.pt every epoch (resume=True continues from it), best.pt at max best_metric
 best_metric: zsl_s_neu
