@@ -311,6 +311,7 @@ class Processor:
         out = self.extract(part, N, paths)
         msg = f'cache {part}: encoded {N} samples ({time.time() - t0:.0f}s)'
         if paths:
+            os.makedirs(a.cache_dir, exist_ok=True)
             if self.where != 'disk':                   # disk: the cube file was written during extraction
                 save_npy(out['cube'], paths['cube'])
             save_npy(out['person'], paths['person'])
