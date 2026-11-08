@@ -1,8 +1,8 @@
 # NeSy on Neuron, ntu60 xsub 48/12. Run from zeroshot/Neuron:
 #   python main_nesy.py --config config/nesy/ntu60_xsub_48_12.yaml
 split: ntu60_seen48_unseen12
-# v1: rule dropout, no person mask, best.pt on zsl_z (the first run, v0, is in nesy_neuron/<split>)
-work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/v1/ntu60_seen48_unseen12
+# v2_kg: KG v2 (primitive_v2.json / kg_rules_v2.json, 82 primitives) + grounding supervised by the definitions; v1 runs are in nesy_neuron/v1/<split> (the first run, v0, is in nesy_neuron/<split>)
+work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/v2_kg/ntu60_seen48_unseen12
 semantic_dir: ./semantics/ntu
 seed: 1
 
@@ -51,9 +51,9 @@ model_args:
   graph: graph.ntu_rgb_d.Graph
   graph_args:
     labeling_mode: spatial
-  primitive_path: ../primitive.json
-  rules_path: ../kg_rules.json
-  prim_text_path: ./semantics/ntu/primitive_text_clip.pt
+  primitive_path: ../primitive_v2.json
+  rules_path: ../kg_rules_v2.json
+  prim_text_path: ./semantics/ntu/primitive_text_clip_v2.pt   # v2 KG: new CLIP cache, built on the first run
   d_sym: 128
   kappa_t: 1.0        # soft max over time (on primitive logits)
   kappa_side: 10.0    # soft max over the left / right rule variants
@@ -61,9 +61,10 @@ model_args:
   two_person_thr: 0.5
   mask_penalty: 0.0   # person-count mask off: in v1 it lowered ZSL in 28/30 epochs (1000 = hard mask)
   freeze_bn: True     # keep the frozen encoder's BatchNorm statistics fixed
-  p_drop: 0.2         # rule dropout: each literal / sequence rule dropped with this probability in training
+  p_drop: 0.0         # rule dropout (0.2 lowered fused ZSL by ~1-2 points on 55/5 in v1, so off)
   neuron_scale: 0.1   # scale of the cosines in Neuron's loss (0.1 = Neuron; its CE then stays at ~ln C)
   neuron_scale_learn: False   # True: learn it, CLIP-style
+  ground_detach: True # the class losses do not train the grounding: it learns only from lambda_prim (+ logic)
 
 # optim: Neuron head as in Neuron (SGD), NeSy branch AdamW; same step decay
 base_lr: 0.1
@@ -85,3 +86,9 @@ resume: True
 lambda_sym: 1.0
 lambda_fuse: 1.0
 lambda_logic: 0.1
+# direct grounding supervision: BCE between p_k^s(t) and the truth values computed from each primitive's
+# `definition` (primitive_labels.py; labels cached next to the cubes). prim_eval logs zsl_oracle (the rules on
+# those labels = ceiling of the KG) and prim_auc_unseen / prim_auc_seen (grounding vs labels).
+lambda_prim: 1.0
+prim_eval: True
+prim_pos_weight_max: 10.0

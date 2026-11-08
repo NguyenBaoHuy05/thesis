@@ -18,6 +18,9 @@ Loss = Neuron loss (CE on its 6 logits)
      + lambda_sym   * CE(tau_sym * s_sym)
      + lambda_fuse  * CE(z)
      + lambda_logic * (exclusive groups + implications on p_k^s(t))
+     + lambda_prim  * BCE(p_k^s(t), labels computed from the primitive definitions)   (primitive_labels.py)
+With ground_detach=True the sym / fuse losses do not reach the grounding: it is trained only by lambda_prim and
+lambda_logic, i.e. class-agnostic perception, and the class knowledge comes only from the fixed rules.
 """
 import math
 
@@ -98,23 +101,28 @@ class RuleReasoner(nn.Module):
         w = torch.softmax(self.kappa_t * logit, dim=-1)
         return (w * torch.sigmoid(logit)).sum(-1)
 
-    def forward(self, logit, classes):
+    def forward(self, logit, classes, lit_mask=None, P=None):
+        """lit_mask (K,): keep only the literals / sequences of these primitives (rule oracle on primitives that
+        have a detector). P: presence (n, 2, K) to use instead of the soft max over time of logit."""
         n = logit.shape[0]
-        P = self.presence(logit)                                                       # (n, 2, K)
+        P = self.presence(logit) if P is None else P                                   # (n, 2, K)
         logP = P.clamp(min=EPS).log()
         log_not_any = (1 - P.max(1).values).clamp(min=EPS).log()                       # (n, K) forbid: neither side
         Rp, Rn = self.Rp[classes], self.Rn[classes]                                    # (C, K)
+        if lit_mask is not None:
+            Rp, Rn = Rp * lit_mask, Rn * lit_mask
         drop = self.training and self.p_drop > 0
         if drop:                    # rule dropout; a class always keeps at least one require literal
             Rp_d = Rp * (torch.rand_like(Rp) > self.p_drop)
             Rp = torch.where((Rp_d.sum(1) == 0)[:, None], Rp, Rp_d)
             Rn = Rn * (torch.rand_like(Rn) > self.p_drop)
-        n_lit = (Rp + Rn).sum(1)
+        n_lit = (Rp + Rn).sum(1).clamp(min=1)
         lit = (logP @ Rp.T + (log_not_any @ Rn.T)[:, None]) / n_lit                   # (n, 2, C)
 
         O = lit.new_zeros(lit.shape)
         col = {int(c): j for j, c in enumerate(classes.tolist())}
-        hit = [(col[c], ks) for c, ks in self.seqs.items() if c in col]
+        keep = None if lit_mask is None else set(torch.nonzero(lit_mask).flatten().tolist())
+        hit = [(col[c], ks) for c, ks in self.seqs.items() if c in col and (keep is None or set(ks) <= keep)]
         if drop:
             hit = [h for h in hit if float(torch.rand(())) > self.p_drop]
         if hit:
@@ -142,7 +150,7 @@ class NeuronNeSy(ModelMatch):
                  n_cls_total=60, primitive_path='../primitive.json', rules_path='../kg_rules.json',
                  prim_text_path='./semantics/ntu/primitive_text_clip.pt', d_sym=128, kappa_t=1.0,
                  kappa_side=10.0, beta_init=0.1, two_person_thr=0.5, mask_penalty=1e3, freeze_bn=True,
-                 p_drop=0.0, neuron_scale=0.1, neuron_scale_learn=False):
+                 p_drop=0.0, neuron_scale=0.1, neuron_scale_learn=False, ground_detach=False):
         super().__init__(num_class, num_point, num_person, graph, graph_args, in_channels)   # encoder frozen here
         kg = kg_lib.load_kg(primitive_path, rules_path, n_cls_total)
         prim_text = torch.load(prim_text_path)
@@ -163,6 +171,11 @@ class NeuronNeSy(ModelMatch):
         self.log_tau_sym = nn.Parameter(torch.tensor(0.0))      # s_sym is a mean log-probability already
         self.beta = nn.Parameter(torch.tensor(float(beta_init)))
         self.two_person_thr, self.mask_penalty, self.freeze_bn = two_person_thr, mask_penalty, freeze_bn
+        # ground_detach: the class losses (sym, fuse) do not reach the grounding, which then learns only from the
+        # primitive labels (lambda_prim) and the logic loss: perception supervised by the KG definitions,
+        # reasoning by the fixed rules.
+        self.ground_detach = ground_detach
+        self.register_buffer('prim_pos_weight', torch.ones(len(kg['ids'])))   # BCE pos_weight, set from the labels
 
     # ---------------------------------------------------------------- parameters
     def nesy_modules(self):
@@ -195,22 +208,38 @@ class NeuronNeSy(ModelMatch):
         """Same as forward, from a (cached) encoder cube (n, 256, 16, 25)."""
         spa, tem = self.neural_logits(cube, spatial_round, temporal_round)
         p_logit = self.ground(cube)                                                    # (n, 2, K, T)
-        s_sym = self.reason(p_logit, classes)
+        s_sym = self.reason(p_logit.detach() if self.ground_detach else p_logit, classes)
         s_neu = (spa[2] + tem[2]) / 2 / 0.1        # Neuron's fine-grained logits are cosine * 0.1
         tau_neu = self.log_tau_neu.exp().clamp(max=100)
         z = tau_neu * s_neu.detach() + self.beta * s_sym
         return dict(spa=spa, tem=tem, s_neu=s_neu, s_sym=s_sym, z=z, p_logit=p_logit)
 
-    def losses(self, out, y, lambda_sym=1.0, lambda_fuse=1.0, lambda_logic=0.1):
-        """y: labels re-indexed to the columns of `classes`."""
+    def losses(self, out, y, lambda_sym=1.0, lambda_fuse=1.0, lambda_logic=0.1, prim=None, prim_impl=None,
+               lambda_prim=0.0):
+        """y: labels re-indexed to the columns of `classes`.
+        prim: primitive labels (n, 2, K, T) from primitive_labels.py (uint8 0..255 or float 0..1); prim_impl (K,)
+        bool: primitives that have a detector (the others get no supervision)."""
         ce = F.cross_entropy
         f = self.log_neuron_scale.exp().clamp(max=100) / 0.1     # Neuron's logits are cosine * 0.1
         neuron = (sum(ce(o * f, y) for o in out['spa']) / 3 + sum(ce(o * f, y) for o in out['tem']) / 3) / 2
         tau_sym = self.log_tau_sym.exp().clamp(max=100)
-        return dict(neuron=neuron,
-                    sym=lambda_sym * ce(tau_sym * out['s_sym'], y),
-                    fuse=lambda_fuse * ce(out['z'], y),
-                    logic=lambda_logic * self.reason.logic_loss(out['p_logit']))
+        L = dict(neuron=neuron,
+                 sym=lambda_sym * ce(tau_sym * out['s_sym'], y),
+                 fuse=lambda_fuse * ce(out['z'], y),
+                 logic=lambda_logic * self.reason.logic_loss(out['p_logit']))
+        if lambda_prim > 0 and prim is not None:
+            L['prim'] = lambda_prim * self.prim_loss(out['p_logit'], prim, prim_impl)
+        return L
+
+    def prim_loss(self, p_logit, prim, prim_impl=None):
+        """Weighted BCE between the grounding logits and the primitive labels, mean over the supervised entries."""
+        tgt = prim.float() / 255 if prim.dtype == torch.uint8 else prim.float()
+        l = F.binary_cross_entropy_with_logits(p_logit, tgt, reduction='none',
+                                               pos_weight=self.prim_pos_weight[None, None, :, None])
+        if prim_impl is None:
+            return l.mean()
+        w = prim_impl.float()[None, None, :, None]
+        return (l * w).mean() / w.mean().clamp(min=1e-6)
 
     @torch.no_grad()
     def second_person(self, x):
