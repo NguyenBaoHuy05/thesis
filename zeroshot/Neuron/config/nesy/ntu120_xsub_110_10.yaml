@@ -1,7 +1,8 @@
 # NeSy on Neuron, ntu120 xsub 110/10. Run from zeroshot/Neuron:
 #   python main_nesy.py --config config/nesy/ntu120_xsub_110_10.yaml
 split: ntu120_seen110_unseen10
-work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/ntu120_seen110_unseen10
+# v1: rule dropout, no person mask, best.pt on zsl_z (the first run, v0, is in nesy_neuron/<split>)
+work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/nesy_neuron/v1/ntu120_seen110_unseen10
 semantic_dir: ./semantics/ntu
 seed: 1
 
@@ -18,6 +19,9 @@ cache_dir: /content/cube_cache
 cache_device: auto     # auto: GPU if the cubes fit, else RAM, else disk (memmap in cache_dir, e.g. on T4) | cuda | cpu | disk
 gpu_cache_gb: 14
 extract_batch_size: 256
+# fixed augmented views per training sample (epoch e uses view e % K). 2 is closer to Neuron, which draws a
+# new augmentation every epoch; costs one more extraction and K x the train cache (auto may then use disk).
+cache_views: 1
 train_feeder_args:
   data_path: /content/data/NTU120_CSub
   ntu_task: ntu120_xsub
@@ -55,8 +59,11 @@ model_args:
   kappa_side: 10.0    # soft max over the left / right rule variants
   beta_init: 0.1      # weight of s_sym in the fused score (learned); small so z starts close to Neuron
   two_person_thr: 0.5
-  mask_penalty: 1000.0
+  mask_penalty: 0.0   # person-count mask off: in v1 it lowered ZSL in 28/30 epochs (1000 = hard mask)
   freeze_bn: True     # keep the frozen encoder's BatchNorm statistics fixed
+  p_drop: 0.2         # rule dropout: each literal / sequence rule dropped with this probability in training
+  neuron_scale: 0.1   # scale of the cosines in Neuron's loss (0.1 = Neuron; its CE then stays at ~ln C)
+  neuron_scale_learn: False   # True: learn it, CLIP-style
 
 # optim: Neuron head as in Neuron (SGD), NeSy branch AdamW; same step decay
 base_lr: 0.1
@@ -71,7 +78,7 @@ test_batch_size: 64
 num_epoch: 30
 
 # checkpoints in work_dir: last.pt every epoch (resume=True continues from it), best.pt at max best_metric
-best_metric: zsl_final
+best_metric: zsl_z
 resume: True
 
 # loss = Neuron + lambda_sym * CE(s_sym) + lambda_fuse * CE(z) + lambda_logic * (exclusive + implication)

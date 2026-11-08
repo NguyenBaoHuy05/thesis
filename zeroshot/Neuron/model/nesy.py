@@ -78,8 +78,9 @@ class PrimitiveGrounding(nn.Module):
 class RuleReasoner(nn.Module):
     """Primitive logits (n, 2, K, T) -> class scores s_sym (n, C) for the global class ids `classes`."""
 
-    def __init__(self, R, seqs, groups, implications, kappa_t=1.0, kappa_side=10.0):
+    def __init__(self, R, seqs, groups, implications, kappa_t=1.0, kappa_side=10.0, p_drop=0.0):
         super().__init__()
+        self.p_drop = p_drop        # rule dropout: each literal (and each sequence rule) dropped while training
         R = torch.as_tensor(R, dtype=torch.float32)
         self.register_buffer('Rp', (R > 0).float())
         self.register_buffer('Rn', (R < 0).float())
@@ -103,11 +104,19 @@ class RuleReasoner(nn.Module):
         logP = P.clamp(min=EPS).log()
         log_not_any = (1 - P.max(1).values).clamp(min=EPS).log()                       # (n, K) forbid: neither side
         Rp, Rn = self.Rp[classes], self.Rn[classes]                                    # (C, K)
-        lit = (logP @ Rp.T + (log_not_any @ Rn.T)[:, None]) / self.n_lit[classes]      # (n, 2, C)
+        drop = self.training and self.p_drop > 0
+        if drop:                    # rule dropout; a class always keeps at least one require literal
+            Rp_d = Rp * (torch.rand_like(Rp) > self.p_drop)
+            Rp = torch.where((Rp_d.sum(1) == 0)[:, None], Rp, Rp_d)
+            Rn = Rn * (torch.rand_like(Rn) > self.p_drop)
+        n_lit = (Rp + Rn).sum(1)
+        lit = (logP @ Rp.T + (log_not_any @ Rn.T)[:, None]) / n_lit                   # (n, 2, C)
 
         O = lit.new_zeros(lit.shape)
         col = {int(c): j for j, c in enumerate(classes.tolist())}
         hit = [(col[c], ks) for c, ks in self.seqs.items() if c in col]
+        if drop:
+            hit = [h for h in hit if float(torch.rand(())) > self.p_drop]
         if hit:
             sim = F.logsigmoid(logit).permute(0, 1, 3, 2).reshape(n * 2, logit.shape[3], logit.shape[2])
             for j, ks in hit:
@@ -132,14 +141,23 @@ class NeuronNeSy(ModelMatch):
     def __init__(self, num_class=55, num_point=25, num_person=2, graph=None, graph_args=dict(), in_channels=3,
                  n_cls_total=60, primitive_path='../primitive.json', rules_path='../kg_rules.json',
                  prim_text_path='./semantics/ntu/primitive_text_clip.pt', d_sym=128, kappa_t=1.0,
-                 kappa_side=10.0, beta_init=0.1, two_person_thr=0.5, mask_penalty=1e3, freeze_bn=True):
+                 kappa_side=10.0, beta_init=0.1, two_person_thr=0.5, mask_penalty=1e3, freeze_bn=True,
+                 p_drop=0.0, neuron_scale=0.1, neuron_scale_learn=False):
         super().__init__(num_class, num_point, num_person, graph, graph_args, in_channels)   # encoder frozen here
         kg = kg_lib.load_kg(primitive_path, rules_path, n_cls_total)
         prim_text = torch.load(prim_text_path)
         assert prim_text.shape[0] == len(kg['ids']), 'primitive text cache does not match primitive.json'
         self.kg_ids, self.kg_names = kg['ids'], kg['names']
         self.ground = PrimitiveGrounding(prim_text, kg['side_masks'], d_in=256, d=d_sym)
-        self.reason = RuleReasoner(kg['R'], kg['seqs'], kg['groups'], kg['implications'], kappa_t, kappa_side)
+        self.reason = RuleReasoner(kg['R'], kg['seqs'], kg['groups'], kg['implications'], kappa_t, kappa_side,
+                                   p_drop=p_drop)
+        # Scale of the cosines in Neuron's own loss. Neuron uses 0.1, which keeps its softmax near uniform
+        # (its CE stays at ~ln(#classes)); neuron_scale_learn=True learns it (CLIP-style temperature).
+        ns = torch.tensor(math.log(neuron_scale))
+        if neuron_scale_learn:
+            self.log_neuron_scale = nn.Parameter(ns)
+        else:
+            self.register_buffer('log_neuron_scale', ns)
         self.register_buffer('person_rule', torch.as_tensor(kg['R'][:, kg['two_person']]))   # +1 / -1 / 0
         self.log_tau_neu = nn.Parameter(torch.tensor(math.log(1 / 0.07)))
         self.log_tau_sym = nn.Parameter(torch.tensor(0.0))      # s_sym is a mean log-probability already
@@ -152,7 +170,10 @@ class NeuronNeSy(ModelMatch):
 
     def nesy_parameters(self):
         ps = [p for m in self.nesy_modules() for p in m.parameters()]
-        return ps + [self.log_tau_neu, self.log_tau_sym, self.beta]
+        ps += [self.log_tau_neu, self.log_tau_sym, self.beta]
+        if isinstance(self.log_neuron_scale, nn.Parameter):     # a scalar: AdamW, not Neuron's SGD at lr 0.1
+            ps.append(self.log_neuron_scale)
+        return ps
 
     def neuron_parameters(self):
         nesy = {id(p) for p in self.nesy_parameters()}
@@ -183,7 +204,8 @@ class NeuronNeSy(ModelMatch):
     def losses(self, out, y, lambda_sym=1.0, lambda_fuse=1.0, lambda_logic=0.1):
         """y: labels re-indexed to the columns of `classes`."""
         ce = F.cross_entropy
-        neuron = (sum(ce(o, y) for o in out['spa']) / 3 + sum(ce(o, y) for o in out['tem']) / 3) / 2
+        f = self.log_neuron_scale.exp().clamp(max=100) / 0.1     # Neuron's logits are cosine * 0.1
+        neuron = (sum(ce(o * f, y) for o in out['spa']) / 3 + sum(ce(o * f, y) for o in out['tem']) / 3) / 2
         tau_sym = self.log_tau_sym.exp().clamp(max=100)
         return dict(neuron=neuron,
                     sym=lambda_sym * ce(tau_sym * out['s_sym'], y),

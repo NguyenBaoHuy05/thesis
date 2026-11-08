@@ -179,8 +179,11 @@ class Processor:
         self.Feeder = import_class(arg.feeder)
         if arg.feature_mode == 'cache':
             n = {part: self.cached_count(part) or count_samples(**self.feeder_args(part)) for part in ('train', 'test')}
-            self.where = self.cache_place(sum(n.values()))
-            self.cache = {part: self.build_cache(part, n[part]) for part in ('train', 'test')}
+            K = self.arg.cache_views
+            self.where = self.cache_place(K * n['train'] + n['test'])
+            # train: K fixed views per sample (epoch e uses view e % K); view 0 is the single-view cache
+            self.cache = dict(train=[self.build_cache('train', n['train'], view=k) for k in range(K)],
+                              test=self.build_cache('test', n['test']))
             n_tr, n_te = n['train'], n['test']
         elif arg.feature_mode == 'online':
             self.loader = dict(
@@ -248,13 +251,16 @@ class Processor:
         self.log(f'cache: {gb:.1f} GB of cubes -> {where} (free GPU {free_gpu:.1f} GB, free RAM {free_ram:.1f} GB)')
         return where
 
-    def cache_paths(self, part):
+    def cache_paths(self, part, view=0):
         a = self.arg
         if not a.cache_dir:
             return {}
-        sig = hashlib.md5(json.dumps(dict(feeder=self.feeder_args(part), weights=os.path.basename(self.weights_path),
-                                          seed=a.seed), sort_keys=True).encode()).hexdigest()[:8]
-        return {k: f'{a.cache_dir}/{a.split}_{part}_{sig}_{k}.npy' for k in ('cube', 'person', 'y')}
+        key = dict(feeder=self.feeder_args(part), weights=os.path.basename(self.weights_path), seed=a.seed)
+        if view:                                       # view 0 keeps the single-view name, so old caches are reused
+            key['view'] = view
+        sig = hashlib.md5(json.dumps(key, sort_keys=True).encode()).hexdigest()[:8]
+        tag = part if not view else f'{part}v{view}'
+        return {k: f'{a.cache_dir}/{a.split}_{tag}_{sig}_{k}.npy' for k in ('cube', 'person', 'y')}
 
     def cached_count(self, part):
         """Number of samples of a complete cache for this part, or 0 (then the data are not needed)."""
@@ -264,10 +270,11 @@ class Processor:
         return 0
 
     @torch.no_grad()
-    def extract(self, part, N, paths):
+    def extract(self, part, N, paths, view=0):
         """Frozen encoder over one feeder, one fixed view per sample -> cube (N, 256, 16, 25) fp16 written
-        straight to its place (GPU / RAM tensor, or a memory-mapped .npy for 'disk'), labels, second-person flag."""
-        ds = FixedView(self.Feeder(**self.feeder_args(part)), self.arg.seed)
+        straight to its place (GPU / RAM tensor, or a memory-mapped .npy for 'disk'), labels, second-person flag.
+        View k seeds sample i with seed + k * 1e8 + i."""
+        ds = FixedView(self.Feeder(**self.feeder_args(part)), self.arg.seed + view * 10 ** 8)
         assert len(ds) == N, (len(ds), N)
         loader = DataLoader(ds, batch_size=self.arg.extract_batch_size, shuffle=False,
                             num_workers=self.arg.num_worker, pin_memory=True)
@@ -281,7 +288,8 @@ class Processor:
                    person=torch.empty(N, dtype=torch.bool, device=small))
         enc = self.model.feature_extractor.eval()
         i = 0
-        for x, y, _ in tqdm(loader, ncols=60, desc=f'extract {part}', mininterval=30):
+        for x, y, _ in tqdm(loader, ncols=60, desc=f'extract {part}' + (f' view {view}' if view else ''),
+                            mininterval=30):
             x = x.float().to(self.dev, non_blocking=True)
             _, _, c = enc(x)
             n = len(x)
@@ -298,18 +306,19 @@ class Processor:
         del loader, ds
         return out
 
-    def build_cache(self, part, N):
-        a, paths, t0 = self.arg, self.cache_paths(part), time.time()
+    def build_cache(self, part, N, view=0):
+        a, paths, t0 = self.arg, self.cache_paths(part, view), time.time()
+        name = part if not view else f'{part} view {view}'
         small = 'cuda' if self.where == 'cuda' else 'cpu'
         if paths and all(os.path.exists(p) for p in paths.values()):
             out = dict(y=load_npy(paths['y'], small), person=load_npy(paths['person'], small))
             out['cube'] = np.load(paths['cube'], mmap_mode='r') if self.where == 'disk' \
                 else load_npy(paths['cube'], self.where)
             assert len(out['y']) == N
-            self.log(f'cache {part}: loaded {N} samples from {a.cache_dir} ({time.time() - t0:.0f}s)')
+            self.log(f'cache {name}: loaded {N} samples from {a.cache_dir} ({time.time() - t0:.0f}s)')
             return out
-        out = self.extract(part, N, paths)
-        msg = f'cache {part}: encoded {N} samples ({time.time() - t0:.0f}s)'
+        out = self.extract(part, N, paths, view)
+        msg = f'cache {name}: encoded {N} samples ({time.time() - t0:.0f}s)'
         if paths:
             os.makedirs(a.cache_dir, exist_ok=True)
             if self.where != 'disk':                   # disk: the cube file was written during extraction
@@ -331,7 +340,7 @@ class Processor:
                 x = x.float().to(self.dev, non_blocking=True)
                 yield x, y.long().to(self.dev, non_blocking=True), self.model.second_person(x), False
             return
-        D = self.cache[part]
+        D = self.cache[part][epoch % len(self.cache[part])] if part == 'train' else self.cache[part]
         N = len(D['y'])
         if shuffle:
             order = torch.randperm(N, generator=torch.Generator().manual_seed(self.arg.seed * 1000 + epoch))
@@ -378,11 +387,12 @@ class Processor:
     @torch.no_grad()
     def evaluate(self):
         self.model.eval()
-        keys = ('spa', 'tem', 's_neu', 's_sym', 'z', 'final')
+        keys = ('spa', 'tem', 's_neu', 'neu3', 's_sym', 'z', 'final')
         acc = {k: [] for k in keys}
         ys = []
         for inp, y, person, is_cube in self.batches('test', shuffle=False):
             out = self.forward(inp, is_cube, self.cls_all)
+            out['neu3'] = (sum(out['spa']) + sum(out['tem'])) / 6       # diagnostic: all 3 rounds of both branches
             out['spa'], out['tem'] = out['spa'][2], out['tem'][2]           # fine-grained round, as Neuron
             out['final'] = self.model.final_scores(out, person, self.cls_all)
             for k in keys:
@@ -400,7 +410,7 @@ class Processor:
             g, s, u, h = best_gamma(S[k], y, self.cls_all, self.cls_seen, span=float(S[ref].max() - S[ref].min()))
             m.update({f'gzsl_{k}_S': s, f'gzsl_{k}_U': u, f'gzsl_{k}_H': h, f'gzsl_{k}_gamma': g})
         m.update(beta=float(self.model.beta), tau_neu=float(self.model.log_tau_neu.exp()),
-                 lam_seq=float(self.model.reason.lam_seq))
+                 lam_seq=float(self.model.reason.lam_seq), neuron_scale=float(self.model.log_neuron_scale.exp()))
         return m
 
     # ------------------------------------------------------------------ checkpoints
@@ -479,6 +489,8 @@ def get_parser():
                    help='disk: memory-mapped .npy in cache_dir (low RAM / VRAM, e.g. T4)')
     p.add_argument('--gpu-cache-gb', type=float, default=14.0, help='auto: cubes go to the GPU below this size')
     p.add_argument('--extract-batch-size', type=int, default=256)
+    p.add_argument('--cache-views', type=int, default=1,
+                   help='fixed augmented views per training sample; epoch e trains on view e %% K')
     # model
     p.add_argument('--model', default='model.nesy.NeuronNeSy')
     p.add_argument('--model-args', action=DictAction, default=dict())

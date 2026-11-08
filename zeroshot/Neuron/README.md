@@ -6,6 +6,7 @@ New files:
 - `model/nesy.py`: `NeuronNeSy` = Neuron head (unchanged) + primitive grounding (71 named primitives from `../primitive.json`, joint-masked attention, left/right variants) + rule reasoning (`../kg_rules.json`: require / forbid / sequence, DNF over sides) + fusion and person-count mask.
 - `kg.py`: KG loading and CLIP text of the primitives.
 - `main_nesy.py`, `config/nesy/*.yaml`: training / evaluation (single prediction per sample; Neuron's OR accuracy is logged as `neuron_or` only). Default `feature_mode: cache`: the frozen encoder runs once, each training sample gets one fixed augmentation (seeded per sample), test uses the centre crop. Checkpoints: `last.pt` every epoch (auto-resume), `best.pt` at max `best_metric`. `cache_device: auto` puts the cubes on GPU, RAM or a memory-mapped file on disk depending on free memory. Colab notebook: `../neuron_nesy.ipynb`.
+- Config options: rule dropout `p_drop` (0.2), person-count mask off (`mask_penalty: 0`), `best.pt` on `zsl_z`; to try: `cache_views: 2` (two fixed augmented views per training sample, alternating by epoch) and `neuron_scale_learn: True` (learned temperature in Neuron's own loss instead of the fixed 0.1).
 - `feeders/feeder_ntu_mmap.py`: `Feeder_Mmap`, memory-mapped `.npy` version of `Feeder_Shiftgcn_Match` (same samples and augmentation, RAM ~1-2 GB instead of ~14 GB for NTU60), so it also runs on a T4.
 
 Changes to upstream files (no change in computation):
