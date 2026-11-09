@@ -169,3 +169,13 @@ Giả định: encoder/Neuron chạy bình thường, chưa truy nguyên khoản
 - Phát hiện: `topk(10)` trên 10 mô tả của Neuron chính là trung bình đơn giản (`agg=mean`).
 - Ablation (RECIPES trong notebook): base → scale → xnce | cal_graph | cal_random | tri_graph → lse → adapter → prop. So cal_graph với cal_random để biết negative từ đồ thị có ích không.
 - Việc tiếp theo: #4 (pooling theo bộ phận × pha), #5 (Skeleton-Cache), #6 (cổng GZSL trung thực), rồi mới tới phần symbolic nhỏ.
+
+## Head mới thay Neuron: PartAttn (2026-11-09)
+
+- Lý do: run `base` 48/12 cho thấy ZSL unseen đỉnh ở epoch 2-3 rồi giảm (s_neu 51 -> 45); số paper 62.7 khớp `neuron_or` (hai dự đoán) ở epoch 3.
+- Giữ: encoder Shift-GCN đóng băng + cube cache, đặc trưng CLIP của mô tả LLM (3 mức spatial + 3 mức temporal), các loss của Neuron++ (ce, xnce, cal, tri).
+- Thay: head Neuron (prototype memory + cổng recall / remember) bằng `model/part_attn.py`. 16 token thị giác (5 bộ phận x 3 pha + global), text là query attend lên token, điểm = tổng có trọng số attention của cosine từng token với embedding mô tả, rồi pool qua 10 mô tả.
+- Config `config/part/*.yaml` (AdamW 5e-4, wd 0.01, ce_scale học được từ 10, xnce 1, step [10, 20]); recipe notebook: `part`, `part_lse`, `part_ce_only`, `part_cal_graph`.
+- `main_plus.py`: SGD của head Neuron thành tuỳ chọn (không có tham số thì bỏ).
+- CHƯA chạy lần nào (máy local không có torch). Lần chạy đầu cần xem: shape lỗi, L_ce có giảm khỏi ln C không, s_neu theo epoch có còn đỉnh sớm rồi giảm không.
+- Không có propagation / adapter trong head này; cột `zsl_prop_*` tắt (`eval_prop_modes: []`).

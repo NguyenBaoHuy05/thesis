@@ -177,7 +177,7 @@ class Processor:
         n_new = sum(p.numel() for p in self.model.plus_parameters())
         self.log(f'trainable params: Neuron head {n_neu:,} | new {n_new:,}')
         self.opt_neu = torch.optim.SGD(self.model.neuron_parameters(), lr=arg.base_lr, momentum=0.9,
-                                       nesterov=arg.nesterov, weight_decay=arg.weight_decay)
+                                       nesterov=arg.nesterov, weight_decay=arg.weight_decay) if n_neu else None
         self.opt_new = torch.optim.AdamW(self.model.plus_parameters(), lr=arg.new_lr, weight_decay=arg.new_wd) \
             if n_new else None
         self.log('losses: ' + ' '.join(f'{k} {getattr(arg, "lambda_" + k)}' for k in ('ce', 'xnce', 'cal', 'tri'))
@@ -228,8 +228,9 @@ class Processor:
 
     def adjust_lr(self, epoch):
         f = self.arg.lr_decay_rate ** np.sum(epoch >= np.array(self.arg.step))
-        for g in self.opt_neu.param_groups:
-            g['lr'] = self.arg.base_lr * f
+        if self.opt_neu is not None:
+            for g in self.opt_neu.param_groups:
+                g['lr'] = self.arg.base_lr * f
         if self.opt_new is not None:
             for g in self.opt_new.param_groups:
                 g['lr'] = self.arg.new_lr * f
@@ -379,11 +380,13 @@ class Processor:
         for inp, y, is_cube in self.batches('train', shuffle=True, epoch=epoch):
             out = self.forward(inp, is_cube, self.cls_seen)
             L = self.model.losses(out, self.remap[y], **lw)
-            self.opt_neu.zero_grad(set_to_none=True)
+            if self.opt_neu is not None:
+                self.opt_neu.zero_grad(set_to_none=True)
             if self.opt_new is not None:
                 self.opt_new.zero_grad(set_to_none=True)
             sum(L.values()).backward()
-            self.opt_neu.step()
+            if self.opt_neu is not None:
+                self.opt_neu.step()
             if self.opt_new is not None:
                 self.opt_new.step()
             for k, v in L.items():
@@ -428,7 +431,8 @@ class Processor:
 
     # ------------------------------------------------------------------ checkpoints
     def save_last(self, epoch, rows, best):
-        torch.save(dict(model=self.model.state_dict(), opt_neu=self.opt_neu.state_dict(),
+        torch.save(dict(model=self.model.state_dict(),
+                        opt_neu=self.opt_neu.state_dict() if self.opt_neu is not None else None,
                         opt_new=self.opt_new.state_dict() if self.opt_new is not None else None,
                         epoch=epoch, rows=rows, best=best), f'{self.arg.work_dir}/last.pt.tmp')
         os.replace(f'{self.arg.work_dir}/last.pt.tmp', f'{self.arg.work_dir}/last.pt')   # no half-written file
@@ -439,7 +443,8 @@ class Processor:
             return 0, [], dict(value=-1.0, epoch=0)
         ck = torch.load(path, map_location=self.dev, weights_only=False)
         self.model.load_state_dict(ck['model'])
-        self.opt_neu.load_state_dict(ck['opt_neu'])
+        if self.opt_neu is not None:
+            self.opt_neu.load_state_dict(ck['opt_neu'])
         if self.opt_new is not None and ck.get('opt_new') is not None:
             self.opt_new.load_state_dict(ck['opt_new'])
         self.log(f'resumed from {path}: {ck["epoch"]} epochs done, best {self.arg.best_metric} '

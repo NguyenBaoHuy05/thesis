@@ -1,0 +1,85 @@
+# PartAttn (text-queried part/phase attention head), ntu120 ntu120_seen110_unseen10. Run from zeroshot/Neuron:
+#   python main_plus.py --config config/part/ntu120_xsub_110_10.yaml
+# New head instead of Neuron's (model/part_attn.py); encoder, descriptions and losses are Neuron++'s.
+split: ntu120_seen110_unseen10
+work_dir: /content/drive/MyDrive/BaoHuy/zeroshot/part_attn/base/ntu120_seen110_unseen10
+semantic_dir: ./semantics/ntu
+seed: 1
+
+# data: the notebook extracts the Drive npz into /content/data/<name>/*.npy first (Feeder_Mmap memory-maps them).
+feeder: feeders.feeder_ntu_mmap.Feeder_Mmap
+num_worker: 2
+# cache: the frozen encoder runs once; each training sample gets ONE fixed augmentation, test uses the centre crop.
+# Same cache file names as main_nesy.py, so cubes already in cache_dir are reused.
+feature_mode: cache
+cache_dir: /content/cube_cache
+cache_device: auto     # auto: GPU if the cubes fit, else RAM, else disk (memmap in cache_dir, e.g. on T4)
+gpu_cache_gb: 14
+extract_batch_size: 256
+cache_views: 1
+train_feeder_args:
+  data_path: /content/data/NTU120_CSub
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen110_unseen10
+  zero_setting: ZSL
+  split: train
+  window_size: 64
+  p_interval: [0.5, 1]
+  random_rot: True
+test_feeder_args:
+  data_path: /content/data/NTU120_CSub
+  ntu_task: ntu120_xsub
+  zero_spilt_setting: ntu120_seen110_unseen10
+  zero_setting: GZSL
+  split: test
+  window_size: 64
+  p_interval: [0.95]
+  random_rot: False
+
+# model
+model: model.part_attn.PartAttn
+weights: /content/drive/MyDrive/BaoHuy/zeroshot/shiftgcn_weights/**/ntu120_ShiftGCN_joint_xsub_seen110_unseen10-*.pt
+model_args:
+  num_point: 25
+  num_person: 2
+  graph: graph.ntu_rgb_d.Graph
+  graph_args:
+    labeling_mode: spatial
+  freeze_bn: True
+  d_att: 256
+  hidden: 512
+  drop: 0.1
+  agg: mean              # mean | lse
+  ce_scale: 10.0         # CLIP-style scale, learned
+  ce_scale_learn: True
+  graph_k: 5
+  graph_temp: 0.1
+  neg_mode: graph        # negatives of cal / tri: graph | random | all
+  cal_tau: 0.1
+  tri_margin: 0.2
+
+# optim: every head parameter is new -> AdamW only (base_lr / SGD is unused)
+base_lr: 0.1
+nesterov: True
+weight_decay: 0.0005
+new_lr: 0.0005
+new_wd: 0.01
+step: [10, 20]
+lr_decay_rate: 0.1
+batch_size: 64
+test_batch_size: 64
+num_epoch: 30
+
+# losses (see model/neuron_plus.py)
+lambda_ce: 1.0
+lambda_xnce: 1.0
+lambda_cal: 0.0
+lambda_tri: 0.0
+
+# no propagation in this head
+eval_alphas: []
+eval_prop_modes: []
+
+# checkpoints in work_dir: last.pt every epoch (resume=True continues from it), best.pt at max best_metric
+best_metric: zsl_s_neu
+resume: True
