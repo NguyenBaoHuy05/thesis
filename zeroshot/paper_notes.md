@@ -179,3 +179,11 @@ Giả định: encoder/Neuron chạy bình thường, chưa truy nguyên khoản
 - `main_plus.py`: SGD của head Neuron thành tuỳ chọn (không có tham số thì bỏ).
 - CHƯA chạy lần nào (máy local không có torch). Lần chạy đầu cần xem: shape lỗi, L_ce có giảm khỏi ln C không, s_neu theo epoch có còn đỉnh sớm rồi giảm không.
 - Không có propagation / adapter trong head này; cột `zsl_prop_*` tắt (`eval_prop_modes: []`).
+
+## Chuyển sang TTA Skeleton-Cache trên head Neuron (2026-11-09)
+
+- PartAttn 48/12 (3 epoch đầu rồi tụt): s_neu đỉnh 45.1% (ep 2) < base 51.35%; L_ce về 0.002 và scale học lên 26 sau 18 epoch: head thuộc seen quá nhanh, H cao hơn nhưng ZSL thấp hơn. Bỏ hướng thay head; PartAttn giữ trong repo làm kết quả âm.
+- Hướng mới: hướng 1 ở trên. `Neuron/tta_cache.py` + cell notebook. Không train lại, chạy trên cube test đã cache và checkpoint base.
+- Theo paper (đã đọc bản PDF): key 8 descriptor (global, 4 vùng, 3 pha), K=8/class, entropy thay mẫu, a = exp(-beta(1-cos)), beta=3, lam_s=5, logit = z + lam s.
+- Khác paper: trọng số descriptor đều (không dùng prior GPT-4o); nhóm joint đặt lại theo chỉ số 0-based vì danh sách trong paper trộn hệ chỉ số; z là cosine nên nhân `scale` (mặc định 50) trước softmax / cộng. Hai thứ tự: `paper` (mẫu vào cache rồi mới truy hồi, nên tự khớp chính nó) và `no_self`.
+- Kết quả phải báo riêng là transductive. Chưa chạy lần nào (máy local không có torch).
