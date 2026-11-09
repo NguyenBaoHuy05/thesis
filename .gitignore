@@ -7,6 +7,7 @@
 *.txt
 *.doc
 *.docx
+*.pdf
 __pycache__/
 *.py[cod]
 *$py.class
