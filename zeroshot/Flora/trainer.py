@@ -61,6 +61,15 @@ class Trainer:
         # load seen & unseen semantics similarity
         semantic_embeddings_mean = semantic_embeddings.mean(1)  # (60, 768*2)
         self.text_similarity = F.cosine_similarity(semantic_embeddings_mean.unsqueeze(1), semantic_embeddings_mean.unsqueeze(0), dim=-1)  # (60, 60)
+        kg = None
+        if self.args.kg_mode != 'none':
+            from kg_semantics import PrimitiveKG
+            kg = PrimitiveKG(self.args.kg_prims, self.args.kg_rules, semantic_embeddings.shape[0], self.args.kg_forbid_weight)
+            if self.args.kg_mode in ('neighbors', 'both'):
+                kg_sim = torch.from_numpy(kg.similarity()).to(self.text_similarity.device, self.text_similarity.dtype)
+                a = self.args.kg_alpha
+                self.text_similarity = (1 - a) * self.text_similarity + a * kg_sim  # self-similarity stays 1
+                self.logger.info(f'KG neighbors on (alpha={a}).')
         self.topk_similarity_indices = torch.topk(self.text_similarity, k=self.args.topk+1, dim=-1).indices[:, 1:]  # (60, topk) except itself
         self.topk_similarity_values = torch.topk(self.text_similarity, k=self.args.topk+1, dim=-1).values[:, 1:]  # (60, topk)  except itself
         # computing neighbor semantics
@@ -71,6 +80,15 @@ class Trainer:
                 topi_semantics[i] = (self.topk_similarity_values[i, k] * semantic_embeddings[self.topk_similarity_indices[i, k], :, :]).unsqueeze(0)
             self.attuned_semantics += self.args.mixed_weights / self.args.topk * topi_semantics  # seen+unseen token 768*2
         self.attuned_semantics += semantic_embeddings # seen+unseen token 768*2
+        if kg is not None and self.args.kg_mode in ('compose', 'both'):
+            import os
+            from kg_semantics import embed_texts, compose_semantics
+            m = self.mapping_model
+            cache = os.path.join(os.path.dirname(os.path.abspath(self.args.kg_prims)), f'prim_clip_L{self.args.max_length}.pt')
+            prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', cache).to(semantic_embeddings.device)
+            kg_sem = compose_semantics(kg, prim_emb, semantic_embeddings.shape[-1]).to(self.attuned_semantics.dtype)
+            self.attuned_semantics += self.args.kg_beta * kg_sem
+            self.logger.info(f'KG compose on (beta={self.args.kg_beta}).')
         self.logger.info(f'Attuned Semantics Successfully.')
     
     def train_learning_phase(self):

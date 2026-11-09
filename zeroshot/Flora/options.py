@@ -73,6 +73,14 @@ def get_args_parser():
     parser.add_argument('--mixed-weights',type=float, default=[0.1, 0.1],nargs='+',help='weights for mixed semantics (ZSL & GZSL)')
 
 
+    # primitive KG semantics (kg_semantics.py): none | neighbors | compose | both
+    parser.add_argument('--kg-mode', type=str, default='none', choices=['none', 'neighbors', 'compose', 'both'])
+    parser.add_argument('--kg-alpha', type=float, default=0.5, help='neighbors: sim = (1-alpha)*text_sim + alpha*kg_sim')
+    parser.add_argument('--kg-beta', type=float, default=0.3, help='compose: attuned += beta * primitive-composed semantics')
+    parser.add_argument('--kg-forbid-weight', type=float, default=0.5, help='negative weight of a forbidden primitive in KG similarity')
+    parser.add_argument('--kg-prims', type=str, default='kg/primitive_v2.json')
+    parser.add_argument('--kg-rules', type=str, default='kg/kg_rules_v2.json')
+
     # GZSL
     parser.add_argument('--calibration-factor', type=float, default=0.025, help='calibration factor for GZSL')
 
