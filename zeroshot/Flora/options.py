@@ -77,6 +77,13 @@ def get_args_parser():
     parser.add_argument('--kg-mode', type=str, default='none', choices=['none', 'neighbors', 'compose', 'both'])
     parser.add_argument('--kg-alpha', type=float, default=0.5, help='neighbors: sim = (1-alpha)*text_sim + alpha*kg_sim')
     parser.add_argument('--kg-beta', type=float, default=0.3, help='compose: attuned += beta * primitive-composed semantics')
+    parser.add_argument('--kg-compose-src', type=str, default='avg', choices=['avg', 'text'],
+                        help='compose: avg = weighted mean of per-primitive CLIP embeddings; '
+                             'text = one CLIP pass over the class\'s required primitive descriptions joined into a sentence')
+    parser.add_argument('--kg-compose-at', type=str, default='post', choices=['post', 'pre'],
+                        help='compose: post = add after neighbour mixing; pre = add to each class before mixing, so neighbours carry it too')
+    parser.add_argument('--kg-compose-half', type=str, default='both', choices=['both', 'csv', 'llm'],
+                        help='compose: which half of the 1536-d class embedding receives the composed semantics')
     parser.add_argument('--kg-forbid-weight', type=float, default=0.5, help='negative weight of a forbidden primitive in KG similarity')
     parser.add_argument('--kg-prims', type=str, default='kg/primitive_v2.json')
     parser.add_argument('--kg-rules', type=str, default='kg/kg_rules_v2.json')

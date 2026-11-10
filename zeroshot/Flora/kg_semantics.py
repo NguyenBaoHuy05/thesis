@@ -82,6 +82,40 @@ def compose_semantics(kg, prim_emb, text_dim_total):
     return torch.cat([comp] * reps, dim=-1)
 
 
+def class_primitive_texts(kg):
+    """One sentence per class: its required primitive descriptions joined in KG order."""
+    texts = []
+    for c in range(kg.W.shape[0]):
+        parts = [kg.prim_text[p] for p in np.nonzero(kg.W[c] > 0)[0]]
+        texts.append(' '.join(parts) if parts else 'A person moves.')
+    return texts
+
+
+def compose_text_semantics(kg, tokenizer, text_encoder, max_length, text_dim_total, device, cache_path=None):
+    """(n, token, text_dim_total): CLIP embedding of each class's primitive sentence, repeated to fill
+    the width. Unlike compose_semantics the tokens come from one coherent sequence, so token
+    positions line up the same way as in Flora's own class texts."""
+    import torch
+    emb = embed_texts(tokenizer, text_encoder, class_primitive_texts(kg), max_length, device, cache_path)
+    reps = text_dim_total // emb.shape[-1]
+    return torch.cat([emb] * reps, dim=-1)
+
+
+def mask_half(sem, half):
+    """Zero one half of a [csv ; llm] class embedding. half: both | csv | llm (the half that is kept)."""
+    if half == 'both':
+        return sem
+    sem = sem.clone()
+    d = sem.shape[-1] // 2
+    if half == 'csv':
+        sem[..., d:] = 0
+    elif half == 'llm':
+        sem[..., :d] = 0
+    else:
+        raise ValueError(half)
+    return sem
+
+
 if __name__ == '__main__':
     # Offline sanity check (no torch / CLIP needed): python kg_semantics.py [n_classes]
     import sys

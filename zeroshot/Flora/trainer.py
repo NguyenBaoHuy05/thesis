@@ -72,23 +72,40 @@ class Trainer:
                 self.logger.info(f'KG neighbors on (alpha={a}).')
         self.topk_similarity_indices = torch.topk(self.text_similarity, k=self.args.topk+1, dim=-1).indices[:, 1:]  # (60, topk) except itself
         self.topk_similarity_values = torch.topk(self.text_similarity, k=self.args.topk+1, dim=-1).values[:, 1:]  # (60, topk)  except itself
+        # KG compose: primitive-composed class semantics (neighbour selection above is unaffected)
+        kg_sem = None
+        if kg is not None and self.args.kg_mode in ('compose', 'both'):
+            import os
+            from kg_semantics import embed_texts, compose_semantics, compose_text_semantics, mask_half
+            m = self.mapping_model
+            kg_dir = os.path.dirname(os.path.abspath(self.args.kg_prims))
+            p_stem = os.path.splitext(os.path.basename(self.args.kg_prims))[0]
+            r_stem = os.path.splitext(os.path.basename(self.args.kg_rules))[0]
+            width = semantic_embeddings.shape[-1]
+            if self.args.kg_compose_src == 'avg':
+                cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
+                prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', cache).to(semantic_embeddings.device)
+                kg_sem = compose_semantics(kg, prim_emb, width)
+            else:
+                cache = os.path.join(kg_dir, f'{r_stem}_classtext_n{semantic_embeddings.shape[0]}_L{self.args.max_length}.pt')
+                kg_sem = compose_text_semantics(kg, m.tokenizer, m.text_encoder, self.args.max_length, width, 'cuda', cache)
+            kg_sem = mask_half(kg_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
+            self.logger.info(f'KG compose on (beta={self.args.kg_beta}, src={self.args.kg_compose_src}, '
+                             f'at={self.args.kg_compose_at}, half={self.args.kg_compose_half}).')
+        # 'pre': every class carries its composed semantics into the neighbour mixing
+        base = semantic_embeddings
+        if kg_sem is not None and self.args.kg_compose_at == 'pre':
+            base = semantic_embeddings + self.args.kg_beta * kg_sem
         # computing neighbor semantics
         self.attuned_semantics = torch.zeros(semantic_embeddings.size(), device=semantic_embeddings.device)  # seen+unseen token 768*2
         for k in range(self.args.topk):
             topi_semantics = torch.zeros(self.attuned_semantics.size(),device=semantic_embeddings.device)  # seen+unseen token 768*2
             for i in range(self.attuned_semantics.shape[0]):
-                topi_semantics[i] = (self.topk_similarity_values[i, k] * semantic_embeddings[self.topk_similarity_indices[i, k], :, :]).unsqueeze(0)
+                topi_semantics[i] = (self.topk_similarity_values[i, k] * base[self.topk_similarity_indices[i, k], :, :]).unsqueeze(0)
             self.attuned_semantics += self.args.mixed_weights / self.args.topk * topi_semantics  # seen+unseen token 768*2
-        self.attuned_semantics += semantic_embeddings # seen+unseen token 768*2
-        if kg is not None and self.args.kg_mode in ('compose', 'both'):
-            import os
-            from kg_semantics import embed_texts, compose_semantics
-            m = self.mapping_model
-            cache = os.path.join(os.path.dirname(os.path.abspath(self.args.kg_prims)), f'prim_clip_L{self.args.max_length}.pt')
-            prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', cache).to(semantic_embeddings.device)
-            kg_sem = compose_semantics(kg, prim_emb, semantic_embeddings.shape[-1]).to(self.attuned_semantics.dtype)
+        self.attuned_semantics += base # seen+unseen token 768*2
+        if kg_sem is not None and self.args.kg_compose_at == 'post':
             self.attuned_semantics += self.args.kg_beta * kg_sem
-            self.logger.info(f'KG compose on (beta={self.args.kg_beta}).')
         self.logger.info(f'Attuned Semantics Successfully.')
     
     def train_learning_phase(self):
