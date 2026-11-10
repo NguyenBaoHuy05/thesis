@@ -1,83 +1,105 @@
-# Ghi chú 2026-11-10: chuyển NeSy sang baseline Flora
+# Ghi chú 2026-11-10: kết quả NeSy-KG trên Flora và bốn hướng cải tiến
 
-Phiên làm việc bắt đầu tối 2026-11-09 và kết thúc 2026-11-10. Commit: `886cacb` (đã push lên `origin/main`).
+Tiếp theo [2026-11-9_flora_nesy_notes.md](2026-11-9_flora_nesy_notes.md). Commit trong ngày: `0a742d1` (sửa import Shift), `16c47f2` (bốn hướng `nesy*.py`). **Chưa commit**: `--feat synse` trong `nesy_common.py` và bản notebook rút gọn.
 
-## 1. Quyết định
+Mọi run chạy trên Colab **L4**, feature **STAR** (1s-Shift-GCN), ZSL, trừ khi ghi khác. `best` = max qua 20 lần đánh giá trên unseen test (cách Flora báo), `last10` = trung bình 10 lần đánh giá cuối.
 
-- **Đóng góp của luận văn là NeSy, không phải TTA.** (Ghi chú cũ trong `paper_notes.md` nghiêng về Skeleton-Cache TTA, nay không phải hướng chính.)
-- **Baseline đổi sang Flora** (CVPR 2026 Findings, `zeroshot/Flora/`), không dùng Neuron nữa cho phần NeSy. Lý do của bạn: ground primitive trên cube của Neuron không ổn định.
-- **"Symbolic" không bắt buộc là luật.** Dùng từ vựng primitive và cấu trúc KG theo kiểu mềm, không khớp luật `require`/`forbid` cứng.
-- Hướng chọn: **kiểu 1 (compose)** và **kiểu 2 (neighbors)**, cả hai chỉ đụng phía ngữ nghĩa của Flora.
+## 1. Sửa lỗi
 
-## 2. Vì sao Flora, và giới hạn của nó
+- `ModuleNotFoundError: No module named 'cuda.shift'`: `shiftgcn.py` dùng `sys.path` + `from cuda.shift import Shift`, đụng gói `cuda` của `cuda-python` trên Colab. Sửa: nạp `Shift` theo đường dẫn file bằng `importlib`; `shift.py` chịu được việc thiếu op `shift_cuda` (không dùng khi `use_features=True`).
+- Cache embedding primitive trong `trainer.load_prototypes` trước chỉ đặt tên theo `max_length`, sẽ nạp nhầm khi đổi KG. Nay tên gồm tên file KG.
 
-ZSL (%) theo bài báo (nguồn: bảng trong `paper_notes.md`, Flora lấy từ `flora_repro.ipynb`):
+## 2. Đối chiếu với bài báo Flora (arXiv 2511.09388)
 
-| | NTU60 55/5 | 48/12 | NTU120 110/10 | 96/24 |
+- Siêu tham số chung khớp phụ lục C: AdamW lr 1e-4 wd 0.01, batch 64, 1000 + 200 iteration, λ = 0.1, DiT 1 lớp, CLIP ViT-L/14@336, γ = 0.75.
+- Bài báo **không ghi** `topk`, `mixed_weights`, `max_length` theo split. Repo chỉ có config STAR cho 55/5; với 48/12, 110/10, 96/24 notebook dùng config SynSE trên feature STAR. Ở 55/5 config STAR và SynSE giống hệt, nên nhiều khả năng tác giả dùng chung theo split (suy luận, không kiểm chứng được).
+- Seed: mọi config trong repo `seed: 1`; bài báo không ghi seed, nhiều khả năng mỗi số là một run, lấy `best`.
+- Bảng 1 có hai dòng Flora: STAR **85.8 / 61.5 / 80.7 / 64.1**, SynSE (†) **86.3 / 65.3 / 79.6 / 66.4**. Ablation của Flora dùng SynSE.
+- Hai điểm lạ ở bảng 1: (a) dòng không có † không bao giờ được tô màu, kể cả khi cao nhất (80.7 ở 110/10), tức tác giả chỉ xếp hạng trong nhóm SynSE mà chú thích không nói; (b) 110/10 là split duy nhất STAR > SynSE.
+- Tính tất định: cùng seed, cùng GPU cho ra đúng cùng số (`[lam0]` của nesy1 trùng `compose` seed 1 đến 0.01). `cudnn.benchmark=True`, `deterministic=False`, nên đổi GPU (L4/T4/4090) có thể lệch. **Baseline và phương pháp phải chạy trên cùng loại GPU.**
+
+## 3. Ablation `neighbors` / `compose` (STAR)
+
+48/12, 3 seed (mean ± std):
+
+| kg | best | last |
+|---|---|---|
+| none | 60.87 ± 1.37 | 58.39 ± 1.20 |
+| neighbors | 57.96 ± 0.97 | 54.67 ± 2.07 |
+| compose | **61.68 ± 1.49** | **59.40 ± 1.28** |
+| both | 56.98 ± 0.88 | 55.28 ± 0.91 |
+
+- `compose` tăng ở cả 3 seed (Δ best +0.76, +1.06, +0.61), nhưng nhỏ so với dao động giữa seed.
+- `neighbors` hại, kéo `both` xuống: 4 cặp mặc/cởi có hàng KG giống hệt nên thành láng giềng mạnh. **Bỏ `neighbors`.**
+
+55/5, 3 seed: none best 85.14 / last 83.87; compose 85.28 / 83.50. Gần trần, không khác biệt.
+
+110/10: none best 77.64 / 77.85 / 79.76 (seed 1-3, mean 78.42, thấp hơn bài báo 2.3); compose 79.17 / 79.92 (seed 1-2, Δ +1.53 / +2.07). `last` của none dao động mạnh (70.5–77.6).
+
+96/24, seed 1: none best 67.07 (iter 1200: 54.75), compose 68.50 (58.71). Chênh 12 điểm giữa `best` và lần cuối trong một run: `best` một seed ở split này gần như vô nghĩa, phải xem `last10` và nhiều seed. Việc none (67.07) cao hơn bài báo (64.1) là do nhiễu, không phải lỗi.
+
+## 4. Bốn hướng cải tiến (`zeroshot/Flora/nesy*.py`)
+
+Mỗi hướng một file, dùng chung `nesy_common.py` (sinh config theo Flora, mỗi run một subprocess, bỏ qua run đã xong, tự chạy baseline thiếu, in và lưu `summary.csv`). Notebook chỉ cần `!python {FLORA}/nesyX.py`. Log: `OUT_DIR/<nhãn>/<task>_ZSL_seed<k>/run.log`.
+
+| File | Hướng |
+|---|---|
+| `nesy1_logic.py` | MLP dự đoán 82 primitive từ feature 256-d (nhãn từ KG trên lớp seen), điểm logic mềm `mean log p(require) + w·mean log(1−p(forbid))`, quyết định `z(−MSE) + λ·z(logic)` |
+| `nesy2_hardneg.py` | Phase 2: thay một phần negative ngẫu nhiên bằng lớp seen gần theo KG (softmax sim_KG / τ) |
+| `nesy3_primtok.py` | Mỗi primitive `require` là một token (CLIP pooled) nối vào cuối chuỗi ngữ nghĩa của lớp; DiT không có positional embedding nên không sửa kiến trúc |
+| `nesy4_seqkg.py` | KG v2seq dựng từ trường `sequence` có sẵn của v2: 29 primitive thứ tự `seq.a>b`, thứ tự ngược vào `forbid`. Số cặp lớp trùng luật 7 → 0 |
+
+Kết quả seed 1, `best` (baseline seed 1: none 62.11 / 77.64, compose 62.87 / 79.17):
+
+| Cấu hình | 48/12 | Δ compose | 110/10 | Δ compose |
 |---|---|---|---|---|
-| Neuron | 86.9 | 62.7 | 71.5 | 57.1 |
-| Flora | 85.8 | 61.5 | 80.7 | 64.1 |
+| 1 logic (λ = 0.5, nền compose) | 54.54 | −8.33 | 75.08 | −4.09 |
+| 2 hardneg (nền compose) | 63.20 | +0.33 | 79.03 | −0.14 |
+| 3 primtok (nền none) | 64.81 | +1.94 | 78.54 | −0.63 |
+| 3 primtok + KG v2seq (nền none) | 64.87 | +2.00 | 78.51 | −0.66 |
+| 4 seqkg (compose với KG v2seq) | 62.75 | −0.12 | 78.98 | −0.19 |
+| **3 primtok + compose** | 63.51 | **+0.64** | **79.81** | **+0.64** |
 
-- Flora hơn rõ ở NTU120, kém Neuron nhẹ ở NTU60. Repo Flora phủ nhiều benchmark: SynSE, STAR, SA-DAVE (3 split ngẫu nhiên), STAR-SMIE, PURLS (40/20, 30/30, 80/40, 60/60), PKU-51, low-shot.
-- Repo trên máy **không có file trọng số**. "Nhiều file có sẵn" nằm trên Google Drive theo link README: (a) trọng số Shift-GCN tiền huấn luyện, (b) feature `.npz` trích sẵn cho nhiều benchmark. Không có checkpoint của đầu Flora, nên đầu Flora vẫn phải train (nhẹ vì feature có sẵn).
-- Cách Flora quyết định ([models/fm.py:290-317](Flora/models/fm.py#L290-L317)): với mỗi lớp, tính MSE giữa vận tốc dự đoán và vận tốc đích của flow, rồi `argmin`.
-- **Flora gộp encoder thành một vector 256 chiều**, không có trục thời gian, khớp, hay người thứ hai. Vì vậy không ground primitive (kiểu `hands.near`, `inter.mutual_reach`) được trên feature của Flora. Đây là lý do NeSy trên Flora đặt ở phía ngữ nghĩa.
+- **Hướng 1 thất bại, có lý do rõ.** Độ chính xác dự đoán primitive 93–95% trên lớp seen nhưng 67% trên lớp unseen (recall `require` 55% / 39%), BCE về 0.0001: đầu primitive học thuộc ánh xạ lớp seen → primitive, vì feature 256-d mã hoá danh tính lớp. `[logic-only]` 30.7% / 46.5%. Khớp với nhận định cũ là không ground được primitive trên feature đã gộp của Flora. Ghi vào luận văn như kết quả âm.
+- Hướng 2 và 4 ngang `compose`. Hướng 4 chỉ đụng 1 lớp unseen ở 48/12 và 2 ở 110/10.
+- **Chọn primtok + compose làm cấu hình chính (tạm, xem đánh giá lại bên dưới)**: duy nhất cao hơn cả none và compose ở cả 48/12 và 110/10; `last10` cao nhất (62.05 / 76.48); ở 48/12 khoảng cách best − last10 chỉ 1.5 (primtok trên none: 2.9).
+- primtok + compose trên 55/5 seed 1: 84.94 (none 85.45, compose 85.38); trên 96/24 seed 1: best 68.05, last10 61.14 (none 67.07, compose 68.50).
+- **Đánh giá lại sau đủ 4 split (seed 1, `best`):**
 
-## 3. Thiết kế NeSy-KG trên Flora
+  | | 55/5 | 48/12 | 110/10 | 96/24 | trung bình |
+  |---|---|---|---|---|---|
+  | primtok + compose − none | −0.51 | +1.40 | +2.17 | +0.98 | +1.01 |
+  | primtok + compose − compose | −0.44 | +0.64 | +0.64 | −0.45 | +0.10 |
 
-File: [Flora/kg_semantics.py](Flora/kg_semantics.py). Sửa trong `trainer.load_prototypes` và `options.py`.
+  Phần tăng so với Flora chủ yếu đến từ `compose`; primtok cộng thêm trên compose gần như bằng 0 (hai split dương, hai split âm, cỡ 0.5). Chưa loại được vì mới 1 seed, nhưng chưa thể gọi là cải tiến.
 
-- Lớp i của Flora (0-based) ứng với luật id `i+1` (A-number) trong `kg_rules_v2.json`.
-- Ma trận lớp × primitive `W`: +1 nếu `require`, −0.5 nếu `forbid` (`--kg-forbid-weight`), 0 nếu không nhắc.
-- **`neighbors`**: độ giống chọn láng giềng = `(1-α)·CLIP + α·KG`. KG = cosine giữa hai hàng của `W`. Mặc định α = 0.5.
-- **`compose`**: embedding lớp = tổng có trọng số của CLIP embedding các mô tả primitive. Chỉ dùng primitive `require` (mô tả điều bị cấm không mô tả hành động), chuẩn hoá tổng = 1. Cộng `β · sem_primitive` vào `attuned_semantics`, mặc định β = 0.3. Embedding được lặp lại để đủ 1536 chiều (Flora ghép hai loại text, primitive chỉ có một).
-- **`both`**: dùng cả hai. **`none`**: Flora gốc, giữ nguyên hành vi upstream.
-- Cờ: `--kg-mode none|neighbors|compose|both`, `--kg-alpha`, `--kg-beta`, `--kg-forbid-weight`, `--kg-prims`, `--kg-rules`.
-- Ghép hai chuỗi token CLIP khác nhau theo vị trí là xấp xỉ thô, nhưng cùng kiểu với cách Flora trộn láng giềng ([trainer.py:60-73](Flora/trainer.py#L60-L73)).
-- KG chỉ được viết từ tên lớp và từ vựng primitive, không dùng dữ liệu skeleton, nên dùng cho lớp unseen cùng loại tri thức với văn bản tên lớp mà Flora đã dùng.
+## 5. Quyết định về cách báo cáo
 
-### Kiểm tra offline trên NTU60 (`python kg_semantics.py 60`)
+- Báo `best` (như bài báo), kèm `last10`; `last10` bắt buộc cho 96/24.
+- Hai bảng: (1) so SOTA: chép số đã công bố của mọi phương pháp kể cả Flora, dòng của mình là trung bình N seed, ghi chú rõ; (2) so sánh có kiểm soát: Flora tự chạy lại, + compose, + primtok + compose, cùng seed, cùng GPU, mean ± std và Δ cặp theo seed. Không chỉ so trung bình của mình với số Flora trong bài báo (bài báo một seed `best`; độ lệch tái lập −2.3 ở 110/10 và +3 ở 96/24 sẽ tạo ảo giác thua/thắng).
+- Tối thiểu 3 seed, 5 seed cho 96/24.
 
-- 82 primitive, trung bình 2.9 primitive `require` và 2.7 `forbid` mỗi lớp. KG khá thưa.
-- Độ giống KG ngoài đường chéo: mean 0.07, p90 0.33.
-- Một số láng giềng hợp lý: punching, pushing và point finger gần nhau; drink water gần eat meal.
-- **4 cặp lớp KG không phân biệt được** (hàng giống hệt, độ giống = 1): wear/take off jacket, shoe, glasses, hat. Ở chế độ `neighbors` chúng thành láng giềng mạnh của nhau và có thể làm nhoè hai lớp. Cần theo dõi khi ablate; cách sửa là thêm primitive chiều (mặc lên, cởi ra).
+## 6. Đánh giá tính mới
 
-## 4. Việc đã làm trong repo (commit `886cacb`)
+- Đủ cho khoá luận: tái lập Flora, thiết kế KG, bốn hướng (hai hướng âm có phân tích), một cấu hình tốt nhất nhiều seed.
+- Chưa đủ cho hội nghị top hay Q1: làm giàu ngữ nghĩa bằng mô tả chuyển động đã phổ biến (PURLS, STAR, SA-DVAE, InfoCPL, DVTA); mức tăng nhỏ; phần symbolic (logic) thất bại; KG viết tay chỉ cho NTU. Hợp lý: hội nghị khu vực/trong nước hoặc workshop; muốn lên tầm trung cần thêm SynSE, GZSL, phân tích theo lớp, so với mô tả LLM không có KG.
+- Việc nâng vị thế đáng làm nhất: chạy trên feature **SynSE** để so với Flora† (65.3 ở 48/12, 79.6 ở 110/10).
 
-- Thêm `Flora/kg_semantics.py`, `Flora/kg/` (khôi phục từ lịch sử git commit `51002aa`), sửa `trainer.py` và `options.py`.
-- Thêm `Flora/semantics/ntu60_llm.txt` và `ntu120_llm.txt`: **upstream Flora thiếu hai file này**, nhưng `MappingNet.extract_text_embeddings` đọc chúng ([fm.py:164](Flora/models/fm.py#L164)). Bạn tải về (60 và 120 dòng, khớp số dòng csv). `.gitignore` gốc có `*.txt` nên phải `git add -f`.
-- Thêm notebook [flora_nesy.ipynb](flora_nesy.ipynb) (xem mục 5).
-- Xoá `neuron_extract.ipynb`, `neuron_plus.ipynb`, và gitlink mồ côi `skeletoncontext` (bạn xác nhận chủ ý xoá). Lưu ý: `neuron_plus.ipynb` lúc đầu có sửa chưa commit, phần đó coi như mất.
-- Nhánh KG/NeSy của Neuron (`main_nesy.py`, `primitive_labels.py`, `kg_tools/`, các file `primitive*.json`, `kg_rules*.json`) đã bị gỡ khỏi working tree ở commit `e825143` nhưng còn trong lịch sử (ví dụ `51002aa`).
+## 7. Notebook `flora_nesy.ipynb` hiện tại
 
-## 5. Cách chạy: `flora_nesy.ipynb`
+Đã xoá các cell Bước 1/2, cell sàng lọc biến thể `compose` (pre / text / llm / β; code vẫn còn trong `trainer.py`, `kg_semantics.py`, `options.py` nhưng **chưa chạy**), cell tổng hợp cũ, và bốn cell `nesy1..4`. Còn: clone, cài đặt, tải feature (nay symlink cả `star_features` và `synse_features`), kiểm tra KG, hai cell primtok (v2seq, compose), và cell SynSE:
 
-Notebook clone `NguyenBaoHuy05/thesis` (repo private thì lưu token vào Colab Secrets tên `GH_TOKEN`) và dùng thẳng `zeroshot/Flora`.
+```
+!python {FLORA}/nesy3_primtok.py --kg-mode compose --feat synse --tasks 48 110 --seeds 1
+```
 
-1. Mount Drive, clone hoặc pull, `assert` có đủ file KG và `*_llm.txt`, có `--kg-mode`.
-2. Tải và giải nén feature `star` (dùng chung file cache với `flora_repro.ipynb`).
-3. In thống kê KG offline.
-4. Chạy thử `both` một seed trên 48/12, `grep` log để xác nhận dòng "KG neighbors on" và "KG compose on".
-5. Bốn chế độ × 3 seed trên 48/12, feature `star`.
-6. Tổng hợp: `last`, `best`, trung bình ± độ lệch chuẩn qua seed, và `delta` so với `none` cùng seed.
+`--feat synse` (trong `nesy_common.py`, chưa commit) dùng `configs/synse/*` và file feature trong config, ghi run và baseline vào `OUT_DIR/synse/`, cột `paper` lấy số Flora†. Chưa kiểm tra archive có thật sự chứa `synse_features` không.
 
-Log: `Drive/.../flora_nesy/<kg>/<task>_ZSL_seed<k>/run.log`. Nếu `none` khớp bài báo (trong 1-2 điểm ở `best`) thì baseline sạch.
+Sau mỗi lần restart runtime phải chạy lại cell tải feature (symlink nằm trong `/content`). Mỗi run: 55/5 ≈ 5.3 phút, 48/12 ≈ 5.7, 110/10 ≈ 10, 96/24 ≈ 21.5 trên L4.
 
-## 6. Chưa làm và cần nhớ
+## 8. Việc tiếp theo
 
-- **Chưa có kết quả huấn luyện nào.** Máy này không có GPU, CLIP, hay feature; chỉ kiểm tra được cú pháp, đường dẫn config, và phần ma trận KG offline. Chưa biết NeSy-KG có cộng được điểm không.
-- **Số chính để so là `last`.** `best` chọn theo unseen test nên lạc quan, chỉ để đối chiếu bài báo.
-- **α và β để mặc định (0.5, 0.3).** Dò chúng trên unseen test là chọn trên test. Muốn chọn sạch thì phải tách validation từ seen (Flora không có sẵn).
-- GZSL chưa chạy (`--kg-mode` dùng được cho GZSL nhưng mỗi lần đánh giá tốn gấp 25-145 lần ZSL).
-- Kiểu 3 (vector primitive từ detector hình học làm đầu vào thêm) và kiểu 4 (ground primitive trên vector đã gộp) chưa làm, để sau nếu kiểu 1 và 2 chưa đủ.
-- **`paper_notes.md` dòng 4 đã cũ**: vẫn ghi "bỏ nhánh KG / NeSy". Cần sửa cho khớp hướng hiện tại. Đề cương docx cũng đã được reframe quanh Neuron và zero-shot (ghi chú trong bộ nhớ), có thể cần chỉnh theo baseline mới.
-- `zeroshot/Neuron/tsne_feats.py` vẫn chưa commit (có sẵn từ trước).
-- Notebook `flora_repro.ipynb` giữ nguyên là bản tái hiện Flora gốc.
-
-## 7. Bước tiếp theo gợi ý
-
-1. Chạy `flora_nesy.ipynb` ô thử, rồi ablate bốn chế độ trên 48/12.
-2. Nếu `neighbors` kém `none`: kiểm tra 4 cặp wear/take off, giảm α, hoặc thêm primitive chiều vào KG.
-3. Nếu có cải thiện: mở rộng sang 96/24 và các split NTU120, rồi 3 seed đủ để báo cáo ± độ lệch chuẩn.
-4. Cập nhật `paper_notes.md`, đề cương, và so sánh với Neuron đã có.
+1. Chạy `nesy3_primtok.py --kg-mode compose --tasks 48 55 110 96 --seeds 1` để `summary.csv` có đủ 4 split và cột `d_last10_vs_*` (mới thêm; chỉ tổng hợp, không train). Quyết định có giữ primtok hay chỉ giữ `compose` dựa trên `last10` và nhiều seed.
+2. Commit + push `nesy_common.py` và notebook, rồi chạy cell SynSE.
+3. Nếu primtok + compose giữ được chiều tăng: 3 seed trên 4 split (5 seed cho 96/24), toàn bộ trên L4. Còn thiếu baseline 96/24 seed 2-3 và có thể `compose` 110/10 seed 3.
+4. Cập nhật `paper_notes.md` (dòng 4 vẫn ghi bỏ nhánh KG / NeSy) và đề cương theo baseline Flora.

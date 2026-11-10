@@ -27,14 +27,41 @@ os.chdir(HERE)                      # Flora configs and data paths are relative 
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
 
-# short name -> (task, Flora config with the split's hyper-parameters, ZSL top-1 reported by Flora on STAR features)
-SPLITS = {
-    '55':  ('ntu60_xsub_seen55_unseen5',    'configs/star/ntu60_xsub_unseen5.yaml',    85.8),
-    '48':  ('ntu60_xsub_seen48_unseen12',   'configs/synse/ntu60_xsub_unseen12.yaml',  61.5),
-    '110': ('ntu120_xsub_seen110_unseen10', 'configs/synse/ntu120_xsub_unseen10.yaml', 80.7),
-    '96':  ('ntu120_xsub_seen96_unseen24',  'configs/synse/ntu120_xsub_unseen24.yaml', 64.1),
+# Two feature sets, as in Flora's Table 1:
+#   star  = STAR-based 1s-Shift-GCN features  (rows "Flora (Ours)")
+#   synse = SynSE-based 4s-Shift-GCN features (rows "Flora (Ours)†"; Flora's ablations also use these)
+# short name -> (task, Flora config with the split's hyper-parameters, ZSL top-1 Flora reports for that feature set)
+FEAT_SPLITS = {
+    'star': {
+        '55':  ('ntu60_xsub_seen55_unseen5',    'configs/star/ntu60_xsub_unseen5.yaml',    85.8),
+        '48':  ('ntu60_xsub_seen48_unseen12',   'configs/synse/ntu60_xsub_unseen12.yaml',  61.5),
+        '110': ('ntu120_xsub_seen110_unseen10', 'configs/synse/ntu120_xsub_unseen10.yaml', 80.7),
+        '96':  ('ntu120_xsub_seen96_unseen24',  'configs/synse/ntu120_xsub_unseen24.yaml', 64.1),
+    },
+    'synse': {
+        '55':  ('ntu60_xsub_seen55_unseen5',    'configs/synse/ntu60_xsub_unseen5.yaml',   86.3),
+        '48':  ('ntu60_xsub_seen48_unseen12',   'configs/synse/ntu60_xsub_unseen12.yaml',  65.3),
+        '110': ('ntu120_xsub_seen110_unseen10', 'configs/synse/ntu120_xsub_unseen10.yaml', 79.6),
+        '96':  ('ntu120_xsub_seen96_unseen24',  'configs/synse/ntu120_xsub_unseen24.yaml', 66.4),
+    },
 }
-FEAT = 'star'
+FEAT = 'star'                       # set by main() from --feat
+SPLITS = FEAT_SPLITS[FEAT]
+
+
+def set_feat(feat):
+    global FEAT, SPLITS
+    FEAT, SPLITS = feat, FEAT_SPLITS[feat]
+
+
+def data_path(task):
+    """Feature file of a task. STAR files are named by task; SynSE files keep the name in Flora's synse config."""
+    if FEAT == 'star':
+        return f'skeleton_features/star_features/{task}.npz'
+    import yaml
+    cfg_path = next(v[1] for v in SPLITS.values() if v[0] == task)
+    with open(cfg_path) as f:
+        return yaml.load(f, Loader=yaml.FullLoader)['data_path']
 DRIVE_OUT = '/content/drive/MyDrive/BaoHuy/zeroshot/flora_nesy'
 BASELINE_LABEL = {'none': 'none', 'compose': 'kg_compose_a0.5_b0.3'}   # names used by flora_nesy.ipynb
 
@@ -52,7 +79,7 @@ def build_args(task, seed, out_dir, flora_overrides=None, extra=None):
     cfg_path = next(v[1] for v in SPLITS.values() if v[0] == task)
     with open(cfg_path) as f:
         cfg = yaml.load(f, Loader=yaml.FullLoader)
-    cfg.update(task_name=task, data_path=f'skeleton_features/{FEAT}_features/{task}.npz', use_features=True,
+    cfg.update(task_name=task, data_path=data_path(task), use_features=True,
                shiftgcn_checkpoint_path=None, clip_checkpoint_path='openai/clip-vit-large-patch14-336',
                num_worker=2, setting='ZSL', seed=seed, out_dir=out_dir)
     cfg.update(flora_overrides or {})
@@ -130,6 +157,9 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     prepare(opts): optional, runs once in the parent before the grid (e.g. build a KG file).
     flora_from_method(opts) -> dict: extra Flora args derived from method options."""
     ap = argparse.ArgumentParser(description=f'{name} on Flora', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    ap.add_argument('--feat', default='star', choices=list(FEAT_SPLITS),
+                    help='skeleton features: star (1s-Shift-GCN) or synse (4s-Shift-GCN, Flora†); '
+                         'synse runs go to <out-root>/synse/')
     ap.add_argument('--tasks', nargs='+', default=['48', '110'], choices=list(SPLITS), help='splits to run')
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
     out_default = DRIVE_OUT if os.path.isdir(os.path.dirname(DRIVE_OUT)) else os.path.join(HERE, 'output', 'nesy')
@@ -149,6 +179,7 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     if defaults:
         ap.set_defaults(**defaults)
     opts = ap.parse_args()
+    set_feat(opts.feat)
     method_dests = [ap._option_string_actions[flag].dest for flag, _ in method_args]
     extra = {d: getattr(opts, d) for d in method_dests}
     flora = dict(kg_mode=opts.kg_mode, kg_beta=opts.kg_beta, kg_prims=opts.kg_prims, kg_rules=opts.kg_rules)
@@ -166,17 +197,23 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
         return
 
     # ---- parent: the grid
+    if opts.feat != 'star':
+        opts.out_root = os.path.join(opts.out_root, opts.feat)   # keep SynSE runs and baselines apart from STAR ones
+    feat_dir = os.path.dirname(data_path(SPLITS[opts.tasks[0]][0]))
+    if not os.path.isdir(feat_dir):
+        sys.exit(f'[nesy] không thấy {os.path.join(HERE, feat_dir)}: chưa chạy cell tải feature '
+                 f'(cell đó tạo symlink star_features và synse_features; sau mỗi lần restart runtime phải chạy lại).')
     if prepare:
         prepare(opts)
     kg_tag = '' if opts.kg_prims.endswith('primitive_v2.json') else '_' + os.path.splitext(os.path.basename(opts.kg_prims))[0]
     label = name + ''.join(f'_{short}{getattr(opts, d)}' for d, short in label_keys) + f'_on-{opts.kg_mode}' + \
         (f'{opts.kg_beta}' if opts.kg_mode == 'compose' else '') + kg_tag
-    print(f'[nesy] {label}  tasks={opts.tasks} seeds={opts.seeds}  out={opts.out_root}', flush=True)
+    print(f'[nesy] {label}  feat={opts.feat} tasks={opts.tasks} seeds={opts.seeds}  out={opts.out_root}', flush=True)
     passthrough = [a for a in sys.argv[1:]]
     for short in opts.tasks:
         task = SPLITS[short][0]
-        if not os.path.exists(f'skeleton_features/{FEAT}_features/{task}.npz'):
-            print(f'[thiếu feature] {task}: bỏ qua')
+        if not os.path.exists(data_path(task)):
+            print(f'[thiếu feature] {data_path(task)}: bỏ qua')
             continue
         for seed in opts.seeds:
             if not opts.no_baselines:
@@ -206,6 +243,7 @@ def summarize(opts, label):
             row = dict(split=short, seed=seed, paper=paper, best=s['best'], last10=s['last10'])
             for b in ('none', 'compose'):
                 row[f'd_best_vs_{b}'] = s['best'] - base[b]['best'] if base[b] else float('nan')
+                row[f'd_last10_vs_{b}'] = s['last10'] - base[b]['last10'] if base[b] else float('nan')
             for t, a in tags.items():
                 row[f'best[{t}]'] = max(a)
             rows.append(row)
