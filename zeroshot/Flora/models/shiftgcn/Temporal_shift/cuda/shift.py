@@ -4,7 +4,15 @@ import sys
 import torch
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import shift_cuda
+try:
+    import shift_cuda
+except ImportError:
+    # Compiled op not built. Fine when Shift-GCN is never run (use_features=True);
+    # calling Shift would fail with a clear error instead of breaking the import.
+    class _MissingShiftCuda:
+        def __getattr__(self, name):
+            raise ImportError("shift_cuda extension is not built (see Flora README to compile it)")
+    shift_cuda = _MissingShiftCuda()
 
 
 import numpy as np 

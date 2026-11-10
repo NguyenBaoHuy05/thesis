@@ -5,10 +5,16 @@ from torch.autograd import Variable
 import numpy as np
 import math
 
-import sys
-sys.path.append("./models/shiftgcn/Temporal_shift/")
+import os
+import importlib.util
 
-from cuda.shift import Shift
+# Load Shift by file path. `from cuda.shift import Shift` with a sys.path hack collides with
+# the `cuda-python` package (top-level `cuda`) that Colab ships, and also depended on the cwd.
+_shift_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Temporal_shift", "cuda", "shift.py")
+_spec = importlib.util.spec_from_file_location("flora_shift_op", _shift_path)
+_shift_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_shift_mod)
+Shift = _shift_mod.Shift
 import copy
 
 
