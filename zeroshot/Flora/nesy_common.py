@@ -171,6 +171,8 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
                     help='KG used by the method and by compose; nesy4_seqkg.py writes kg/primitive_v2seq.json')
     ap.add_argument('--kg-rules', default='kg/kg_rules_v2.json')
     ap.add_argument('--no-baselines', action='store_true', help='do not train missing none/compose baselines')
+    ap.add_argument('--baselines-only', action='store_true',
+                    help='only train none/compose (not the method) and print compose vs none per seed')
     ap.add_argument('--single', nargs=2, metavar=('TASK', 'SEED'), help=argparse.SUPPRESS)
     ap.add_argument('--baseline', choices=['none', 'compose'], help=argparse.SUPPRESS)
     ap.add_argument('--run-dir', help=argparse.SUPPRESS)
@@ -221,9 +223,48 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
                     d = f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_ZSL_seed{seed}'
                     spawn(passthrough + ['--single', task, str(seed), '--baseline', b, '--run-dir', d],
                           f'{b} {short} seed{seed}', d)
+            if opts.baselines_only:
+                continue
             d = f'{opts.out_root}/{label}/{task}_ZSL_seed{seed}'
             spawn(passthrough + ['--single', task, str(seed), '--run-dir', d], f'{label} {short} seed{seed}', d)
-    summarize(opts, label)
+    if opts.baselines_only:
+        summarize_baselines(opts)
+    else:
+        summarize(opts, label)
+
+
+def summarize_baselines(opts):
+    """compose vs none (Flora re-run), per split and seed, plus mean ± std over seeds."""
+    import pandas as pd
+    rows = []
+    for short in opts.tasks:
+        task, _, paper = SPLITS[short]
+        for seed in opts.seeds:
+            st = {}
+            for b in ('none', 'compose'):
+                acc, _ = read_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_ZSL_seed{seed}')
+                st[b] = stats(acc) if acc else None
+            if not (st['none'] and st['compose']):
+                continue
+            rows.append(dict(split=short, seed=seed, paper=paper,
+                             none_best=st['none']['best'], compose_best=st['compose']['best'],
+                             none_last10=st['none']['last10'], compose_last10=st['compose']['last10'],
+                             d_best=st['compose']['best'] - st['none']['best'],
+                             d_last10=st['compose']['last10'] - st['none']['last10']))
+    if not rows:
+        print('[nesy] chưa có cặp none/compose nào xong')
+        return
+    df = pd.DataFrame(rows).round(2)
+    out = f'{opts.out_root}/baselines_compose_vs_none.csv'
+    df.to_csv(out, index=False)
+    with pd.option_context('display.max_columns', 50, 'display.width', 250):
+        print(df.to_string(index=False))
+        g = df.drop(columns=['seed']).groupby('split', sort=False)
+        agg = g.mean(numeric_only=True).round(2).join(g.std(numeric_only=True).round(2), rsuffix='_std')
+        agg.insert(0, 'n_seeds', g.size())
+        print('\nmean (và _std) qua seed:\n' + agg[['n_seeds', 'paper', 'none_best', 'none_best_std', 'compose_best', 'compose_best_std',
+              'd_best', 'd_best_std', 'none_last10', 'compose_last10', 'd_last10', 'd_last10_std']].to_string())
+    print(f'[nesy] saved {out}')
 
 
 def summarize(opts, label):

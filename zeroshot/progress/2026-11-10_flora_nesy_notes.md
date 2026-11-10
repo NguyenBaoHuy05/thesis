@@ -62,7 +62,7 @@ Kết quả seed 1, `best` (baseline seed 1: none 62.11 / 77.64, compose 62.87 /
 
 - **Hướng 1 thất bại, có lý do rõ.** Độ chính xác dự đoán primitive 93–95% trên lớp seen nhưng 67% trên lớp unseen (recall `require` 55% / 39%), BCE về 0.0001: đầu primitive học thuộc ánh xạ lớp seen → primitive, vì feature 256-d mã hoá danh tính lớp. `[logic-only]` 30.7% / 46.5%. Khớp với nhận định cũ là không ground được primitive trên feature đã gộp của Flora. Ghi vào luận văn như kết quả âm.
 - Hướng 2 và 4 ngang `compose`. Hướng 4 chỉ đụng 1 lớp unseen ở 48/12 và 2 ở 110/10.
-- **Chọn primtok + compose làm cấu hình chính (tạm, xem đánh giá lại bên dưới)**: duy nhất cao hơn cả none và compose ở cả 48/12 và 110/10; `last10` cao nhất (62.05 / 76.48); ở 48/12 khoảng cách best − last10 chỉ 1.5 (primtok trên none: 2.9).
+- Ban đầu chọn primtok + compose (bị loại sau khi có đủ 4 split, xem bên dưới): duy nhất cao hơn cả none và compose ở cả 48/12 và 110/10; `last10` cao nhất (62.05 / 76.48); ở 48/12 khoảng cách best − last10 chỉ 1.5 (primtok trên none: 2.9).
 - primtok + compose trên 55/5 seed 1: 84.94 (none 85.45, compose 85.38); trên 96/24 seed 1: best 68.05, last10 61.14 (none 67.07, compose 68.50).
 - **Đánh giá lại sau đủ 4 split (seed 1, `best`):**
 
@@ -72,10 +72,20 @@ Kết quả seed 1, `best` (baseline seed 1: none 62.11 / 77.64, compose 62.87 /
   | primtok + compose − compose | −0.44 | +0.64 | +0.64 | −0.45 | +0.10 |
 
   Phần tăng so với Flora chủ yếu đến từ `compose`; primtok cộng thêm trên compose gần như bằng 0 (hai split dương, hai split âm, cỡ 0.5). Chưa loại được vì mới 1 seed, nhưng chưa thể gọi là cải tiến.
+- **Theo `last10` (seed 1), primtok bị loại:**
+
+  | Δ `last10` | 55/5 | 48/12 | 110/10 | 96/24 | trung bình |
+  |---|---|---|---|---|---|
+  | primtok + compose − compose | −0.68 | +1.02 | −0.21 | −3.07 | −0.74 |
+  | compose − none | +0.04 | +1.22 | +2.36 | +2.88 | +1.63 |
+
+  **Bạn chọn đo theo `best`** (như bài báo). Theo `best`, Δ so với none trung bình 4 split: compose +0.91, primtok + compose +1.01, tức primtok chỉ thêm ~0.1, chưa phân định được với 1 seed. Cần 3 seed cho cả hai (`--kg-mode compose --tasks 48 55 110 96 --seeds 1 2 3`).
+
+  Tạm thời: **cấu hình chính là `compose`** (đơn giản hơn, kết quả tương đương). compose − none theo `best` (seed 1): −0.07 / +0.76 / +1.53 / +1.43. Kết luận cho luận văn: KG đưa vào phía ngữ nghĩa (compose) giúp Flora ổn định; các cách dùng KG khác (láng giềng, logic ở bước quyết định, hard negative, token riêng, KG có thứ tự) không cộng thêm được.
 
 ## 5. Quyết định về cách báo cáo
 
-- Báo `best` (như bài báo), kèm `last10`; `last10` bắt buộc cho 96/24.
+- **Chỉ số chính là `best`** (quyết định của bạn, như bài báo). `last10` vẫn được in để tham khảo.
 - Hai bảng: (1) so SOTA: chép số đã công bố của mọi phương pháp kể cả Flora, dòng của mình là trung bình N seed, ghi chú rõ; (2) so sánh có kiểm soát: Flora tự chạy lại, + compose, + primtok + compose, cùng seed, cùng GPU, mean ± std và Δ cặp theo seed. Không chỉ so trung bình của mình với số Flora trong bài báo (bài báo một seed `best`; độ lệch tái lập −2.3 ở 110/10 và +3 ở 96/24 sẽ tạo ảo giác thua/thắng).
 - Tối thiểu 3 seed, 5 seed cho 96/24.
 
@@ -99,7 +109,9 @@ Sau mỗi lần restart runtime phải chạy lại cell tải feature (symlink 
 
 ## 8. Việc tiếp theo
 
-1. Chạy `nesy3_primtok.py --kg-mode compose --tasks 48 55 110 96 --seeds 1` để `summary.csv` có đủ 4 split và cột `d_last10_vs_*` (mới thêm; chỉ tổng hợp, không train). Quyết định có giữ primtok hay chỉ giữ `compose` dựa trên `last10` và nhiều seed.
-2. Commit + push `nesy_common.py` và notebook, rồi chạy cell SynSE.
-3. Nếu primtok + compose giữ được chiều tăng: 3 seed trên 4 split (5 seed cho 96/24), toàn bộ trên L4. Còn thiếu baseline 96/24 seed 2-3 và có thể `compose` 110/10 seed 3.
+1. Xác nhận `compose` so với `none` đủ 3 seed trên 4 split, không chạy phương pháp nào khác (cờ `--baselines-only` mới thêm trong `nesy_common.py`, in bảng compose − none theo seed, mean ± std, lưu `OUT_DIR/baselines_compose_vs_none.csv`):
+   `!python {FLORA}/nesy3_primtok.py --baselines-only --tasks 48 55 110 96 --seeds 1 2 3`
+   Còn thiếu: 110/10 compose seed 3 (có thể đã có), 96/24 none + compose seed 2-3 (≈ 4 × 21 phút). Cân nhắc seed 4-5 cho 96/24.
+2. Commit + push `nesy_common.py` (cột `d_last10_vs_*`, `--feat synse`, `--baselines-only`) và notebook.
+3. SynSE: `--feat synse --baselines-only` để xem compose có giúp Flora† không (so với 65.3 / 79.6).
 4. Cập nhật `paper_notes.md` (dòng 4 vẫn ghi bỏ nhánh KG / NeSy) và đề cương theo baseline Flora.
