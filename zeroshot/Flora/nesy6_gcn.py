@@ -12,18 +12,26 @@ Mạng (mọi trọng số khởi tạo bằng 0, nên LÚC ĐẦU ĐÚNG BẰNG
   đọc ra lớp:  h_c = A_req h + W_req (A_req h) + W_forb (A_forb h)               A: trung bình theo hàng
 Mỗi W là Linear 768 -> 768 không bias, dùng chung cho mọi token CLIP, nên đầu ra vẫn là (n, token, 768)
 và được lặp ×2 lên 1536 như compose. Nút lớp không dùng embedding tên lớp (chỉ từ primitive của nó), để
-khó học thuộc danh tính lớp seen;.
+khó học thuộc danh tính lớp seen.
 
 Gắn vào Flora: semantics = attuned (Flora thuần, không KG) + kg_beta * GCN(KG). Giống kg_gate của Flora:
 GCN chỉ được huấn luyện ở phase 1, sang phase 2 đóng băng và dùng đầu ra cố định.
-Chống học thuộc: dropout cạnh lớp-primitive, weight decay, lr riêng nhỏ, và phạt độ lệch tương đối so
-với compose (--gcn-reg).
+
+Hàm mục tiêu chỉ dựa vào KG (--gcn-sim): loss Flora không có lý do để tách hai lớp đảo chiều (lần chạy đầu:
+cosine cặp đảo chiều 0.9980 -> 0.9978, GCN lệch compose 3.5%). Vì vậy phase 1 có thêm
+    L = L_Flora + gcn_sim * L_sim,   L_sim = mean_{c != c'} ( cos(z_c, z_c') - s_kg(c, c') )^2
+  z_c   = token pooled của h_c, TRỪ trung bình theo lớp rồi chuẩn hoá (CLIP rất đẳng hướng: cosine thô
+          giữa hai lớp bất kỳ đã ~0.9, không so được với s_kg)
+  s_kg  = cosine giữa hai hàng luật của KG (require +1, forbid -0.5, gồm primitive thứ tự) = kg.similarity()
+Chỉ dùng luật KG, không dùng skeleton hay nhãn; tính trên mọi lớp (cả unseen), như compose đã dùng luật của lớp unseen.
+Phạt lệch so với compose (--gcn-reg) mặc định tắt vì nó giữ embedding ở chỗ cosine = 0.998.
 
 Chạy: python nesy6_gcn.py --feat synse --tasks 96 --seeds 1        (none/compose baseline tự chạy nếu chưa có)
       python nesy6_gcn.py --feat synse --tasks 55 48 110 96 --seeds 1 2 3
+      python nesy6_gcn.py --gcn-sim 0                                 (bản trước: chỉ loss Flora; thêm --gcn-reg 1 --gcn-lr 1e-5)
       python nesy6_gcn.py --gcn-layers 0                              (chỉ đọc ra, không làm mịn primitive)
-      python nesy6_gcn.py --gcn-reg 0 --gcn-lr 1e-4                   (thả lỏng, dễ học thuộc hơn)
 Trong notebook: !python nesy6_gcn.py --feat synse --tasks 96 --seeds 1
+Log có dòng `[nesy6] GCN frozen ...`: độ lệch so với compose, cosine cặp đảo chiều (thô và đã trừ trung bình), L_sim.
 """
 import json
 import os
@@ -114,6 +122,8 @@ class GCNTrainer(Trainer):
         self.optimizer_mapping.add_param_group(dict(params=list(self.gcn.parameters()), lr=a.gcn_lr, weight_decay=a.gcn_wd))
         self.gcn_cache = None
         self.gcn_pen = None
+        self.gcn_sim_loss = None
+        self.gcn_skg = torch.from_numpy(kg.similarity()).to(dev, dt)          # (n, n) KG similarity of the classes
         # pairs of classes that differ only by their order primitives (what SeqKG was built to separate)
         strip = lambda ids: tuple(sorted(i for i in ids if not i.startswith('seq.')))
         rules = {r['id'] - 1: r for r in json.load(open(a.gcn_rules, encoding='utf-8'))['rules']}
@@ -128,12 +138,26 @@ class GCNTrainer(Trainer):
             out = orig(*args, **kw)
             if self.gcn_pen is not None and a.gcn_reg > 0:
                 out['loss'] = out['loss'] + a.gcn_reg * self.gcn_pen
+            if self.gcn_sim_loss is not None and a.gcn_sim > 0:
+                out['loss'] = out['loss'] + a.gcn_sim * self.gcn_sim_loss
             return out
         m.forward_phase1 = forward_phase1
         n_par = sum(p.numel() for p in self.gcn.parameters())
         self.logger.info(f'[nesy6] SeqKG GCN: {len(kg.prim_ids)} primitives, relations {self.gcn.rel_names}, '
                          f'{a.gcn_layers} refine layer(s), {n_par / 1e6:.2f}M params, lr {a.gcn_lr}, reg {a.gcn_reg}, '
-                         f'edge_drop {a.gcn_edge_drop}, {len(self.gcn_pairs)} order-only class pairs')
+                         f'sim {a.gcn_sim}, edge_drop {a.gcn_edge_drop}, {len(self.gcn_pairs)} order-only class pairs')
+
+    def centered_cos(self, x):
+        """x: (n, T, D) class tokens -> (n, n) cosine of the pooled tokens after removing the mean over classes."""
+        z = x[:, -1, :]
+        z = F.normalize(z - z.mean(0, keepdim=True), dim=-1)
+        return z @ z.t()
+
+    def sim_loss(self, x):
+        """Mean squared gap between embedding cosine and KG similarity over all pairs of different classes."""
+        gap = (self.centered_cos(x) - self.gcn_skg) ** 2
+        off = ~torch.eye(gap.shape[0], dtype=torch.bool, device=gap.device)
+        return gap[off].mean()
 
     def _to_width(self, x):
         reps = self.attuned_semantics.shape[-1] // x.shape[-1]
@@ -144,6 +168,7 @@ class GCNTrainer(Trainer):
             return self.gcn_cache
         out, base = self.gcn(self.kg_prim_emb)
         self.gcn_pen = ((out - base) ** 2).mean() / (base ** 2).mean().clamp_min(1e-8)
+        self.gcn_sim_loss = self.sim_loss(out)
         return self._to_width(out)
 
     def current_attuned_semantics(self, return_gate=False):
@@ -159,11 +184,15 @@ class GCNTrainer(Trainer):
             self.gcn_cache = self._to_width(out)
             rel = ((out - base) ** 2).mean().sqrt() / (base ** 2).mean().sqrt().clamp_min(1e-8)
             msg = f'[nesy6] GCN frozen. relative change vs compose = {rel.item():.4f}'
+            msg += f'; L_sim {self.sim_loss(base).item():.4f} (compose) -> {self.sim_loss(out).item():.4f} (GCN)'
             if self.gcn_pairs:
-                cos = lambda x, i, j: F.cosine_similarity(x[i, -1], x[j, -1], dim=-1).item()
-                before = np.mean([cos(base, i, j) for i, j in self.gcn_pairs])
-                after = np.mean([cos(out, i, j) for i, j in self.gcn_pairs])
-                msg += f'; cosine of order-only class pairs {before:.4f} (compose) -> {after:.4f} (GCN)'
+                raw = lambda x, i, j: F.cosine_similarity(x[i, -1], x[j, -1], dim=-1).item()
+                cen_b, cen_o = self.centered_cos(base), self.centered_cos(out)
+                m = lambda f: np.mean([f(i, j) for i, j in self.gcn_pairs])
+                msg += (f'; cosine of order-only class pairs: raw {m(lambda i, j: raw(base, i, j)):.4f} (compose) -> '
+                        f'{m(lambda i, j: raw(out, i, j)):.4f} (GCN), centered {m(lambda i, j: cen_b[i, j].item()):.4f} -> '
+                        f'{m(lambda i, j: cen_o[i, j].item()):.4f}, KG similarity of these pairs '
+                        f'{m(lambda i, j: self.gcn_skg[i, j].item()):.4f}')
         for p in self.gcn.parameters():
             p.requires_grad_(False)
         self.logger.info(msg)
@@ -183,8 +212,9 @@ if __name__ == '__main__':
                ('--gcn-layers', dict(type=int, default=1, help='primitive refinement layers before the class read-out (0 = read-out only)')),
                ('--gcn-order', dict(type=int, default=1, choices=[0, 1], help='1 = add first/second edges from seq.a>b to a and b')),
                ('--gcn-edge-drop', dict(type=float, default=0.1, help='dropout of class-primitive edges while training')),
-               ('--gcn-lr', dict(type=float, default=1e-5, help='learning rate of the GCN (Flora uses 1e-4)')),
+               ('--gcn-lr', dict(type=float, default=5e-5, help='learning rate of the GCN (Flora uses 1e-4)')),
                ('--gcn-wd', dict(type=float, default=0.01, help='weight decay of the GCN, pulls the weights back to compose')),
-               ('--gcn-reg', dict(type=float, default=1.0, help='weight of the relative deviation from compose added to the phase 1 loss')),
+               ('--gcn-reg', dict(type=float, default=0.0, help='weight of the relative deviation from compose added to the phase 1 loss')),
+               ('--gcn-sim', dict(type=float, default=1.0, help='weight of L_sim, the KG-only loss matching embedding cosines to KG similarity')),
            ],
-           label_keys=[('gcn_layers', 'L'), ('gcn_lr', 'lr'), ('gcn_reg', 'reg')])
+           label_keys=[('gcn_layers', 'L'), ('gcn_lr', 'lr'), ('gcn_reg', 'reg'), ('gcn_sim', 'sim')])
