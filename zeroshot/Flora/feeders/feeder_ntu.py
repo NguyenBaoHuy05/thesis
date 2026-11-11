@@ -16,6 +16,11 @@ class Feeder(Dataset):
             self.load_data()
         if self.split_type == 'train' and self.low_shot == True:
             self.sample_data()
+        # Sampling a contrastive item used to build a Python list over the
+        # whole training set for every __getitem__ call.  That made the
+        # DataLoader CPU-bound and left the GPU idle.  Rejection sampling is
+        # uniform over samples with a different label and is O(1) on average.
+        self._has_different_label = len(np.unique(self.label)) > 1
 
     def load_data(self):
         # data: N C V T M
@@ -102,16 +107,18 @@ class Feeder(Dataset):
         data_numpy = self.data[index]
         label = self.label[index]
         data_numpy = np.array(data_numpy)
-        # for contrastive samples
-        different_label_indices = [i for i in range(len(self.label)) if self.label[i] != label]
-        if not different_label_indices:
-            same_label_indices = [i for i in range(len(self.label)) if i != index and self.label[i] == label]
-            if not same_label_indices:  
-                contrast_index = index
-            else:
-                contrast_index = np.random.choice(same_label_indices)
+        # Uniformly sample a contrastive item without scanning every sample.
+        if self._has_different_label:
+            contrast_index = np.random.randint(len(self.label))
+            while self.label[contrast_index] == label:
+                contrast_index = np.random.randint(len(self.label))
+        elif len(self.label) > 1:
+            # Degenerate one-class split: retain the old same-class fallback.
+            contrast_index = np.random.randint(len(self.label) - 1)
+            if contrast_index >= index:
+                contrast_index += 1
         else:
-            contrast_index = np.random.choice(different_label_indices)
+            contrast_index = index
         contrast_data_numpy = self.data[contrast_index]
         contrast_label = self.label[contrast_index]
         contrast_data_numpy = np.array(contrast_data_numpy)

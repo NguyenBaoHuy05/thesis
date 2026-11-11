@@ -66,6 +66,7 @@ DRIVE_OUT = '/content/drive/MyDrive/BaoHuy/zeroshot/flora_nesy'
 BASELINE_LABEL = {'none': 'none', 'compose': 'kg_compose_a0.5_b0.3'}   # names used by flora_nesy.ipynb
 
 ZSL_RE = re.compile(r'Iter (\d+): ZSL Accuracy: ([\d.]+)%')
+GZSL_RE = re.compile(r'Iter (\d+): Seen Accuracy: ([\d.]+)%\s+Unseen Accuracy: ([\d.]+)%\s+Harmonic Mean: ([\d.]+)%')
 TAG_RE = re.compile(r'Iter (\d+): \[([^\]]+)\] ZSL Accuracy: ([\d.]+)%')   # extra accuracies a method logs
 
 
@@ -96,9 +97,13 @@ def build_args(task, seed, out_dir, flora_overrides=None, extra=None):
 
 # ---------------------------------------------------------------- logs
 
-def run_done(run_dir):
+def run_done(run_dir, setting='ZSL'):
     log = os.path.join(run_dir, 'run.log')
-    return os.path.exists(log) and 'Best ZSL' in open(log).read()
+    if not os.path.exists(log):
+        return False
+    text = open(log).read()
+    expected = 'Best GZSL' if setting == 'GZSL' else 'Best ZSL'
+    return expected in text
 
 
 def read_log(run_dir):
@@ -108,10 +113,33 @@ def read_log(run_dir):
         return None, {}
     text = open(log).read()
     main_acc = [float(m.group(2)) for m in ZSL_RE.finditer(text)]
+    if not main_acc:
+        # For GZSL, summary.csv's best/last10 columns refer to harmonic mean.
+        main_acc = [float(m.group(4)) for m in GZSL_RE.finditer(text)]
     tags = {}
     for m in TAG_RE.finditer(text):
         tags.setdefault(m.group(2), []).append(float(m.group(3)))
     return (main_acc or None), tags
+
+
+def read_gzsl_log(run_dir):
+    """Return (iteration, seen, unseen, H) rows from a completed GZSL run."""
+    log = os.path.join(run_dir, 'run.log')
+    if not os.path.exists(log):
+        return None
+    rows = [(int(m.group(1)), float(m.group(2)), float(m.group(3)), float(m.group(4)))
+            for m in GZSL_RE.finditer(open(log).read())]
+    return rows or None
+
+
+def gzsl_stats(rows):
+    """Metrics at the highest-H checkpoint plus the final-ten evaluation mean."""
+    _, seen, unseen, h = max(rows, key=lambda row: row[3])
+    tail = rows[-10:]
+    return dict(best_seen=seen, best_unseen=unseen, best_H=h,
+                last10_seen=sum(row[1] for row in tail) / len(tail),
+                last10_unseen=sum(row[2] for row in tail) / len(tail),
+                last10_H=sum(row[3] for row in tail) / len(tail))
 
 
 def stats(acc):
@@ -129,8 +157,11 @@ def run_single(trainer_cls, task, seed, run_dir, flora_overrides, extra):
     trainer.train()
 
 
-def spawn(argv, label, run_dir):
-    if run_done(run_dir):
+def spawn(argv, label, run_dir, setting='ZSL', force=False):
+    if not force and run_done(run_dir, setting):
+        print(f'[skip] {label}: completed')
+        return
+    if run_done(run_dir, setting):
         print(f'[skip] {label}: đã xong')
         return
     shutil.rmtree(run_dir, ignore_errors=True)   # Flora's logger appends; never mix two runs in one log
@@ -164,13 +195,39 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
     out_default = DRIVE_OUT if os.path.isdir(os.path.dirname(DRIVE_OUT)) else os.path.join(HERE, 'output', 'nesy')
     ap.add_argument('--out-root', default=out_default)
+    ap.add_argument('--setting', default='ZSL', choices=['ZSL', 'GZSL'],
+                    help='Flora evaluation protocol; GZSL summaries use harmonic mean')
     ap.add_argument('--kg-mode', default=default_kg_mode, choices=['none', 'compose'],
                     help='semantic side under the method: Flora alone, or with compose')
     ap.add_argument('--kg-beta', type=float, default=0.3)
+    ap.add_argument('--kg-compose-src', choices=['avg', 'text'],
+                    help='KG compose source; text encodes the class primitive sentence coherently')
+    ap.add_argument('--kg-compose-at', choices=['post'],
+                    help='where to add compose semantics (learned gate currently supports post only)')
+    ap.add_argument('--kg-compose-half', choices=['both', 'csv', 'llm'],
+                    help='half of Flora semantic embedding that receives KG composition')
+    ap.add_argument('--kg-compose-idf', action='store_true',
+                    help='use inverse KG rule frequency when averaging primitive embeddings')
+    ap.add_argument('--kg-learned-gate', action='store_true',
+                    help='learn a per-class text-compose vs IDF-compose gate on seen classes')
+    ap.add_argument('--kg-gate-hidden', type=int,
+                    help='hidden width of the learned text/IDF compose gate')
     ap.add_argument('--kg-prims', default='kg/primitive_v2.json',
                     help='KG used by the method and by compose; nesy4_seqkg.py writes kg/primitive_v2seq.json')
     ap.add_argument('--kg-rules', default='kg/kg_rules_v2.json')
+    ap.add_argument('--test-batch-size', type=int, help='override Flora evaluation batch size')
+    ap.add_argument('--num-worker', type=int, help='override Flora DataLoader worker count')
+    ap.add_argument('--eval-class-chunk', type=int,
+                    help='classes evaluated together; 0 means all classes in one GPU batch')
+    ap.add_argument('--train-batch-size', type=int, help='override Flora training batch size')
+    ap.add_argument('--total-iter', type=int, help='override Flora total iterations')
+    ap.add_argument('--align-iter', type=int, help='override Flora phase-1 iterations')
+    ap.add_argument('--eval-iter', type=int, help='override Flora evaluation interval')
     ap.add_argument('--no-baselines', action='store_true', help='do not train missing none/compose baselines')
+    ap.add_argument('--baselines', nargs='+', choices=['none', 'compose'], default=['none', 'compose'],
+                    help='reference runs to train/reuse before the method; use --baselines compose for SeqKG Compose only')
+    ap.add_argument('--rerun-baselines', action='store_true',
+                    help='replace completed none/compose baseline runs, but keep the method run')
     ap.add_argument('--baselines-only', action='store_true',
                     help='only train none/compose (not the method) and print compose vs none per seed')
     ap.add_argument('--single', nargs=2, metavar=('TASK', 'SEED'), help=argparse.SUPPRESS)
@@ -184,7 +241,20 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     set_feat(opts.feat)
     method_dests = [ap._option_string_actions[flag].dest for flag, _ in method_args]
     extra = {d: getattr(opts, d) for d in method_dests}
-    flora = dict(kg_mode=opts.kg_mode, kg_beta=opts.kg_beta, kg_prims=opts.kg_prims, kg_rules=opts.kg_rules)
+    flora = dict(kg_mode=opts.kg_mode, kg_beta=opts.kg_beta, kg_prims=opts.kg_prims,
+                 kg_rules=opts.kg_rules, setting=opts.setting)
+    for key in ('kg_compose_src', 'kg_compose_at', 'kg_compose_half', 'kg_gate_hidden'):
+        value = getattr(opts, key)
+        if value is not None:
+            flora[key] = value
+    if opts.kg_compose_idf:
+        flora['kg_compose_idf'] = True
+    if opts.kg_learned_gate:
+        flora['kg_learned_gate'] = True
+    for key in ('train_batch_size', 'test_batch_size', 'num_worker', 'eval_class_chunk', 'total_iter', 'align_iter', 'eval_iter'):
+        value = getattr(opts, key)
+        if value is not None:
+            flora[key] = value
     if flora_from_method:
         flora.update(flora_from_method(opts))
 
@@ -193,7 +263,15 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
         task, seed = opts.single[0], int(opts.single[1])
         if opts.baseline:
             from trainer import Trainer
-            run_single(Trainer, task, seed, opts.run_dir, dict(kg_mode=opts.baseline), {})
+            baseline_flora = dict(flora)
+            # Baselines must remain the original Flora variants.  Do not let
+            # an experimental compose option (text/IDF/gate) leak into the
+            # `compose` reference run.
+            baseline_flora.update(kg_mode=opts.baseline,
+                                  kg_compose_src='avg',
+                                  kg_compose_idf=False,
+                                  kg_learned_gate=False)
+            run_single(Trainer, task, seed, opts.run_dir, baseline_flora, {})
         else:
             run_single(trainer_cls, task, seed, opts.run_dir, flora, extra)
         return
@@ -208,8 +286,15 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     if prepare:
         prepare(opts)
     kg_tag = '' if opts.kg_prims.endswith('primitive_v2.json') else '_' + os.path.splitext(os.path.basename(opts.kg_prims))[0]
+    compose_tag = ''
+    if opts.kg_compose_src:
+        compose_tag += f'_{opts.kg_compose_src}'
+    if opts.kg_compose_idf:
+        compose_tag += '_idf'
+    if opts.kg_learned_gate:
+        compose_tag += '_gate'
     label = name + ''.join(f'_{short}{getattr(opts, d)}' for d, short in label_keys) + f'_on-{opts.kg_mode}' + \
-        (f'{opts.kg_beta}' if opts.kg_mode == 'compose' else '') + kg_tag
+        (f'{opts.kg_beta}' if opts.kg_mode == 'compose' else '') + compose_tag + kg_tag
     print(f'[nesy] {label}  feat={opts.feat} tasks={opts.tasks} seeds={opts.seeds}  out={opts.out_root}', flush=True)
     passthrough = [a for a in sys.argv[1:]]
     for short in opts.tasks:
@@ -219,14 +304,14 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
             continue
         for seed in opts.seeds:
             if not opts.no_baselines:
-                for b in ('none', 'compose'):
-                    d = f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_ZSL_seed{seed}'
+                for b in opts.baselines:
+                    d = f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_{opts.setting}_seed{seed}'
                     spawn(passthrough + ['--single', task, str(seed), '--baseline', b, '--run-dir', d],
-                          f'{b} {short} seed{seed}', d)
+                          f'{b} {short} seed{seed}', d, opts.setting, force=opts.rerun_baselines)
             if opts.baselines_only:
                 continue
-            d = f'{opts.out_root}/{label}/{task}_ZSL_seed{seed}'
-            spawn(passthrough + ['--single', task, str(seed), '--run-dir', d], f'{label} {short} seed{seed}', d)
+            d = f'{opts.out_root}/{label}/{task}_{opts.setting}_seed{seed}'
+            spawn(passthrough + ['--single', task, str(seed), '--run-dir', d], f'{label} {short} seed{seed}', d, opts.setting)
     if opts.baselines_only:
         summarize_baselines(opts)
     else:
@@ -235,18 +320,20 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
 
 def summarize_baselines(opts):
     """compose vs none (Flora re-run), per split and seed, plus mean ± std over seeds."""
+    if opts.setting == 'GZSL':
+        return summarize_gzsl_baselines(opts)
     import pandas as pd
     rows = []
     for short in opts.tasks:
         task, _, paper = SPLITS[short]
         for seed in opts.seeds:
             st = {}
-            for b in ('none', 'compose'):
-                acc, _ = read_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_ZSL_seed{seed}')
+            for b in opts.baselines:
+                acc, _ = read_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_{opts.setting}_seed{seed}')
                 st[b] = stats(acc) if acc else None
             if not (st['none'] and st['compose']):
                 continue
-            rows.append(dict(split=short, seed=seed, paper=paper,
+            rows.append(dict(split=short, seed=seed, paper=paper if opts.setting == 'ZSL' else float('nan'),
                              none_best=st['none']['best'], compose_best=st['compose']['best'],
                              none_last10=st['none']['last10'], compose_last10=st['compose']['last10'],
                              d_best=st['compose']['best'] - st['none']['best'],
@@ -268,21 +355,24 @@ def summarize_baselines(opts):
 
 
 def summarize(opts, label):
+    if opts.setting == 'GZSL':
+        return summarize_gzsl(opts, label)
     import pandas as pd
     rows = []
     for short in opts.tasks:
         task, _, paper = SPLITS[short]
         for seed in opts.seeds:
             base = {}
-            for b in ('none', 'compose'):
-                acc, _ = read_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_ZSL_seed{seed}')
+            for b in opts.baselines:
+                acc, _ = read_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_{opts.setting}_seed{seed}')
                 base[b] = stats(acc) if acc else None
-            acc, tags = read_log(f'{opts.out_root}/{label}/{task}_ZSL_seed{seed}')
+            acc, tags = read_log(f'{opts.out_root}/{label}/{task}_{opts.setting}_seed{seed}')
             if not acc:
                 continue
             s = stats(acc)
-            row = dict(split=short, seed=seed, paper=paper, best=s['best'], last10=s['last10'])
-            for b in ('none', 'compose'):
+            row = dict(split=short, seed=seed, paper=paper if opts.setting == 'ZSL' else float('nan'),
+                       best=s['best'], last10=s['last10'])
+            for b in opts.baselines:
                 row[f'd_best_vs_{b}'] = s['best'] - base[b]['best'] if base[b] else float('nan')
                 row[f'd_last10_vs_{b}'] = s['last10'] - base[b]['last10'] if base[b] else float('nan')
             for t, a in tags.items():
@@ -298,4 +388,67 @@ def summarize(opts, label):
         print(df.to_string(index=False))
         mean = df.drop(columns=['seed']).groupby('split', sort=False).mean(numeric_only=True).round(2)
         print('\nmean over seeds:\n' + mean.to_string())
+    print(f'[nesy] saved {out}')
+
+
+def summarize_gzsl_baselines(opts):
+    """Compare GZSL baselines by H while retaining seen/unseen accuracy."""
+    import pandas as pd
+    rows = []
+    for short in opts.tasks:
+        task, _, _ = SPLITS[short]
+        for seed in opts.seeds:
+            values = {b: read_gzsl_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_{opts.setting}_seed{seed}')
+                      for b in opts.baselines}
+            if not all(values.values()):
+                continue
+            row = dict(split=short, seed=seed)
+            for b, value in values.items():
+                s = gzsl_stats(value)
+                row.update({f'{b}_best_S': s['best_seen'], f'{b}_best_U': s['best_unseen'], f'{b}_best_H': s['best_H']})
+            if 'none' in values and 'compose' in values:
+                row['d_best_H'] = row['compose_best_H'] - row['none_best_H']
+            rows.append(row)
+    if not rows:
+        print('[nesy] chÆ°a cÃ³ cáº·p GZSL none/compose nÃ o xong')
+        return
+    df = pd.DataFrame(rows).round(2)
+    out = f'{opts.out_root}/baselines_compose_vs_none_GZSL.csv'
+    df.to_csv(out, index=False)
+    print(df.to_string(index=False))
+    print(f'[nesy] saved {out}')
+
+
+def summarize_gzsl(opts, label):
+    """GZSL table with S/U/H at the best-H checkpoint and final-ten means."""
+    import pandas as pd
+    rows = []
+    for short in opts.tasks:
+        task, _, _ = SPLITS[short]
+        for seed in opts.seeds:
+            base = {b: read_gzsl_log(f'{opts.out_root}/{BASELINE_LABEL[b]}/{task}_{opts.setting}_seed{seed}')
+                    for b in opts.baselines}
+            method = read_gzsl_log(f'{opts.out_root}/{label}/{task}_{opts.setting}_seed{seed}')
+            if method is None:
+                continue
+            s = gzsl_stats(method)
+            row = dict(split=short, seed=seed,
+                       best_S=s['best_seen'], best_U=s['best_unseen'], best_H=s['best_H'],
+                       last10_S=s['last10_seen'], last10_U=s['last10_unseen'], last10_H=s['last10_H'])
+            for b in opts.baselines:
+                if base[b]:
+                    ref = gzsl_stats(base[b])
+                    row[f'd_best_H_vs_{b}'] = s['best_H'] - ref['best_H']
+                    row[f'd_last10_H_vs_{b}'] = s['last10_H'] - ref['last10_H']
+                else:
+                    row[f'd_best_H_vs_{b}'] = float('nan')
+                    row[f'd_last10_H_vs_{b}'] = float('nan')
+            rows.append(row)
+    if not rows:
+        print('[nesy] chÆ°a cÃ³ GZSL run nÃ o xong')
+        return
+    df = pd.DataFrame(rows).round(2)
+    out = f'{opts.out_root}/{label}/summary_GZSL.csv'
+    df.to_csv(out, index=False)
+    print(df.to_string(index=False))
     print(f'[nesy] saved {out}')

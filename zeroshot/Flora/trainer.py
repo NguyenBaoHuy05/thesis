@@ -8,6 +8,7 @@ import utils.utils as utils
 class Trainer:
     def __init__(self, args):
         self.args = args
+        self.device = torch.device('cuda')
         ##### ---- Logger ---- #####
         self.logger = utils.get_logger(self.args.out_dir)
         self.logger.info(f'Training Flora on {args.task_name} dataset.')
@@ -26,6 +27,12 @@ class Trainer:
     def load_task(self):
         # load train and test data
         self.num_classes, self.unseen_classes, self.seen_classes, self.train_label_dict, self.test_zsl_label_dict, self.test_gzsl_label_dict = utils.task_definition(self.args.task_name)
+        # Map dataset labels directly on the GPU.  The old code rebuilt a
+        # Python list of one-hot vectors for every batch, then ran argmax.
+        self.train_target_lookup = torch.full((self.num_classes,), -1, dtype=torch.long, device=self.device)
+        self.train_target_lookup[self.seen_classes] = torch.arange(len(self.seen_classes), device=self.device)
+        self.zsl_target_lookup = torch.full((self.num_classes,), -1, dtype=torch.long, device=self.device)
+        self.zsl_target_lookup[self.unseen_classes] = torch.arange(len(self.unseen_classes), device=self.device)
         self.logger.info(f'Loading task done.')
     
     def load_data(self):
@@ -50,6 +57,8 @@ class Trainer:
         self.logger.info(f'Loading mapping network optimizer done.')
     
     def load_prototypes(self):
+        self.kg_gate_text = None
+        self.kg_gate_idf = None
         if self.args.setting == 'ZSL':
             self.args.mixed_weights = self.args.mixed_weights[0]
         elif self.args.setting == 'GZSL':
@@ -82,16 +91,30 @@ class Trainer:
             p_stem = os.path.splitext(os.path.basename(self.args.kg_prims))[0]
             r_stem = os.path.splitext(os.path.basename(self.args.kg_rules))[0]
             width = semantic_embeddings.shape[-1]
-            if self.args.kg_compose_src == 'avg':
+            if self.args.kg_learned_gate:
+                if self.args.kg_compose_at != 'post':
+                    raise ValueError('kg_learned_gate currently supports kg_compose_at=post only')
+                prim_cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
+                text_cache = os.path.join(kg_dir, f'{r_stem}_classtext_n{semantic_embeddings.shape[0]}_L{self.args.max_length}.pt')
+                prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', prim_cache).to(semantic_embeddings.device)
+                text_sem = compose_text_semantics(kg, m.tokenizer, m.text_encoder, self.args.max_length, width, 'cuda', text_cache)
+                idf_sem = compose_semantics(kg, prim_emb, width, weighting='idf')
+                self.kg_gate_text = mask_half(text_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
+                self.kg_gate_idf = mask_half(idf_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
+                self.logger.info(f'KG text-compose + IDF + learned gate on (beta={self.args.kg_beta}, '
+                                 f'half={self.args.kg_compose_half}).')
+            elif self.args.kg_compose_src == 'avg':
                 cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
                 prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', cache).to(semantic_embeddings.device)
-                kg_sem = compose_semantics(kg, prim_emb, width)
+                weighting = 'idf' if self.args.kg_compose_idf else 'uniform'
+                kg_sem = compose_semantics(kg, prim_emb, width, weighting=weighting)
             else:
                 cache = os.path.join(kg_dir, f'{r_stem}_classtext_n{semantic_embeddings.shape[0]}_L{self.args.max_length}.pt')
                 kg_sem = compose_text_semantics(kg, m.tokenizer, m.text_encoder, self.args.max_length, width, 'cuda', cache)
-            kg_sem = mask_half(kg_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
-            self.logger.info(f'KG compose on (beta={self.args.kg_beta}, src={self.args.kg_compose_src}, '
-                             f'at={self.args.kg_compose_at}, half={self.args.kg_compose_half}).')
+            if kg_sem is not None:
+                kg_sem = mask_half(kg_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
+                self.logger.info(f'KG compose on (beta={self.args.kg_beta}, src={self.args.kg_compose_src}, '
+                                 f'at={self.args.kg_compose_at}, half={self.args.kg_compose_half}).')
         # 'pre': every class carries its composed semantics into the neighbour mixing
         base = semantic_embeddings
         if kg_sem is not None and self.args.kg_compose_at == 'pre':
@@ -106,18 +129,36 @@ class Trainer:
         self.attuned_semantics += base # seen+unseen token 768*2
         if kg_sem is not None and self.args.kg_compose_at == 'post':
             self.attuned_semantics += self.args.kg_beta * kg_sem
+        if self.kg_gate_text is not None:
+            self.log_gate_stats('Initial')
         self.logger.info(f'Attuned Semantics Successfully.')
+
+    def current_attuned_semantics(self, return_gate=False):
+        """Return static Flora semantics, optionally fused with the trainable KG gate."""
+        if self.kg_gate_text is None:
+            return (self.attuned_semantics, None) if return_gate else self.attuned_semantics
+        semantics, gate = self.mapping_model.compose_with_learned_gate(
+            self.attuned_semantics, self.kg_gate_text, self.kg_gate_idf, self.args.kg_beta)
+        return (semantics, gate) if return_gate else semantics
+
+    def log_gate_stats(self, stage):
+        if self.kg_gate_text is None:
+            return
+        with torch.no_grad():
+            _, gate = self.current_attuned_semantics(return_gate=True)
+        self.logger.info(f'{stage} text-compose gate: mean={gate.mean().item():.3f}, '
+                         f'min={gate.min().item():.3f}, max={gate.max().item():.3f}.')
     
     def train_learning_phase(self):
         ###### ---- Phase 1: Neighbor-aware Semantic Learning ---- #####
         avg_loss, avg_mu, avg_logvar, avg_recon = 0., 0., 0., 0.
         for nb_iter in range(1, self.args.align_iter+ 1):
             gt_motion, label_idx, _, _,  _ = next(self.train_loader_iter)
-            gt_motion = gt_motion.cuda().float() # (bs, 2, 16, 512)
-            label_idx = label_idx.cuda() # (bs, )
-            true_label_array = torch.tensor([self.train_label_dict[l.item()] for l in label_idx]).cuda()
+            gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True) # (bs, 2, 16, 512)
+            label_idx = label_idx.to(self.device, non_blocking=True) # (bs, )
+            targets = self.train_target_lookup[label_idx]
             # train
-            metrics = self.mapping_model.forward_phase1(gt_motion, self.attuned_semantics, self.seen_classes, torch.argmax(true_label_array, dim=1))  # (bs, 2, 16, 512)
+            metrics = self.mapping_model.forward_phase1(gt_motion, self.current_attuned_semantics(), self.seen_classes, targets)  # (bs, 2, 16, 512)
             # Combined loss
             loss = metrics['loss']
             loss_mu = metrics['loss_mu']
@@ -139,6 +180,7 @@ class Trainer:
                 self.logger.info(f"Train Phase 1. Iter {nb_iter} : Loss. {avg_loss:.5f} \t Loss_mu. {avg_mu:.5f} \t Loss_logvar. {avg_logvar:.5f} \t Loss_Recon. {avg_recon:.5f}")
                 avg_loss, avg_mu, avg_logvar, avg_recon = 0., 0., 0., 0.
         self.logger.info(f'Phase 1: Neighbor-aware Semantic Learning Done.')
+        self.log_gate_stats('After Phase 1')
 
 
     def train_deciding_phase(self):
@@ -146,14 +188,14 @@ class Trainer:
         avg_loss, avg_fm, avg_fm_con = 0., 0., 0.
         for nb_iter in range(self.args.align_iter+ 1, self.args.total_iter+ 1):
             gt_motion, label_idx, gt_motion_contrastive, label_idx_contrastive, _ = next(self.train_loader_iter)
-            gt_motion = gt_motion.cuda().float() # (bs, 2, 16, 512)
-            gt_motion_contrastive = gt_motion_contrastive.cuda().float() # (bs, 2, 16, 512)
-            label_idx = label_idx.cuda() # (bs, )
-            label_idx_contrastive = label_idx_contrastive.cuda() # (bs, )
-            true_label_array = torch.tensor([self.train_label_dict[l.item()] for l in label_idx]).cuda()
-            true_label_array_contrastive = torch.tensor([self.train_label_dict[l.item()] for l in label_idx_contrastive]).cuda()
+            gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True) # (bs, 2, 16, 512)
+            gt_motion_contrastive = gt_motion_contrastive.to(self.device, dtype=torch.float32, non_blocking=True) # (bs, 2, 16, 512)
+            label_idx = label_idx.to(self.device, non_blocking=True) # (bs, )
+            label_idx_contrastive = label_idx_contrastive.to(self.device, non_blocking=True) # (bs, )
+            targets = self.train_target_lookup[label_idx]
+            contrastive_targets = self.train_target_lookup[label_idx_contrastive]
             # train
-            metrics = self.mapping_model.forward_phase2(gt_motion, gt_motion_contrastive, torch.argmax(true_label_array, dim=1), torch.argmax(true_label_array_contrastive, dim=1), self.seen_classes, self.attuned_semantics)  
+            metrics = self.mapping_model.forward_phase2(gt_motion, gt_motion_contrastive, targets, contrastive_targets, self.seen_classes, self.current_attuned_semantics())
             # Combined loss
             loss = metrics['loss'] 
             loss_fm = metrics['loss_flow_matching']
@@ -194,11 +236,11 @@ class Trainer:
         correct_predictions = 0
         for batch_idx, (gt_motion, label_idx, _, _, _) in enumerate(self.zsl_loader):
             with torch.no_grad():
-                gt_motion = gt_motion.cuda().float() # (bs, 2, 16, 512)
-                true_label_array = torch.tensor([self.test_zsl_label_dict[l.item()] for l in label_idx]).cuda()
+                gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True) # (bs, 2, 16, 512)
+                label_idx = label_idx.to(self.device, non_blocking=True)
+                labels = self.zsl_target_lookup[label_idx]
                 # calculate accuracy -- velocity error
-                res_dis = self.mapping_model.predict_zsl(gt_motion, self.unseen_classes, self.attuned_semantics, torch.argmax(true_label_array, dim=1))
-                labels = torch.argmax(true_label_array, dim=1)
+                res_dis = self.mapping_model.predict_zsl(gt_motion, self.unseen_classes, self.current_attuned_semantics(), labels)
                 predictions = res_dis['predictions_idx']  # (bs,)
                 correct_predictions += (predictions == labels).sum().item()
                 total_samples += gt_motion.size(0)
@@ -216,11 +258,11 @@ class Trainer:
         pred_list = []
         for batch_idx, (gt_motion, label_idx, _, _, _) in enumerate(self.gzsl_loader):
             with torch.no_grad():
-                gt_motion = gt_motion.cuda().float() # (bs, 2, 16, 512)
-                true_label_array = torch.tensor([self.test_gzsl_label_dict[l.item()] for l in label_idx]).cuda()
+                gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True) # (bs, 2, 16, 512)
+                label_idx = label_idx.to(self.device, non_blocking=True)
+                labels = label_idx
                 # calculate accuracy -- velocity error
-                res_dis = self.mapping_model.predict_gzsl(gt_motion, self.seen_classes, self.unseen_classes, self.attuned_semantics)
-                labels = torch.argmax(true_label_array, dim=1)
+                res_dis = self.mapping_model.predict_gzsl(gt_motion, self.seen_classes, self.unseen_classes, self.current_attuned_semantics())
                 predictions = res_dis['predictions_idx']  # (bs, num_noise)
                 correct_predictions += (predictions == labels).sum().item()
                 label_statistics.append(labels.cpu().numpy())  # 记录标签统计
@@ -269,14 +311,3 @@ class Trainer:
     def train(self):
         self.train_learning_phase()
         self.train_deciding_phase()
-        
-                
-        
-
-    
-    
-
-
-   
-   
-    

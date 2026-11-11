@@ -52,6 +52,20 @@ class PrimitiveKG:
         Wp = np.clip(self.W, 0.0, None)
         return Wp / np.maximum(Wp.sum(axis=1, keepdims=True), 1e-8)
 
+    def idf_compose_weights(self):
+        """IDF-weighted compose weights for required primitives.
+
+        A primitive occurring in many action rules is less discriminative than
+        one appearing in only a few.  IDF is computed from the KG itself, so
+        this adds no skeleton labels or unseen-class supervision.
+        """
+        required = (self.W > 0).astype(np.float32)
+        n_classes = required.shape[0]
+        document_frequency = required.sum(axis=0)
+        idf = np.log((n_classes + 1) / (document_frequency + 1)) + 1.0
+        weighted = required * idf[None, :]
+        return weighted / np.maximum(weighted.sum(axis=1, keepdims=True), 1e-8)
+
 
 def embed_texts(tokenizer, text_encoder, texts, max_length, device, cache_path=None):
     """Same recipe as MappingNet.extract_text_embeddings: tokens + pooled -> (N, max_length+1, 768)."""
@@ -71,12 +85,18 @@ def embed_texts(tokenizer, text_encoder, texts, max_length, device, cache_path=N
     return emb
 
 
-def compose_semantics(kg, prim_emb, text_dim_total):
+def compose_semantics(kg, prim_emb, text_dim_total, weighting='uniform'):
     """(n, token, text_dim_total) class embeddings composed from primitive embeddings.
     prim_emb: (P, token, 768). Flora's class embedding is [csv-text ; llm-text] = 1536 wide,
     primitives have one text type, so the composed vector is repeated to fill the width."""
     import torch
-    w = torch.from_numpy(kg.compose_weights()).to(prim_emb.device, prim_emb.dtype)  # (n, P)
+    if weighting == 'uniform':
+        weights = kg.compose_weights()
+    elif weighting == 'idf':
+        weights = kg.idf_compose_weights()
+    else:
+        raise ValueError(f'unknown compose weighting: {weighting}')
+    w = torch.from_numpy(weights).to(prim_emb.device, prim_emb.dtype)  # (n, P)
     comp = torch.einsum('np,ptd->ntd', w, prim_emb)  # (n, token, 768)
     reps = text_dim_total // comp.shape[-1]
     return torch.cat([comp] * reps, dim=-1)

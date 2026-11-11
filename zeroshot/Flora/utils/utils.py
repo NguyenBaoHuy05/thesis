@@ -47,13 +47,22 @@ def cycle(iterable):
             yield x
 
 def load_data(Feeder, args, unseen_classes, seed_fun, batch_size, split_type='train', use_features=True, low_shot=False, percentage=0.1):
-    data_loader = torch.utils.data.DataLoader(
+    # Keep host-to-device copies asynchronous.  Persistent workers avoid
+    # repeatedly spawning Windows workers whenever an iterator is recreated.
+    worker_count = args.num_worker
+    data_loader_args = dict(
         dataset=Feeder(args.data_path, unseen_classes, split_type, use_features, low_shot, percentage),
         batch_size=batch_size,
         shuffle=True if split_type == 'train' else False,
-        num_workers=args.num_worker,
+        num_workers=worker_count,
         drop_last=True if split_type == 'train' else False,
-        worker_init_fn=seed_fun)
+        worker_init_fn=seed_fun,
+        pin_memory=torch.cuda.is_available() and args.pin_memory)
+    if worker_count > 0:
+        data_loader_args.update(
+            persistent_workers=args.persistent_workers,
+            prefetch_factor=args.prefetch_factor)
+    data_loader = torch.utils.data.DataLoader(**data_loader_args)
     return data_loader
 
 

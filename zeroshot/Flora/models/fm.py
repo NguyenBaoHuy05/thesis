@@ -113,6 +113,17 @@ class MappingNet(nn.Module):
         self.load_pretrained_models()
         # extract class text embeddings
         self.class_embeddings = self.extract_text_embeddings()
+        # A shared gate generalizes from seen to unseen classes because it is
+        # conditioned on semantic embeddings, not on a class ID.
+        self.kg_gate = None
+        if args.kg_learned_gate:
+            gate_dim = args.text_dim * 3
+            self.kg_gate = nn.Sequential(
+                nn.LayerNorm(gate_dim),
+                nn.Linear(gate_dim, args.kg_gate_hidden),
+                nn.SiLU(),
+                nn.Linear(args.kg_gate_hidden, 1),
+            )
         # semantic encoder 
         self.semantic_encoder = Encoder(input_dim=args.text_dim, output_dim=args.latent_dim)  # 768*2 for sadave 
         self.motion_encoder = Encoder(input_dim=args.ske_dim, output_dim=args.latent_dim)  # 256 for sadave
@@ -169,6 +180,19 @@ class MappingNet(nn.Module):
         # concatenate type 1 & type 2
         self.class_embeddings = torch.cat((torch.cat(text_embed_csv, dim=0), torch.cat(text_embed_txt, dim=0)), dim=-1)  # [60, token, 768*2]
         return self.class_embeddings # [60, token, 768*2]
+
+    def compose_with_learned_gate(self, base_semantics, text_semantics, idf_semantics, beta):
+        """Fuse text-compose and IDF-weighted primitive compose per class.
+
+        The pooled token is used only to predict a scalar gate.  The selected
+        branch is then applied to every token, preserving Flora's token layout.
+        """
+        if self.kg_gate is None:
+            raise RuntimeError('kg_learned_gate is disabled')
+        gate_input = torch.cat((base_semantics[:, -1], text_semantics[:, -1], idf_semantics[:, -1]), dim=-1)
+        gate = torch.sigmoid(self.kg_gate(gate_input)).view(-1, 1, 1)
+        composed = gate * text_semantics + (1.0 - gate) * idf_semantics
+        return base_semantics + beta * composed, gate.squeeze(-1).squeeze(-1)
         
 
     def psi(self, t, x, x1):
@@ -205,7 +229,7 @@ class MappingNet(nn.Module):
         skeleton_embedding = skeleton_embedding.unsqueeze(1).expand(-1, self.args.max_length+1, -1)  # b token 256
         # semantics -- prepare data
         semantics_seen = attuned_semantics[seen_classes]  # seen token 768*2
-        semantics_embedding = torch.cat([semantics_seen[i,:,:].unsqueeze(0) for i in label_idx], dim=0)  # b token 768*2
+        semantics_embedding = semantics_seen[label_idx]  # b token 768*2
         return skeleton_embedding, semantics_embedding  # b token 256, b token 768*2
     
     
@@ -221,6 +245,8 @@ class MappingNet(nn.Module):
             p.requires_grad = True
         for p in self.semantic_decoder.parameters():
             p.requires_grad = True
+        if self.kg_gate is not None:
+            self.kg_gate.requires_grad_(True)
         # prepare skeleton & semantics embedding
         skeleton_embedding, semantics_embedding = self.prepare_embedding(skeleton_data, seen_classes, label_idx, attuned_semantics)  # b token 256, b token 768*2
         B, _, _ = skeleton_embedding.size()  # b token 256
@@ -258,6 +284,8 @@ class MappingNet(nn.Module):
             p.requires_grad = False
         for p in self.semantic_decoder.parameters():
             p.requires_grad = False
+        if self.kg_gate is not None:
+            self.kg_gate.requires_grad_(False)
         # prepare skeleton & semantics embedding
         skeleton_embedding, semantics_embedding = self.prepare_embedding(skeleton_data, seen_classes, label_idx, attuned_semantics)  # b token 256, b token 768*2
         skeleton_embedding_contrastive, semantics_embedding_contrastive = self.prepare_embedding(skeleton_data_contraastive, seen_classes, label_idx_contrastive, attuned_semantics)  # b token 256, b token 768*2
@@ -304,15 +332,21 @@ class MappingNet(nn.Module):
         z0_text, _, _ = self.semantic_encoder(semantics_embedding)  # unseen token 768
         # timestep
         timestep = torch.ones(B, device=skeleton_embedding.device) * self.args.step_ratio  # [B]
+        # Evaluate several candidate classes in one forward pass.  The former
+        # implementation launched one tiny GPU kernel sequence per class,
+        # which dominated the runtime of ZSL evaluation on a 5090.
+        class_chunk = self.args.eval_class_chunk or len(unseen_classes)
         mse_error_list = []
-        for i, _ in enumerate(unseen_classes):
-            # flow matching
-            z0_text_category = z0_text[i].unsqueeze(0).expand(B, -1, -1)  # [B, token, 768]
-            z_time = self.psi(timestep, z0_text_category, z1_ske)  # [B, token, 768]  # z_time
-            pred_velocity = self.velocity_predictor(z_time, timestep)  # [B, token, 768]  
-            target_velocity = self.Dt_psi(timestep, z0_text_category, z1_ske)  # [B, token, 768]  
-            mse_error = F.mse_loss(pred_velocity, target_velocity, reduction='none').mean(2).mean(1) # B
-            mse_error_list.append(mse_error.view(B, 1))
+        for start in range(0, len(unseen_classes), class_chunk):
+            z0_chunk = z0_text[start:start + class_chunk]
+            n_class = z0_chunk.shape[0]
+            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
+            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
+            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
+            z_time = self.psi(time_batch, z0_batch, z1_batch)
+            pred_velocity = self.velocity_predictor(z_time, time_batch)
+            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
+            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
         mse_error_list = torch.cat(mse_error_list, dim=1)  # B, unseen_classes
         predictions_idx = torch.argmin(mse_error_list, dim=1)  # B, 
         return {
@@ -337,15 +371,19 @@ class MappingNet(nn.Module):
         z0_text, _, _ = self.semantic_encoder(semantics_embedding)  # unseen token 768
         # timestep
         timestep = torch.ones(B, device=skeleton_embedding.device) * self.args.step_ratio  # [B]
+        n_total = len(seen_classes) + len(unseen_classes)
+        class_chunk = self.args.eval_class_chunk or n_total
         mse_error_list = []
-        for i in range(len(seen_classes)+len(unseen_classes)):
-            # flow matching
-            z0_text_category = z0_text[i].unsqueeze(0).expand(B, -1, -1)
-            z_time = self.psi(timestep, z0_text_category, z1_ske)  # [B, token, 768]  # z_time
-            pred_velocity = self.velocity_predictor(z_time, timestep)  # [B, token, 768]  
-            target_velocity = self.Dt_psi(timestep, z0_text_category, z1_ske)  # [B, token, 768]  
-            mse_error = F.mse_loss(pred_velocity, target_velocity, reduction='none').mean(2).mean(1) # B
-            mse_error_list.append(mse_error.view(B, 1))
+        for start in range(0, n_total, class_chunk):
+            z0_chunk = z0_text[start:start + class_chunk]
+            n_class = z0_chunk.shape[0]
+            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
+            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
+            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
+            z_time = self.psi(time_batch, z0_batch, z1_batch)
+            pred_velocity = self.velocity_predictor(z_time, time_batch)
+            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
+            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
         mse_error_list = torch.cat(mse_error_list, dim=1)  # B, unseen_classes + seen_classes
         # determine the skeleton sample is from seen domain or unseen domain
         mse_error_seen_min = torch.min(mse_error_list[:, seen_classes], dim=1).values   # B

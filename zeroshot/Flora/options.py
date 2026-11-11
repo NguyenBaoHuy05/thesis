@@ -56,6 +56,12 @@ def get_args_parser():
     # feeder
     parser.add_argument('--feeder', default='feeders.feeder_ntu.Feeder_FM', help='data loader will be used')
     parser.add_argument('--num-worker', type=int, default=32, help='the number of worker for data loader')
+    parser.add_argument('--pin-memory', action=argparse.BooleanOptionalAction, default=True,
+                        help='use pinned host memory for asynchronous CUDA copies')
+    parser.add_argument('--persistent-workers', action=argparse.BooleanOptionalAction, default=True,
+                        help='keep DataLoader workers alive across iterator resets')
+    parser.add_argument('--prefetch-factor', type=int, default=4,
+                        help='batches prefetched by each DataLoader worker')
     parser.add_argument('--use-features', action='store_true', help='whether to use pre-trained features')
     parser.add_argument('--data-path', type=str, default='/root/autodl-tmp/Neuron/data/ntu60/NTU60_CS.npz', help='path to the skeleton data or feature')
     parser.add_argument('--low-shot', action='store_true', help='low-shot training setting')
@@ -63,6 +69,8 @@ def get_args_parser():
 
     # test
     parser.add_argument('--step-ratio', type=float, default=0.5, help='ratio of steps for testing')
+    parser.add_argument('--eval-class-chunk', type=int, default=16,
+                        help='classes evaluated together; 0 evaluates all classes in one GPU batch')
     
     
 
@@ -84,6 +92,12 @@ def get_args_parser():
                         help='compose: post = add after neighbour mixing; pre = add to each class before mixing, so neighbours carry it too')
     parser.add_argument('--kg-compose-half', type=str, default='both', choices=['both', 'csv', 'llm'],
                         help='compose: which half of the 1536-d class embedding receives the composed semantics')
+    parser.add_argument('--kg-compose-idf', action=argparse.BooleanOptionalAction, default=False,
+                        help='compose: weight required primitive embeddings by inverse KG rule frequency')
+    parser.add_argument('--kg-learned-gate', action=argparse.BooleanOptionalAction, default=False,
+                        help='compose: learn a per-class gate between text-compose and IDF primitive compose')
+    parser.add_argument('--kg-gate-hidden', type=int, default=256,
+                        help='hidden width of the text/IDF semantic gate')
     parser.add_argument('--kg-forbid-weight', type=float, default=0.5, help='negative weight of a forbidden primitive in KG similarity')
     parser.add_argument('--kg-prims', type=str, default='kg/primitive_v2.json')
     parser.add_argument('--kg-rules', type=str, default='kg/kg_rules_v2.json')
