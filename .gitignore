@@ -128,3 +128,4 @@ desktop.ini
 .ruff_cache/
 .coverage
 htmlcov/
+*.drawio
