@@ -76,6 +76,7 @@ class ForbidTrainer(Trainer):
             super().load_prototypes()
         finally:
             KS.compose_semantics = orig
+        self.kg_info = info                         # nesy4_1_1_fuse.py re-fuses from these
 
         def centered(x):
             z = x[:, -1, :].float()
