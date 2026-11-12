@@ -84,6 +84,7 @@ class SeqKGGCN(nn.Module):
         for p in self.parameters():
             nn.init.zeros_(p)            # start exactly at compose
         self.edge_drop = edge_drop
+        self.describe = f'relations {self.rel_names}, {layers} refine layer(s)'
 
     def _drop(self, A):
         keep = (torch.rand_like(A) > self.edge_drop) & (A > 0)
@@ -109,6 +110,11 @@ class SeqKGGCN(nn.Module):
 
 
 class GCNTrainer(Trainer):
+    def build_net(self, kg, a):
+        """Network mapping the primitive embeddings to class tokens: forward(xp) -> (classes, compose baseline).
+        nesy7_esa.py overrides this."""
+        return SeqKGGCN(kg, self.kg_prim_emb.shape[-1], a.gcn_layers, a.gcn_edge_drop, bool(a.gcn_order))
+
     def load_prototypes(self):
         super().load_prototypes()                     # Flora attuned semantics; --kg-mode none -> no KG inside
         a = self.args
@@ -118,7 +124,7 @@ class GCNTrainer(Trainer):
         cache = os.path.join(os.path.dirname(os.path.abspath(a.gcn_prims)), f'{stem}_clip_L{a.max_length}.pt')
         dev, dt = self.attuned_semantics.device, self.attuned_semantics.dtype
         self.kg_prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, a.max_length, 'cuda', cache).to(dev, dt)
-        self.gcn = SeqKGGCN(kg, self.kg_prim_emb.shape[-1], a.gcn_layers, a.gcn_edge_drop, bool(a.gcn_order)).to(dev)
+        self.gcn = self.build_net(kg, a).to(dev)
         self.optimizer_mapping.add_param_group(dict(params=list(self.gcn.parameters()), lr=a.gcn_lr, weight_decay=a.gcn_wd))
         self.gcn_cache = None
         self.gcn_pen = None
@@ -143,8 +149,8 @@ class GCNTrainer(Trainer):
             return out
         m.forward_phase1 = forward_phase1
         n_par = sum(p.numel() for p in self.gcn.parameters())
-        self.logger.info(f'[nesy6] SeqKG GCN: {len(kg.prim_ids)} primitives, relations {self.gcn.rel_names}, '
-                         f'{a.gcn_layers} refine layer(s), {n_par / 1e6:.2f}M params, lr {a.gcn_lr}, reg {a.gcn_reg}, '
+        self.logger.info(f'[nesy6] SeqKG net: {len(kg.prim_ids)} primitives, {self.gcn.describe}, '
+                         f'{n_par / 1e6:.2f}M params, lr {a.gcn_lr}, reg {a.gcn_reg}, '
                          f'sim {a.gcn_sim}, edge_drop {a.gcn_edge_drop}, {len(self.gcn_pairs)} order-only class pairs')
 
     def centered_cos(self, x):
@@ -204,17 +210,21 @@ def _prepare(opts):
         build_seq_kg()
 
 
+# flags shared with nesy7_esa.py (same trainer machinery, different network)
+COMMON_ARGS = [
+    ('--gcn-prims', dict(default=SEQ_PRIMS, help='KG primitives the network runs on (nesy4_seqkg.py writes this file)')),
+    ('--gcn-rules', dict(default=SEQ_RULES)),
+    ('--gcn-edge-drop', dict(type=float, default=0.1, help='dropout of class-primitive edges while training')),
+    ('--gcn-lr', dict(type=float, default=5e-5, help='learning rate of the network (Flora uses 1e-4)')),
+    ('--gcn-wd', dict(type=float, default=0.01, help='weight decay of the network, pulls the weights back to compose')),
+    ('--gcn-reg', dict(type=float, default=0.0, help='weight of the relative deviation from compose added to the phase 1 loss')),
+    ('--gcn-sim', dict(type=float, default=1.0, help='weight of L_sim, the KG-only loss matching embedding cosines to KG similarity')),
+]
+GCN_ARGS = [
+    ('--gcn-layers', dict(type=int, default=1, help='primitive refinement layers before the class read-out (0 = read-out only)')),
+    ('--gcn-order', dict(type=int, default=1, choices=[0, 1], help='1 = add first/second edges from seq.a>b to a and b')),
+]
+
 if __name__ == '__main__':
-    C.main('gcn', GCNTrainer, default_kg_mode='none', prepare=_prepare,
-           method_args=[
-               ('--gcn-prims', dict(default=SEQ_PRIMS, help='KG primitives the GCN runs on (nesy4_seqkg.py writes this file)')),
-               ('--gcn-rules', dict(default=SEQ_RULES)),
-               ('--gcn-layers', dict(type=int, default=1, help='primitive refinement layers before the class read-out (0 = read-out only)')),
-               ('--gcn-order', dict(type=int, default=1, choices=[0, 1], help='1 = add first/second edges from seq.a>b to a and b')),
-               ('--gcn-edge-drop', dict(type=float, default=0.1, help='dropout of class-primitive edges while training')),
-               ('--gcn-lr', dict(type=float, default=5e-5, help='learning rate of the GCN (Flora uses 1e-4)')),
-               ('--gcn-wd', dict(type=float, default=0.01, help='weight decay of the GCN, pulls the weights back to compose')),
-               ('--gcn-reg', dict(type=float, default=0.0, help='weight of the relative deviation from compose added to the phase 1 loss')),
-               ('--gcn-sim', dict(type=float, default=1.0, help='weight of L_sim, the KG-only loss matching embedding cosines to KG similarity')),
-           ],
+    C.main('gcn', GCNTrainer, default_kg_mode='none', prepare=_prepare, method_args=GCN_ARGS + COMMON_ARGS,
            label_keys=[('gcn_layers', 'L'), ('gcn_lr', 'lr'), ('gcn_reg', 'reg'), ('gcn_sim', 'sim')])
