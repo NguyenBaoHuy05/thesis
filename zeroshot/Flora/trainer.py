@@ -103,6 +103,14 @@ class Trainer:
                 self.kg_gate_idf = mask_half(idf_sem.to(semantic_embeddings.device, semantic_embeddings.dtype), self.args.kg_compose_half)
                 self.logger.info(f'KG text-compose + IDF + learned gate on (beta={self.args.kg_beta}, '
                                  f'half={self.args.kg_compose_half}).')
+            elif self.args.kg_compose_src == 'mix':
+                # same two branches as the learned gate, with a constant 0.5 instead of a trained sigmoid
+                prim_cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
+                text_cache = os.path.join(kg_dir, f'{r_stem}_classtext_n{semantic_embeddings.shape[0]}_L{self.args.max_length}.pt')
+                prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', prim_cache).to(semantic_embeddings.device)
+                text_sem = compose_text_semantics(kg, m.tokenizer, m.text_encoder, self.args.max_length, width, 'cuda', text_cache)
+                idf_sem = compose_semantics(kg, prim_emb, width, weighting='idf')
+                kg_sem = 0.5 * text_sem.to(idf_sem.device, idf_sem.dtype) + 0.5 * idf_sem
             elif self.args.kg_compose_src == 'avg':
                 cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
                 prim_emb = embed_texts(m.tokenizer, m.text_encoder, kg.prim_text, self.args.max_length, 'cuda', cache).to(semantic_embeddings.device)

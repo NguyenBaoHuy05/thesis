@@ -85,9 +85,10 @@ def get_args_parser():
     parser.add_argument('--kg-mode', type=str, default='none', choices=['none', 'neighbors', 'compose', 'both'])
     parser.add_argument('--kg-alpha', type=float, default=0.5, help='neighbors: sim = (1-alpha)*text_sim + alpha*kg_sim')
     parser.add_argument('--kg-beta', type=float, default=0.3, help='compose: attuned += beta * primitive-composed semantics')
-    parser.add_argument('--kg-compose-src', type=str, default='avg', choices=['avg', 'text'],
+    parser.add_argument('--kg-compose-src', type=str, default='avg', choices=['avg', 'text', 'mix'],
                         help='compose: avg = weighted mean of per-primitive CLIP embeddings; '
-                             'text = one CLIP pass over the class\'s required primitive descriptions joined into a sentence')
+                             'text = one CLIP pass over the class\'s required primitive descriptions joined into a sentence; '
+                             'mix = fixed 0.5 * text + 0.5 * IDF-weighted avg (the learned-gate model with the gate frozen at 0.5)')
     parser.add_argument('--kg-compose-at', type=str, default='post', choices=['post', 'pre'],
                         help='compose: post = add after neighbour mixing; pre = add to each class before mixing, so neighbours carry it too')
     parser.add_argument('--kg-compose-half', type=str, default='both', choices=['both', 'csv', 'llm'],

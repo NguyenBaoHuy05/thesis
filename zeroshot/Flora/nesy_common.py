@@ -200,8 +200,9 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     ap.add_argument('--kg-mode', default=default_kg_mode, choices=['none', 'compose'],
                     help='semantic side under the method: Flora alone, or with compose')
     ap.add_argument('--kg-beta', type=float, default=0.3)
-    ap.add_argument('--kg-compose-src', choices=['avg', 'text'],
-                    help='KG compose source; text encodes the class primitive sentence coherently')
+    ap.add_argument('--kg-compose-src', choices=['avg', 'text', 'mix'],
+                    help='KG compose source; text encodes the class primitive sentence coherently; '
+                         'mix = fixed 0.5 text + 0.5 IDF (Text+IDF without the learned gate)')
     ap.add_argument('--kg-compose-at', choices=['post'],
                     help='where to add compose semantics (learned gate currently supports post only)')
     ap.add_argument('--kg-compose-half', choices=['both', 'csv', 'llm'],
