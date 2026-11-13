@@ -1,0 +1,78 @@
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+
+% Core packages
+\usepackage{amsmath,amssymb}
+\usepackage{tikz-cd}
+\usepackage{multicol}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage[table]{xcolor}
+
+% Paragraphs
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1\baselineskip}
+
+\title{Zero-shot action recognition}
+\author{Huy}
+\date{\today}
+
+\begin{document}
+\maketitle
+\begin{table}[htbp]
+\centering
+\caption{Performance comparison on NTU-60 (Xsub) and NTU-120 (Xsub). The best and second-best results are marked in red and blue, respectively. $\dagger$ denotes methods using SynSE-based [11] Shift-GCN features, while others use STAR-based [3] ones. Both are trained in the same manner [6], but differ slightly and were inconsistent in our evaluation, so we report both for completeness and fairness. $\ddagger$ indicates two-stream fusion; others are single-stream. ZSL results of SeqKG Compose use seed 1, while SeqKG + COA-Fuse reports the mean of 3 seeds (1--3). Results on Xview and Xset are reported in the Appendix.}
+\label{tab:ntu-comparison}
+\scriptsize
+\setlength{\tabcolsep}{2.3pt}
+\renewcommand{\arraystretch}{1.08}
+\newcommand{\best}[1]{\textcolor{red}{#1}}
+\newcommand{\second}[1]{\textcolor{blue}{#1}}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{ll|cccc|cccc|cccc|cccc}
+\hline
+\multirow{3}{*}{Method} & \multirow{3}{*}{Venue}
+& \multicolumn{8}{c|}{NTU RGB+D 60 (Xsub)}
+& \multicolumn{8}{c}{NTU RGB+D 120 (Xsub)} \\
+\cline{3-18}
+& & \multicolumn{4}{c|}{55/5 Split}
+& \multicolumn{4}{c|}{48/12 Split}
+& \multicolumn{4}{c|}{110/10 Split}
+& \multicolumn{4}{c}{96/24 Split} \\
+\cline{3-18}
+& & ZSL & \multicolumn{3}{c|}{GZSL}
+& ZSL & \multicolumn{3}{c|}{GZSL}
+& ZSL & \multicolumn{3}{c|}{GZSL}
+& ZSL & \multicolumn{3}{c}{GZSL} \\
+& & Acc & S & U & H & Acc & S & U & H & Acc & S & U & H & Acc & S & U & H \\
+\hline
+ReViSE [18] & ICCV 2017 & 69.5 & 40.8 & 50.2 & 45.0 & 24.0 & 21.8 & 14.8 & 17.6 & 19.8 & 0.6 & 14.5 & 1.1 & 8.5 & 3.4 & 1.5 & 2.1 \\
+JPoSE [41] & ICCV 2019 & 73.7 & 66.5 & 53.5 & 59.3 & 27.5 & 28.6 & 18.7 & 22.6 & 57.3 & 53.6 & 11.6 & 19.1 & 38.1 & 41.0 & 3.8 & 6.9 \\
+CADA-VAE [37] & CVPR 2019 & 76.9 & 56.1 & 56.0 & 56.0 & 32.1 & 50.4 & 25.0 & 33.4 & 52.5 & 50.2 & 43.9 & 46.8 & 38.7 & 48.3 & 27.5 & 35.1 \\
+SynSE [11] & ICIP 2021 & 71.9 & 51.3 & 47.4 & 49.2 & 31.3 & 44.1 & 22.9 & 30.1 & 52.4 & 57.3 & 43.2 & 49.5 & 41.9 & 48.1 & 32.9 & 39.1 \\
+GZSSAR [22] & IGIG 2023 & 83.6 & 71.7 & 66.2 & 68.8 & 49.2 & 58.8 & 40.0 & 47.6 & 71.2 & 46.8 & 68.3 & 55.6 & 59.7 & 56.8 & 48.6 & 52.4 \\
+SMIE [46] & ACM MM 2023 & 79.7 & -- & -- & -- & 41.5 & -- & -- & -- & 61.3 & -- & -- & -- & 42.3 & -- & -- & -- \\
+PURLS [47] & CVPR 2024 & 79.2 & -- & -- & -- & 41.0 & -- & -- & -- & 72.0 & -- & -- & -- & 52.0 & -- & -- & -- \\
+SA-DAVE [23] & ECCV 2024 & 82.4 & 62.8 & 70.8 & 66.3 & 41.4 & 50.2 & 36.9 & 42.6 & 68.8 & 61.1 & 59.8 & 60.4 & 46.1 & \second{58.8} & 35.8 & 44.5 \\
+STAR [3] & ACM MM 2024 & 81.4 & 69.0 & 69.9 & 69.4 & 45.1 & 62.7 & 37.0 & 46.6 & 63.3 & 59.9 & 52.7 & 56.1 & 44.3 & 51.2 & 36.9 & 42.9 \\
+STAR++ [5] & TCSVT 2026 & 84.4 & 61.1 & 73.6 & 66.8 & 49.5 & 58.2 & 40.4 & 47.7 & 72.0 & 59.0 & 55.4 & 57.2 & 53.5 & 52.8 & 45.2 & 48.7 \\
+DVTA$^{\dagger}$ [21] & PR 2025 & 79.3 & -- & -- & -- & 44.1 & -- & -- & -- & 74.9 & -- & -- & -- & 51.8 & -- & -- & -- \\
+InfoCPL$^{\dagger}$ [43] & TMM 2025 & 85.9 & -- & -- & -- & 53.3 & -- & -- & -- & 74.8 & -- & -- & -- & 60.1 & -- & -- & -- \\
+ScoPLE$^{\dagger}$ [48] & CVPR 2025 & 84.1 & 69.6 & 71.9 & 70.8 & 53.0 & 54.5 & \best{61.8} & 57.9 & 74.5 & 63.5 & 61.1 & 62.3 & 52.2 & 53.3 & 51.2 & 52.2 \\
+Neuron$^{\dagger}$ [4] & CVPR 2025 & \best{86.9} & 69.1 & 73.8 & 71.4 & 62.7 & 61.6 & 56.8 & \second{59.1} & 71.5 & \best{67.6} & 59.5 & 63.3 & 57.1 & \best{67.5} & 44.4 & 53.6 \\
+FS-VAE$^{\dagger}$ [42] & ICCV 2025 & \best{86.9} & 77.0 & 74.5 & 75.7 & 57.2 & 56.2 & 48.6 & 52.1 & 74.4 & 59.2 & 67.9 & 63.3 & 62.5 & 57.8 & 51.9 & \second{54.7} \\
+TDSM$^{\dagger}$ [8] & ICCV 2025 & \second{86.5} & -- & -- & -- & 56.0 & -- & -- & -- & 74.2 & -- & -- & -- & 65.1 & -- & -- & -- \\
+\textbf{Flora} & CVPR 2026 & 85.80 & \second{77.7} & \second{75.6} & \second{76.6} & 61.50 & \second{66.9} & 49.0 & 56.6 & 80.70 & 59.7 & \second{70.5} & 64.7 & 64.10 & 53.7 & \second{52.2} & 52.9 \\
+\textbf{Flora}$^{\dagger}$ & CVPR 2026 & 86.30 & 75.9 & \best{78.8} & \best{77.4} & \best{65.30} & 63.7 & \second{57.5} & \best{60.5} & 79.60 & \second{66.2} & 66.0 & \best{66.1} & 66.40 & 55.9 & 50.7 & 53.2 \\
+\hline
+\textbf{SeqKG Compose (Ours)} & This work & 84.72 & \best{79.19} & 72.37 & 75.63 & 63.29 & \best{71.70} & 49.71 & 58.72 & 79.97 & 58.86 & \best{72.02} & \second{64.78} & \second{68.02} & 51.48 & \best{60.10} & \best{55.46} \\
+\textbf{SeqKG Compose (Ours)}$^{\dagger}$ & This work & 85.18 & -- & -- & -- & \second{63.88} & -- & -- & -- & 80.83 & -- & -- & -- & 67.06 & -- & -- & -- \\
+\hline
+\textbf{SeqKG + COA-Fuse (Ours)} & This work & 85.24 & - & - & - & 62.39 & - & - & - & \second{81.10} & - & - & - & \best{68.16} & - & - & - \\
+\textbf{SeqKG + COA-Fuse (Ours)}$^{\dagger}$ & This work & 85.49 & - & - & - & 63.60 & - & - & - & \best{81.45} & - & - & - & 66.08 & - & - & - \\
+\end{tabular}%
+}
+\end{table}
+
+\end{document}
