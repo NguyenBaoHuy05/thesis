@@ -1,6 +1,6 @@
 # Flora experiment results
 
-Updated: 12 Nov 2026. Sections 1–3 report the current main method (3-seed means). The older sections below ("Earlier method") are the 11 Nov snapshot and use seed 1 only.
+Updated: 13 Nov 2026. Sections 1–3 report the current main method (3-seed means). The older sections below ("Earlier method") are the 11 Nov snapshot and use seed 1 only.
 
 Protocol: paper setting (1000 + 200 iterations), Colab L4, ZSL, `best` = best checkpoint on unseen. Flora is compared with the numbers reported in its paper; Flora itself was not rerun, apart from the STAR `none` / `compose` runs listed for reference.
 
@@ -26,8 +26,9 @@ Per-seed COA-Fuse (s1 / s2 / s3): 55/5 85.09 / 85.09 / 85.53; 48/12 63.75 / 62.2
 Notes:
 - The 96/24 gain over the paper is mostly the rerun itself (`none` is already +3.10). That split is unstable (best − last ≈ 8–12 points).
 - COA-Fuse vs compose v2: +0.71 / +1.40 / −0.04 / −0.97 (48/12, 110/10, 55/5, 96/24); mean +0.28, inside seed noise. Only 110/10 is consistent (3/3 seeds).
-- Centering alone (C-Fuse) gives 61.86 (48/12) and 80.94 (110/10), so most of the 110/10 gain is a KG-independent shift. A no-KG centering control is still missing.
+- Centering alone (C-Fuse) gives 61.86 (48/12) and 80.94 (110/10). The shuffled-KG control (below) shows this is not a KG-independent shift: centering a shuffled KG gives 58.28 / 77.77.
 - SeqKG + forbid is on par with compose (mean −0.08) but separates reversed-order class pairs: centered cosine 0.99 → 0.78–0.81.
+- **The order claim cannot be tested by ZSL accuracy on the standard splits** (checked 13 Nov with `nesy4_1_1_3_diag.py`): in all four splits each reversed-order pair has only one unseen member (48/12 wear a shoe; 110/10 wear jacket, put something into a bag; 55/5 put on a hat/cap; 96/24 take off shoe / glasses / hat / bag), so in-pair confusion never happens in ZSL. Claim only the representational difference. A split with both members unseen would need new STAR features.
 
 ### ZSL, SynSE features (SeqKG + COA-Fuse, seeds 1–3, best)
 
@@ -45,7 +46,41 @@ Notes:
 
 Not yet run for SeqKG + COA-Fuse (STAR, use `--eval-class-chunk 16`). The only GZSL numbers so far are in the "Earlier method" sections below.
 
+### Control: shuffled KG (13 Nov, `nesy0_shuffle.py`, STAR, mean of seeds 1–3, best)
+
+KG rows are permuted across classes (class c gets the rules of class π(c), no fixed points, π depends on the run seed); everything else is unchanged. Real-KG columns are the runs above.
+
+| Fusion | 48/12 shuffled | 48/12 real | real − shuffled | 110/10 shuffled | 110/10 real | real − shuffled |
+|---|---:|---:|---:|---:|---:|---:|
+| raw add (SeqKG + forbid) | 57.95 | 61.55 | +3.60 | 77.79 | 80.14 | +2.35 |
+| Center only (C-Fuse) | 58.28 | 61.86 | +3.58 | 77.77 | 80.94 | +3.17 |
+| COA-Fuse | 58.48 | 62.39 | +3.91 | 77.96 | 81.10 | +3.14 |
+| none (Flora, no KG) | 60.87 | | | 78.42 | | |
+
+Per seed (s1 / s2 / s3) for COA-Fuse shuffled: 48/12 56.88 / 59.37 / 59.19; 110/10 77.81 / 76.89 / 79.17. The gap real − shuffled is about 3× the seed std. A wrong KG falls below no-KG (−2.4 to −2.9 at 48/12, −0.5 to −0.7 at 110/10), so the model reads the KG content, and Center / Orth / Adaptive do not rescue a wrong KG. Within the real KG, each added fusion step is small (+0.31 / +0.80 for Center over raw add, +0.53 / +0.16 for Orth + Adaptive over Center, at 48/12 / 110/10) and inside seed noise. The shuffle also corrupts the Adaptive step, so the drop contains both effects. Not run: 55/5 and 96/24.
+
+### β sensitivity (13 Nov, C-Fuse = Center only, STAR, mean of seeds 1–3, best)
+
+| β | 48/12 | 110/10 | mean of both | 48/12 − none | 110/10 − none |
+|---|---:|---:|---:|---:|---:|
+| 0.1 | 61.86 | 79.57 | 70.72 | +0.99 | +1.16 |
+| **0.3** (fixed in advance) | 61.86 | 80.94 | **71.40** | +0.99 | +2.52 |
+| 0.5 | 60.87 | **81.36** | 71.12 | 0.00 | +2.94 |
+| 1.0 | 59.27 | 79.29 | 69.28 | −1.61 | +0.87 |
+| none | 60.87 | 78.42 | 69.65 | | |
+
+Inverted U on both splits; the good range is β ∈ [0.3, 0.5]. 110/10 peaks at 0.5, 48/12 at ≤ 0.3, and β = 1.0 hurts 48/12 (seeds 1, 2: −3.40, −3.16 vs none). The method is sensitive to β at the ±1-point level, so report it as a sensitivity analysis with β = 0.3 fixed beforehand (ZSL has no validation set). Per seed (s1 / s2 / s3), 48/12: β 0.1 63.69 / 61.01 / 60.89, β 0.5 61.96 / 59.80 / 60.86, β 1.0 58.71 / 57.95 / 61.14; 110/10: β 0.1 78.94 / 79.31 / 80.47, β 0.5 81.55 / 81.41 / 81.12, β 1.0 79.81 / 79.48 / 78.58. Not run for full COA-Fuse.
+
+### Other 13 Nov analyses (details: `progress/2026-11-13_flora_nesy_notes.md`)
+
+- **KG-only** (`nesy4_1_1_2_kgonly.py`, 48/12 seed 1, centered, no neighbours): 41.08 vs Flora text 61.5 (chance ≈ 8%).
+- **Error diagnostic** (`nesy4_1_1_3_diag.py`, seed 1): top2 − top1 14.16 / 13.46, margin predicts errors (error ratio 2.34 / 23.7), but only 46.4% / 34.5% of wrong samples have the KG saying "more different than text" (criterion 50%). A margin-gated KG re-ranking loop is dropped; errors are skeleton-side. On 55/5 (3 seeds) almost all errors are reading ↔ writing and 90–94% of wrong samples have d > 0; on 96/24 (seed 1) 62–63%, with take off a hat/cap at ~20% accuracy (51% predicted as take off glasses). So criterion (c) passes on 55/5 and 96/24 but not on 48/12 and 110/10; 55/5 is a single pair, so this is not enough to revive the loop.
+- **Name-free context around primitive sentences** (`nesy4_1_1_4_ctx.py`, seed 1, COA-Fuse 63.75 / 80.63): `action` 64.33 / 79.69, `person` 63.78 / 78.91. No gain; the template shifts all primitives along a common direction, which Center removes.
+
 ## 2. Negative results (STAR, 48/12 unless noted)
+
+- Compose from a joined class sentence (`--kg-compose-src text`): 62.53 vs compose 62.87 (seed 1; seeds 2–3 and 110/10 not run).
+- Name-free context around primitive sentences: no gain (see above).
 
 - ESA over per-class KG triples (`nesy7_esa.py`), Δ best vs compose: −5.99 (sim 1), −7.84 (sim 0), −0.82 (sim 0.05 + reg 1). R-GCN (`nesy6_gcn.py`) behaves the same: a learned delta on the KG memorises seen classes.
 - Text+IDF+gate ≈ compose after 3 seeds; fixed mix (0.5 text + 0.5 IDF, no gate): 61.37 vs 61.68.
@@ -54,9 +89,9 @@ Not yet run for SeqKG + COA-Fuse (STAR, use `--eval-class-chunk 16`). The only G
 
 ## 3. Still to do
 
-1. No-KG centering control (`nesy0_center.py`), 48/12 and 110/10, 3 seeds.
-2. SynSE 96/24, and GZSL for SeqKG + COA-Fuse.
-3. Per-pair accuracy and confusion for the reversed-order pairs (evidence for the order/negation claim).
+1. Shuffled-KG control on 55/5 and 96/24 if it goes into the paper; β sensitivity for full COA-Fuse (done for C-Fuse only).
+2. GZSL for SeqKG + COA-Fuse.
+3. ~~Per-pair accuracy for the reversed-order pairs~~: not measurable on the standard splits (see section 1).
 
 ---
 

@@ -192,4 +192,4 @@ if __name__ == '__main__':
                ('--fuse-adaptive', dict(type=int, default=1, choices=[0, 1])),
                ('--fuse-clip', dict(type=float, default=3.0)),
            ],
-           label_keys=[('fuse_center', 'c'), ('fuse_orth', 'o'), ('fuse_adaptive', 'a')])
+           label_keys=[('forbid_lam', 'lam'), ('fuse_center', 'c'), ('fuse_orth', 'o'), ('fuse_adaptive', 'a')])

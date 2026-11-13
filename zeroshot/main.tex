@@ -22,7 +22,7 @@
 \maketitle
 \begin{table}[htbp]
 \centering
-\caption{Performance comparison on NTU-60 (Xsub) and NTU-120 (Xsub). The best and second-best results are marked in red and blue, respectively. $\dagger$ denotes methods using SynSE-based [11] Shift-GCN features, while others use STAR-based [3] ones. Both are trained in the same manner [6], but differ slightly and were inconsistent in our evaluation, so we report both for completeness and fairness. $\ddagger$ indicates two-stream fusion; others are single-stream. ZSL results of SeqKG Compose use seed 1, while SeqKG + COA-Fuse reports the mean of 3 seeds (1--3). Results on Xview and Xset are reported in the Appendix.}
+\caption{Performance comparison on NTU-60 (Xsub) and NTU-120 (Xsub). The best and second-best results are marked in red and blue, respectively. $\dagger$ denotes methods using SynSE-based [11] Shift-GCN features, while others use STAR-based [3] ones. Both are trained in the same manner [6], but differ slightly and were inconsistent in our evaluation, so we report both for completeness and fairness. $\ddagger$ indicates two-stream fusion; others are single-stream. All results of our methods use seed 1 (fixed in advance); means over seeds 1--3 are given in Table~\ref{tab:ablation-shuffle} and the text. Results on Xview and Xset are reported in the Appendix.}
 \label{tab:ntu-comparison}
 \scriptsize
 \setlength{\tabcolsep}{2.3pt}
@@ -66,13 +66,51 @@ TDSM$^{\dagger}$ [8] & ICCV 2025 & \second{86.5} & -- & -- & -- & 56.0 & -- & --
 \textbf{Flora} & CVPR 2026 & 85.80 & \second{77.7} & \second{75.6} & \second{76.6} & 61.50 & \second{66.9} & 49.0 & 56.6 & 80.70 & 59.7 & \second{70.5} & 64.7 & 64.10 & 53.7 & \second{52.2} & 52.9 \\
 \textbf{Flora}$^{\dagger}$ & CVPR 2026 & 86.30 & 75.9 & \best{78.8} & \best{77.4} & \best{65.30} & 63.7 & \second{57.5} & \best{60.5} & 79.60 & \second{66.2} & 66.0 & \best{66.1} & 66.40 & 55.9 & 50.7 & 53.2 \\
 \hline
-\textbf{SeqKG Compose (Ours)} & This work & 84.72 & \best{79.19} & 72.37 & 75.63 & 63.29 & \best{71.70} & 49.71 & 58.72 & 79.97 & 58.86 & \best{72.02} & \second{64.78} & \second{68.02} & 51.48 & \best{60.10} & \best{55.46} \\
-\textbf{SeqKG Compose (Ours)}$^{\dagger}$ & This work & 85.18 & -- & -- & -- & \second{63.88} & -- & -- & -- & 80.83 & -- & -- & -- & 67.06 & -- & -- & -- \\
+\textbf{SeqKG Compose (Ours)} & This work & 84.72 & \best{79.19} & 72.37 & 75.63 & 63.29 & \best{71.70} & 49.71 & 58.72 & 79.97 & 58.86 & \best{72.02} & \second{64.78} & \best{68.02} & 51.48 & \best{60.10} & \best{55.46} \\
+\textbf{SeqKG Compose (Ours)}$^{\dagger}$ & This work & 85.18 & -- & -- & -- & 63.88 & -- & -- & -- & \second{80.83} & -- & -- & -- & \second{67.06} & -- & -- & -- \\
 \hline
-\textbf{SeqKG + COA-Fuse (Ours)} & This work & 85.24 & - & - & - & 62.39 & - & - & - & \second{81.10} & - & - & - & \best{68.16} & - & - & - \\
-\textbf{SeqKG + COA-Fuse (Ours)}$^{\dagger}$ & This work & 85.49 & - & - & - & 63.60 & - & - & - & \best{81.45} & - & - & - & 66.08 & - & - & - \\
+\textbf{SeqKG + COA-Fuse (Ours)} & This work & 85.09 & - & - & - & 63.75 & - & - & - & 80.63 & - & - & - & 66.96 & - & - & - \\
+\textbf{SeqKG + COA-Fuse (Ours)}$^{\dagger}$ & This work & 85.32 & - & - & - & \second{64.68} & - & - & - & \best{81.37} & - & - & - & 66.78 & - & - & - \\
 \end{tabular}%
 }
 \end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Ablation of the fusion steps and shuffled-KG control (ZSL accuracy, STAR features, mean of 3 seeds). Each row adds one step to the row above. \emph{Shuffled KG} permutes the KG rows across classes (class $c$ receives the rules of another class, no fixed points), keeping every other component unchanged. A wrong KG falls below the model without KG, so the gain comes from the KG content and not from the extra term itself. The no-KG row is our rerun of Flora (paper: 61.5 / 80.7).}
+\label{tab:ablation-shuffle}
+\small
+\begin{tabular}{l|ccc|ccc}
+\hline
+\multirow{2}{*}{Semantics} & \multicolumn{3}{c|}{NTU-60 48/12} & \multicolumn{3}{c}{NTU-120 110/10} \\
+& Real KG & Shuffled KG & $\Delta$ & Real KG & Shuffled KG & $\Delta$ \\
+\hline
+No KG (Flora, rerun) & \multicolumn{3}{c|}{60.87} & \multicolumn{3}{c}{78.42} \\
+\hline
+SeqKG, Signed Compose (raw add) & 61.55 & 57.95 & +3.60 & 80.14 & 77.79 & +2.35 \\
+\quad + Center (C-Fuse) & 61.86 & 58.28 & +3.58 & 80.94 & 77.77 & +3.17 \\
+\quad + Orthogonal + Adaptive (COA-Fuse) & \textbf{62.39} & 58.48 & +3.91 & \textbf{81.10} & 77.96 & +3.14 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Sensitivity to the KG weight $\beta$ (C-Fuse, ZSL accuracy, STAR features, mean of 3 seeds). $\beta = 0.3$ was fixed before this sweep and is used in all other tables; ZSL has no validation split, so $\beta$ is not tuned on unseen classes.}
+\label{tab:beta}
+\small
+\begin{tabular}{l|cccc|c}
+\hline
+$\beta$ & 0.1 & \textbf{0.3} & 0.5 & 1.0 & No KG \\
+\hline
+NTU-60 48/12 & \textbf{61.86} & \textbf{61.86} & 60.87 & 59.27 & 60.87 \\
+NTU-120 110/10 & 79.57 & 80.94 & \textbf{81.36} & 79.29 & 78.42 \\
+\hline
+Mean & 70.72 & \textbf{71.40} & 71.12 & 69.28 & 69.65 \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Reversed-order class pairs.} SeqKG removes all class pairs with identical rules (7 $\rightarrow$ 0) and lowers the centered cosine between the semantics of reversed-order pairs (e.g.\ \emph{wear jacket} / \emph{take off jacket}) from 0.99 to 0.78--0.81. In every standard split, however, each such pair has exactly one unseen member (48/12: \emph{wear a shoe}; 110/10: \emph{wear jacket}, \emph{put something into a bag}; 55/5: \emph{put on a hat/cap}; 96/24: \emph{take off} shoe / glasses / hat / bag). Since ZSL only predicts among unseen classes, confusion inside a pair cannot occur, and the benefit of order primitives cannot be measured by ZSL accuracy on these splits. We therefore claim only the representational difference.
 
 \end{document}
