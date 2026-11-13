@@ -90,6 +90,28 @@ Tiêu chí đặt trước (≥ +1 ở cả hai split, 3 seed) không đạt; kh
 Lưu ý log `person`: 12/111 câu bị cắt ở 48/12 nhưng 0/111 ở 110/10, và cosine trần so với bọc lệch (0.739 so với 0.752); chưa giải thích được (có thể lỗi đếm hoặc hai cache khác nhau). Vì vậy chỉ dựa vào số của `action`.
 Lý do không đưa tên lớp vào câu: `A_c` của Flora đã chứa tên lớp, nên `k_c` bị Orthogonal triệt tiêu hoặc chỉ phóng to `A_c`; cặp đảo thứ tự bị kéo giống nhau (đối ngược với lợi thế của forbid thứ tự); primitive mất tính dùng chung giữa seen và unseen. Chưa thử, chỉ lập luận.
 
+## 4b. Chấm lại ứng viên bằng truy hồi + luật KG (`nesy4_1_1_5_retrieval.py`) — kết quả âm
+
+Cơ chế: huấn luyện như COA-Fuse; khi dự đoán, lấy 50 mẫu huấn luyện seen gần nhất (cosine trên đặc trưng 256 chiều), hồ sơ primitive = trung bình có trọng số hàng `require` của lớp các mẫu đó; điểm luật của lớp unseen = TB hồ sơ trên primitive `require` − TB trên primitive `forbid` (chỉ primitive có ở lớp seen); chấm lại top-3 của DiT bằng z(−MSE) + γ·z(luật), γ = 1 cố định.
+
+| `best`, TB 3 seed | 48/12 (s1 / s2 / s3) | 110/10 (s1 / s2 / s3) |
+|---|---|---|
+| COA-Fuse (không chấm lại) | 62.39 | 81.10 |
+| + chấm lại, luật thật | **46.20** (46.40 / 46.49 / 45.70) | **56.44** (56.77 / 57.40 / 55.14) |
+| + chấm lại, luật xáo | 42.04 (46.55 / 35.19 / 44.39) | 52.77 (51.85 / 54.08 / 52.37) |
+
+- 48/12 seed 1: điểm DiT gốc trong cùng run đạt 63.75 (trùng COA-Fuse, kiểm tra đúng). Sau chấm lại 44–46% ở mọi lần đánh giá; số mẫu bị làm sai (500–750) gấp 3–5 lần số mẫu được sửa (110–300). Điểm chỉ dùng luật 31.21% (KG-only phía ngữ nghĩa: 41%). Trần top-3 85–89%.
+- Lưới γ × top tại lần đánh giá tốt nhất (cơ sở 57.22): γ 0.25 top-2 54.60, top-3 51.50; γ 1 top-3 46.40; γ 2 top-5 37.28. Không ô nào hơn cơ sở → không phải chọn sai γ.
+- Độ phủ primitive (primitive `require` của lớp unseen có ở lớp seen): 48/12 0.58, 110/10 0.90, 55/5 0.88, 96/24 0.85 (shake head 0.00). 110/10 phủ tốt mà vẫn tụt −25, nên độ phủ không phải nguyên nhân chính.
+- Nguyên nhân: hồ sơ là bản sao luật của lớp seen gần nhất, không phải primitive của mẫu (walking apart → `body.staggering 1.00` → falling; pushing → hồ sơ của một lớp tương tác seen → walking towards). Khi đúng thì rất rõ (brushing hair: `hand.vertical_oscillation 1.00, both_hands.above_head 0.92`; wear a shoe: `hand.at_foot, body.sitting`), nhưng ít hơn nhiều.
+- Luật thật hơn luật xáo ~+4 điểm: có tín hiệu thật nhưng yếu hơn DiT rất nhiều. **Không tiếp tục hướng này.**
+
+**Tổng kết phía skeleton:** mọi cách đưa KG vào phía skeleton hoặc bước quyết định đều thất bại (logic head, primitive token, chấm lại theo margin, truy hồi + luật). Chỉ phía ngữ nghĩa có tác dụng (đối chứng KG xáo xác nhận). Diễn giải: đặc trưng skeleton đã gộp thành vector 256 chiều không giữ thông tin khớp/thời gian để tách primitive khỏi nhãn lớp. `nesy0_probe.py` (đã viết, chưa chạy) đo trực tiếp điều này bằng AUC dự đoán primitive trên mẫu unseen; tiêu chí đặt trước: ≥ 0.75 là đặc trưng có primitive, ≤ 0.65 là không.
+
+## 4c. Bảng chính dùng seed 1 (quyết định của người dùng, 13/11)
+
+`main.tex`: hai dòng SeqKG + COA-Fuse đổi sang seed 1 (STAR 85.09 / 63.75 / 80.63 / 66.96; SynSE 85.32 / 64.68 / 81.37 / 66.78), tô lại best/second. Lý do chọn seed 1: cố định từ trước, khớp GZSL seed 1. Trung bình 4 split theo seed — STAR 74.11 / 74.45 / 74.11, SynSE 74.54 / 73.46 / 74.47 (seed 1 / 2 / 3): thứ hạng seed đảo giữa hai loại đặc trưng, chênh lệch là nhiễu. Bảng ablation/KG xáo và bảng β vẫn dùng TB 3 seed.
+
 ## 5. Các biến thể ghép text (nhắc lại)
 
 `--kg-compose-src text` (gộp primitive `require` thành một câu mỗi lớp): 48/12 seed 1 là 62.53, thấp hơn compose 62.87 (seed 2, 3 và 110/10 chưa chạy). `mix` (0.5 text + 0.5 IDF, không cổng): 61.37 (3 seed, 48/12) so với compose 61.68. Text+IDF+gate ≈ compose sau 3 seed. Không biến thể nào thắng compose.
@@ -139,3 +161,5 @@ Lý do không đưa tên lớp vào câu: `A_c` của Flora đã chứa tên l�
 | `nesy4_1_1_3_diag.py` | chẩn đoán lỗi DiT (top-k, margin, nhầm lẫn, KG so với text) | 075efae |
 | `nesy4_1_1_4_ctx.py` | câu primitive có ngữ cảnh không chứa tên lớp | 44d07e1 |
 | `nesy0_shuffle.py` | đối chứng KG xáo trộn | a6fc52b |
+| `nesy4_1_1_5_retrieval.py` | truy hồi mẫu seen → hồ sơ primitive → chấm lại top-k bằng luật (âm) | e1abc5e |
+| `nesy0_probe.py` | bộ dò primitive trên đặc trưng 256 chiều (AUC trên unseen) | chưa commit |

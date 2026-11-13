@@ -77,7 +77,12 @@ Inverted U on both splits; the good range is β ∈ [0.3, 0.5]. 110/10 peaks at 
 - **Error diagnostic** (`nesy4_1_1_3_diag.py`, seed 1): top2 − top1 14.16 / 13.46, margin predicts errors (error ratio 2.34 / 23.7), but only 46.4% / 34.5% of wrong samples have the KG saying "more different than text" (criterion 50%). A margin-gated KG re-ranking loop is dropped; errors are skeleton-side. On 55/5 (3 seeds) almost all errors are reading ↔ writing and 90–94% of wrong samples have d > 0; on 96/24 (seed 1) 62–63%, with take off a hat/cap at ~20% accuracy (51% predicted as take off glasses). So criterion (c) passes on 55/5 and 96/24 but not on 48/12 and 110/10; 55/5 is a single pair, so this is not enough to revive the loop.
 - **Name-free context around primitive sentences** (`nesy4_1_1_4_ctx.py`, seed 1, COA-Fuse 63.75 / 80.63): `action` 64.33 / 79.69, `person` 63.78 / 78.91. No gain; the template shifts all primitives along a common direction, which Center removes.
 
+- **Retrieval → primitive → rule re-ranking** (`nesy4_1_1_5_retrieval.py`, 3 seeds, best): the 50 nearest seen training samples give a primitive profile (mean of their class rules), a fuzzy rule score (mean require − mean forbid) re-ranks the DiT top-3 with γ = 1. Result 46.20 (48/12) and 56.44 (110/10) vs COA-Fuse 62.39 / 81.10; with shuffled rules 42.04 / 52.77. Rule-only accuracy 31.2% at 48/12; no cell of the γ × top grid beats the base (best: γ 0.25, top-2, 54.60 vs base 57.22 at the same eval). The profile copies the rules of the nearest seen class (e.g. walking apart → staggering → falling). Real rules beat shuffled by ~4, so the signal is real but much weaker than DiT. **Negative; not pursued.**
+- **Primitive probe** (`nesy0_probe.py`, no Flora training): measures whether the 256-d features carry primitive information that transfers to unseen classes (AUC on unseen test samples, seen-test reference, shuffled-rule control, kNN comparison). Not run yet.
+
 ## 2. Negative results (STAR, 48/12 unless noted)
+
+- Every use of the KG on the skeleton side or at decision time failed: logic head, primitive tokens, margin-gated re-ranking (diagnostic), retrieval + rule re-ranking (−16 / −25). Only the semantic-side use works, confirmed by the shuffled-KG control.
 
 - Compose from a joined class sentence (`--kg-compose-src text`): 62.53 vs compose 62.87 (seed 1; seeds 2–3 and 110/10 not run).
 - Name-free context around primitive sentences: no gain (see above).
