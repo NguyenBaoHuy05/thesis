@@ -106,7 +106,48 @@ Cơ chế: huấn luyện như COA-Fuse; khi dự đoán, lấy 50 mẫu huấn 
 - Nguyên nhân: hồ sơ là bản sao luật của lớp seen gần nhất, không phải primitive của mẫu (walking apart → `body.staggering 1.00` → falling; pushing → hồ sơ của một lớp tương tác seen → walking towards). Khi đúng thì rất rõ (brushing hair: `hand.vertical_oscillation 1.00, both_hands.above_head 0.92`; wear a shoe: `hand.at_foot, body.sitting`), nhưng ít hơn nhiều.
 - Luật thật hơn luật xáo ~+4 điểm: có tín hiệu thật nhưng yếu hơn DiT rất nhiều. **Không tiếp tục hướng này.**
 
-**Tổng kết phía skeleton:** mọi cách đưa KG vào phía skeleton hoặc bước quyết định đều thất bại (logic head, primitive token, chấm lại theo margin, truy hồi + luật). Chỉ phía ngữ nghĩa có tác dụng (đối chứng KG xáo xác nhận). Diễn giải: đặc trưng skeleton đã gộp thành vector 256 chiều không giữ thông tin khớp/thời gian để tách primitive khỏi nhãn lớp. `nesy0_probe.py` (đã viết, chưa chạy) đo trực tiếp điều này bằng AUC dự đoán primitive trên mẫu unseen; tiêu chí đặt trước: ≥ 0.75 là đặc trưng có primitive, ≤ 0.65 là không.
+**Tổng kết phía skeleton:** mọi cách đưa KG vào phía skeleton hoặc bước quyết định đều thất bại (logic head, primitive token, chấm lại theo margin, truy hồi + luật). Chỉ phía ngữ nghĩa có tác dụng (đối chứng KG xáo xác nhận). ~~Diễn giải: đặc trưng gộp không giữ thông tin primitive~~ — **sai**, xem mục 4d: đặc trưng có thông tin primitive chuyển giao được; cái yếu là bằng chứng primitive không đủ để phân biệt các lớp unseen.
+
+## 4d. Bộ dò primitive (`nesy0_probe.py`, STAR, không huấn luyện Flora)
+
+Bộ dò đa nhãn học trên đặc trưng seen (nhãn = hàng `require` của lớp), đo AUC từng primitive trên mẫu test unseen (chỉ primitive học được từ seen và phân chia các lớp unseen).
+
+| split | số primitive đo được | AUC unseen tuyến tính / MLP | luật xáo tuyến tính / MLP | kNN | seen test | luật-only: bộ dò / kNN (ngẫu nhiên) |
+|---|---:|---|---|---:|---:|---|
+| 55/5 | 11 | 0.771 / 0.859 | 0.744 / 0.820 | 0.775 | 0.990 | 72.9 / 66.4 (20.0) |
+| 48/12 | 15 | 0.831 / 0.871 | 0.631 / 0.690 | 0.786 | 0.989 | 29.7 / 31.2 (8.3) |
+| 110/10 | 21 | 0.772 / 0.858 | 0.522 / 0.535 | 0.784 | 0.985 | 43.1 / 31.7 (10.0) |
+| 96/24 | 31 | 0.841 / 0.882 | 0.531 / 0.595 | 0.781 | 0.986 | 25.8 / 26.3 (4.2) |
+
+- Đạt tiêu chí "có thông tin" (≥ 0.75) ở cả 4 split, MLP 0.86–0.88. Thật − xáo +0.18 đến +0.32 ở 48/12, 110/10, 96/24; 55/5 không có ý nghĩa (ít primitive, chủ yếu primitive dễ như hai người, nhảy lên).
+- Nhận tốt: `inter.two_person`, `inter.facing`, `hand.behind_torso`, `hand.at_foot`, `torso.bend_deep`, `torso.twisted` (0.95–1.00). Nhận kém: `hand.vertical_oscillation`, `hand.at_head_side`, `body.sustained_motion` (0.5–0.7).
+- Nhưng phân loại chỉ bằng luật vẫn thấp (26–43% ở 48/12, 110/10, 96/24 so với DiT 62–81%): mỗi lớp chỉ có vài primitive, nhiều lớp chia sẻ phần lớn primitive, AUC ~0.8 còn nhiễu.
+- Giá trị cho luận văn: bằng chứng grounding có thật, dùng được cho giải thích dự đoán (ví dụ wear a shoe ← `hand.at_foot` 0.97, `body.sitting` 0.93), dù không tăng điểm.
+
+## 4e. DiT + bằng chứng primitive cộng bằng log-xác suất (`nesy4_1_1_5_1_probe.py`, seed 1) — đóng
+
+Điểm = z(−MSE) + γ·[TB log q(require) + TB log(1 − q(forbid))] trong top-k của DiT; q từ bộ dò MLP hoặc kNN. Lưới tại lần đánh giá có DiT cao nhất (base 63.75 / 80.63):
+
+| γ (top-3) | 0.02 | 0.05 | 0.1 | 0.25 | 0.5 |
+|---|---:|---:|---:|---:|---:|
+| bộ dò, 48/12 | 62.17 | 59.53 | 56.58 | 50.14 | 43.91 |
+| bộ dò, 110/10 | 80.80 | **81.43** | 81.29 | 76.68 | 69.48 |
+| kNN, 48/12 | 61.20 | 57.49 | 53.08 | 47.31 | 43.69 |
+| kNN, 110/10 | 81.17 | 80.70 | 77.99 | 70.82 | 62.93 |
+
+- Cộng log-xác suất đỡ hại hơn z-score nhiều (kNN 48/12 γ 0.1: 53.08 so với 46.40), bộ dò tốt hơn kNN.
+- 48/12 tụt ở mọi γ, càng gần 0 càng gần base; 110/10 nhích +0.17 đến +0.80 (một seed). Khớp với độ phủ primitive (0.58 so với 0.90).
+- Không đạt tiêu chí (phải tăng ở cả hai split). **Đóng hướng cộng bằng chứng primitive vào quyết định.**
+- Kiểm giả thuyết "lợi ích phụ thuộc độ phủ primitive" (14/11, γ = 0.05 top-3 cố định từ 110/10, 55/5 và 96/24 là split giữ lại, seed 1). Dự đoán ghi trước: 55/5 nhích, 96/24 ≈ 0. Quy tắc: ≥ +0.3 so với base cùng run ở cả hai split.
+
+| γ 0.05, top-3, tại lần đánh giá có base cao nhất | 55/5 | 48/12 | 110/10 | 96/24 |
+|---|---:|---:|---:|---:|
+| base (DiT) | 85.09 | 63.75 | 80.63 | 66.96 |
+| + bộ dò | 84.50 | 59.53 | 81.43 | 68.01 |
+| Δ | −0.59 | −4.22 | +0.80 | **+1.05** |
+| độ phủ primitive | 0.88 | 0.58 | 0.90 | 0.85 |
+
+  `rr best − base best` (mỗi điểm lấy max riêng): 55/5 +0.00, 96/24 +1.17. Dự đoán của mình sai ở cả hai split. Không đạt quy tắc (55/5 âm) → giả thuyết độ phủ **không** được ủng hộ (55/5 phủ 0.88 vẫn tụt; lỗi ở đó là reading ↔ writing, hai lớp gần như cùng primitive). Quan sát sau sự kiện, không được kiểm: tăng ở hai split NTU-120 (+0.80, +1.05), giảm ở hai split NTU-60; có thể do NTU-120 có nhiều lớp seen hơn để học bộ dò. Nếu đưa vào luận văn chỉ được ghi là quan sát khám phá, seed 1; chọn split sau khi xem số rồi chạy 3 seed sẽ là chọn theo kết quả.
 
 ## 4c. Bảng chính dùng seed 1 (quyết định của người dùng, 13/11)
 
