@@ -24,6 +24,9 @@ from trainer import Trainer
 
 SRC_PRIMS, SRC_RULES = 'kg/primitive_v2.json', 'kg/kg_rules_v2.json'
 DST_PRIMS, DST_RULES = 'kg/primitive_v2seq.json', 'kg/kg_rules_v2seq.json'
+# PKU-MMD I: same vocabulary, rules from kg_pku51.py; nesy_common.kg_for_task picks these for pku51 tasks
+PKU_SRC_RULES = 'kg/kg_rules_pku51_v2.json'
+PKU_DST_PRIMS, PKU_DST_RULES = 'kg/primitive_pku51seq.json', 'kg/kg_rules_pku51seq.json'
 
 
 def _sentence(desc):
@@ -32,9 +35,17 @@ def _sentence(desc):
 
 
 def build_seq_kg(verbose=True):
-    with open(SRC_PRIMS, encoding='utf-8') as f:
+    """Build the NTU SeqKG and, when kg_rules_pku51_v2.json exists, the PKU-MMD one. Returns the NTU paths."""
+    _build_seq_kg(SRC_PRIMS, SRC_RULES, DST_PRIMS, DST_RULES, verbose)
+    if os.path.exists(PKU_SRC_RULES):
+        _build_seq_kg(SRC_PRIMS, PKU_SRC_RULES, PKU_DST_PRIMS, PKU_DST_RULES, verbose)
+    return DST_PRIMS, DST_RULES
+
+
+def _build_seq_kg(src_prims, src_rules, dst_prims, dst_rules, verbose):
+    with open(src_prims, encoding='utf-8') as f:
         prims = json.load(f)
-    with open(SRC_RULES, encoding='utf-8') as f:
+    with open(src_rules, encoding='utf-8') as f:
         kg = json.load(f)
     desc = {p['id']: p['description'] for p in prims}
     pairs = []
@@ -56,21 +67,20 @@ def build_seq_kg(verbose=True):
         r['forbid'] = list(r['forbid']) + [x for x in rev if x not in r['forbid']]
         n_forbid += len(rev)
     kg['meta'] = dict(kg.get('meta', {}))
-    kg['meta']['v2seq'] = ('built by nesy4_seqkg.py from kg_rules_v2.json: consecutive `sequence` pairs become order '
-                           'primitives seq.a>b (require), the reverse order is forbidden when it is a primitive; '
-                           'no new knowledge')
-    with open(DST_PRIMS, 'w', encoding='utf-8') as f:
+    kg['meta']['v2seq'] = (f'built by nesy4_seqkg.py from {os.path.basename(src_rules)}: consecutive `sequence` pairs '
+                           'become order primitives seq.a>b (require), the reverse order is forbidden when it is a '
+                           'primitive; no new knowledge')
+    with open(dst_prims, 'w', encoding='utf-8') as f:
         json.dump(new_prims, f, ensure_ascii=False, indent=1)
-    with open(DST_RULES, 'w', encoding='utf-8') as f:
+    with open(dst_rules, 'w', encoding='utf-8') as f:
         json.dump(kg, f, ensure_ascii=False, indent=1)
     if verbose:
         key = lambda r: (tuple(sorted(r['require'])), tuple(sorted(r['forbid'])))
         rules = kg['rules']
         same = sum(1 for i in range(len(rules)) for j in range(i + 1, len(rules)) if key(rules[i]) == key(rules[j]))
-        print(f'[nesy] KG v2seq: {len(prims)} + {len(pairs)} order primitives, {n_forbid} reverse-order forbids, '
-              f'class pairs with identical rules: {same} (v2 had 7)')
+        print(f'[nesy] {os.path.basename(dst_rules)}: {len(prims)} + {len(pairs)} order primitives, '
+              f'{n_forbid} reverse-order forbids, class pairs with identical rules: {same}')
         print(f'[nesy] e.g. {new_prims[len(prims)]["id"]}: {new_prims[len(prims)]["description"]}')
-    return DST_PRIMS, DST_RULES
 
 
 if __name__ == '__main__':

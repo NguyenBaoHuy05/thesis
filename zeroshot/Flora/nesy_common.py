@@ -44,7 +44,37 @@ FEAT_SPLITS = {
         '110': ('ntu120_xsub_seen110_unseen10', 'configs/synse/ntu120_xsub_unseen10.yaml', 79.6),
         '96':  ('ntu120_xsub_seen96_unseen24',  'configs/synse/ntu120_xsub_unseen24.yaml', 66.4),
     },
+    # Flora's Table 3: SA-DVAE random splits with ST-GCN features. Flora reports only the mean over the
+    # three splits (ZSL 88.6 / 71.2 / 71.6), so the per-split paper column is empty. PKU-MMD uses the KG of
+    # kg_pku51.py (see kg_for_task).
+    'sadave': {
+        f'{n}s{k}': (f'{task}_sadave_split{k}', f'configs/sadave_random_split/{cfg}_split{k}.yaml', float('nan'))
+        for n, task, cfg in (('55', 'ntu60_xsub_seen55_unseen5', 'ntu60_xsub_unseen5'),
+                             ('110', 'ntu120_xsub_seen110_unseen10', 'ntu120_xsub_unseen10'),
+                             ('46', 'pku51_xsub_seen46_unseen5', 'pku51_xsub_unseen5'))
+        for k in (1, 2, 3)
+    },
 }
+
+# KG files of other datasets, keyed by the NTU file they replace (same vocabulary, own class rules)
+KG_BY_DATASET = {
+    'pku51': {'primitive_v2.json': 'primitive_v2.json', 'kg_rules_v2.json': 'kg_rules_pku51_v2.json',
+              'primitive_v2seq.json': 'primitive_pku51seq.json', 'kg_rules_v2seq.json': 'kg_rules_pku51seq.json'},
+}
+
+
+def kg_for_task(task, prims, rules):
+    """KG files to use for a task: unchanged for NTU, the dataset's own version otherwise."""
+    swap = KG_BY_DATASET.get(task.split('_')[0])
+    if swap is None:
+        return prims, rules
+    out = []
+    for path in (prims, rules):
+        base = os.path.basename(path)
+        if base not in swap:
+            raise ValueError(f'{task}: no {task.split("_")[0]} version of KG file {path}')
+        out.append(os.path.join(os.path.dirname(path), swap[base]))
+    return tuple(out)
 FEAT = 'star'                       # set by main() from --feat
 SPLITS = FEAT_SPLITS[FEAT]
 
@@ -191,7 +221,9 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     ap.add_argument('--feat', default='star', choices=list(FEAT_SPLITS),
                     help='skeleton features: star (1s-Shift-GCN) or synse (4s-Shift-GCN, Flora†); '
                          'synse runs go to <out-root>/synse/')
-    ap.add_argument('--tasks', nargs='+', default=['48', '110'], choices=list(SPLITS), help='splits to run')
+    ap.add_argument('--tasks', nargs='+', default=['48', '110'],
+                    choices=sorted({k for splits in FEAT_SPLITS.values() for k in splits}),
+                    help='splits to run (sadave: 55s1..55s3, 110s1..110s3, 46s1..46s3 = PKU-MMD I)')
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
     out_default = DRIVE_OUT if os.path.isdir(os.path.dirname(DRIVE_OUT)) else os.path.join(HERE, 'output', 'nesy')
     ap.add_argument('--out-root', default=out_default)
@@ -224,6 +256,10 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     ap.add_argument('--total-iter', type=int, help='override Flora total iterations')
     ap.add_argument('--align-iter', type=int, help='override Flora phase-1 iterations')
     ap.add_argument('--eval-iter', type=int, help='override Flora evaluation interval')
+    ap.add_argument('--low-shot', action='store_true',
+                    help='Flora low-shot training: keep --percentage of the training samples of each seen class; '
+                         'runs go to <out-root>/lowshot<percentage>/')
+    ap.add_argument('--percentage', type=float, default=0.1, help='fraction of training samples kept with --low-shot')
     ap.add_argument('--no-baselines', action='store_true', help='do not train missing none/compose baselines')
     ap.add_argument('--baselines', nargs='+', choices=['none', 'compose'], default=['none', 'compose'],
                     help='reference runs to train/reuse before the method; use --baselines compose for SeqKG Compose only')
@@ -240,6 +276,9 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
         ap.set_defaults(**defaults)
     opts = ap.parse_args()
     set_feat(opts.feat)
+    bad_tasks = [t for t in opts.tasks if t not in SPLITS]
+    if bad_tasks:
+        ap.error(f'--tasks {bad_tasks} không có với --feat {opts.feat}; chọn trong {list(SPLITS)}')
     method_dests = [ap._option_string_actions[flag].dest for flag, _ in method_args]
     extra = {d: getattr(opts, d) for d in method_dests}
     flora = dict(kg_mode=opts.kg_mode, kg_beta=opts.kg_beta, kg_prims=opts.kg_prims,
@@ -256,12 +295,15 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
         value = getattr(opts, key)
         if value is not None:
             flora[key] = value
+    if opts.low_shot:
+        flora.update(low_shot=True, percentage=opts.percentage)
     if flora_from_method:
         flora.update(flora_from_method(opts))
 
     # ---- inside a subprocess: one run
     if opts.single:
         task, seed = opts.single[0], int(opts.single[1])
+        flora['kg_prims'], flora['kg_rules'] = kg_for_task(task, flora['kg_prims'], flora['kg_rules'])
         if opts.baseline:
             from trainer import Trainer
             baseline_flora = dict(flora)
@@ -280,6 +322,8 @@ def main(name, trainer_cls, method_args=(), default_kg_mode='compose', label_key
     # ---- parent: the grid
     if opts.feat != 'star':
         opts.out_root = os.path.join(opts.out_root, opts.feat)   # keep SynSE runs and baselines apart from STAR ones
+    if opts.low_shot:
+        opts.out_root = os.path.join(opts.out_root, f'lowshot{opts.percentage:g}')   # never mix with full-data runs
     feat_dir = os.path.dirname(data_path(SPLITS[opts.tasks[0]][0]))
     if not os.path.isdir(feat_dir):
         sys.exit(f'[nesy] không thấy {os.path.join(HERE, feat_dir)}: chưa chạy cell tải feature '

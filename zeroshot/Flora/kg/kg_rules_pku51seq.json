@@ -1,0 +1,1011 @@
+{
+ "meta": {
+  "generator": "Claude Opus 5.5, one pass (no majority vote), 2026-11-06, written from class names + primitive.json only, without looking at any experiment result. v2: Claude Opus 5.5, 2026-11-08, revised from v1 using only a rule-level analysis (classes with identical require sets, class pairs separated by <= 2 primitives) and class names; no experiment result or test data used",
+  "vocabulary": "zeroshot/primitive_v2.json (82 primitives: v1 + 11 new, head.nod redefined to include bow)",
+  "classes": "PKU-MMD I, 51 classes, id = line in semantics/pku51_llm.txt; ntu_id = NTU class the rule is copied from",
+  "semantics": "require = must occur at some time during the action; forbid = never occurs; sequence = phase order (subset of require); a primitive not listed = don't care",
+  "persons": "number of persons the action involves (1 or 2); kept for reference only, the rules encode it as inter.two_person (forbid for 1, require for 2)",
+  "pku51": "built by kg_pku51.py from kg_rules_v2.json: every rule copied from the NTU class of the same action; only the two pocket classes (both NTU 25) get hand.in_front_space and opposite sequences, written by Claude Opus 5.5 on 2026-11-16 from class names and primitive_v2.json only",
+  "v2seq": "built by nesy4_seqkg.py from kg_rules_pku51_v2.json: consecutive `sequence` pairs become order primitives seq.a>b (require), the reverse order is forbidden when it is a primitive; no new knowledge"
+ },
+ "constraints": {
+  "implication": [
+   [
+    "inter.approaching",
+    "inter.two_person"
+   ],
+   [
+    "inter.separating",
+    "inter.two_person"
+   ],
+   [
+    "inter.facing",
+    "inter.two_person"
+   ],
+   [
+    "inter.same_heading",
+    "inter.two_person"
+   ],
+   [
+    "inter.hand_to_other_hand",
+    "inter.two_person"
+   ],
+   [
+    "inter.hand_to_other_head_shoulder",
+    "inter.two_person"
+   ],
+   [
+    "inter.hand_to_other_trunk",
+    "inter.two_person"
+   ],
+   [
+    "inter.hand_to_other_back",
+    "inter.two_person"
+   ],
+   [
+    "inter.arms_around_other",
+    "inter.two_person"
+   ],
+   [
+    "inter.foot_to_other_leg",
+    "inter.two_person"
+   ],
+   [
+    "inter.other_displaced",
+    "inter.two_person"
+   ],
+   [
+    "inter.head_to_other_head",
+    "inter.two_person"
+   ],
+   [
+    "inter.pointing_at_other",
+    "inter.two_person"
+   ],
+   [
+    "inter.mutual_reach",
+    "inter.two_person"
+   ],
+   [
+    "inter.arms_around_other",
+    "inter.hand_to_other_back"
+   ],
+   [
+    "both_hands.above_head",
+    "hand.above_head"
+   ],
+   [
+    "hands.rubbing",
+    "hands.touching"
+   ],
+   [
+    "hands.clapping",
+    "hands.both_active"
+   ],
+   [
+    "hands.rubbing",
+    "hands.both_active"
+   ]
+  ]
+ },
+ "rules": [
+  {
+   "id": 1,
+   "class": "bow",
+   "persons": 1,
+   "require": [
+    "head.nod",
+    "head.lowered"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "head.shake",
+    "hand.above_head",
+    "body.translating"
+   ],
+   "sequence": [],
+   "ntu_id": 35
+  },
+  {
+   "id": 2,
+   "class": "brushing hair",
+   "persons": 1,
+   "require": [
+    "hand.at_head_side",
+    "arm.lateral_raised",
+    "hand.vertical_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.touching"
+   ],
+   "sequence": [],
+   "ntu_id": 4
+  },
+  {
+   "id": 3,
+   "class": "brushing teeth",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "arm.flexed",
+    "hand.small_fast_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "hands.touching"
+   ],
+   "sequence": [],
+   "ntu_id": 3
+  },
+  {
+   "id": 4,
+   "class": "check time (from watch)",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.torso_level",
+    "arm.flexed",
+    "head.lowered",
+    "hand.static_hold"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.small_fast_oscillation",
+    "hand.vertical_oscillation",
+    "hands.near"
+   ],
+   "sequence": [],
+   "ntu_id": 33
+  },
+  {
+   "id": 5,
+   "class": "cheer up",
+   "persons": 1,
+   "require": [
+    "both_hands.above_head",
+    "hand.vertical_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.sitting"
+   ],
+   "sequence": [],
+   "ntu_id": 22
+  },
+  {
+   "id": 6,
+   "class": "clapping",
+   "persons": 1,
+   "require": [
+    "hands.clapping",
+    "hand.torso_level"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.rubbing",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 10
+  },
+  {
+   "id": 7,
+   "class": "cross hands in front (say stop)",
+   "persons": 1,
+   "require": [
+    "hands.crossed",
+    "arm.forward_raised",
+    "hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.clapping",
+    "hand.at_torso_front"
+   ],
+   "sequence": [],
+   "ntu_id": 40
+  },
+  {
+   "id": 8,
+   "class": "drink water",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "hand.head_level",
+    "arm.flexed"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "hand.small_fast_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 1
+  },
+  {
+   "id": 9,
+   "class": "drop",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.torso_level",
+    "body.brief_motion"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.at_foot",
+    "torso.bend_deep",
+    "hand.above_head",
+    "hand.vertical_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 5
+  },
+  {
+   "id": 10,
+   "class": "eat meal/snack",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "arm.flexed",
+    "hand.vertical_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 2
+  },
+  {
+   "id": 11,
+   "class": "falling",
+   "persons": 1,
+   "require": [
+    "body.standing",
+    "body.falling",
+    "seq.body.standing>body.falling"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.rising"
+   ],
+   "sequence": [
+    "body.standing",
+    "body.falling"
+   ],
+   "ntu_id": 43
+  },
+  {
+   "id": 12,
+   "class": "giving something to other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.facing",
+    "inter.hand_to_other_hand",
+    "hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.arms_around_other",
+    "hand.above_head",
+    "inter.mutual_reach"
+   ],
+   "sequence": [],
+   "ntu_id": 56
+  },
+  {
+   "id": 13,
+   "class": "hand waving",
+   "persons": 1,
+   "require": [
+    "hand.lateral_oscillation",
+    "hand.head_level"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.at_face",
+    "hands.touching",
+    "both_hands.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 23
+  },
+  {
+   "id": 14,
+   "class": "handshaking",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.facing",
+    "inter.hand_to_other_hand",
+    "hand.torso_level"
+   ],
+   "forbid": [
+    "inter.arms_around_other",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 58
+  },
+  {
+   "id": 15,
+   "class": "hopping (one foot jumping)",
+   "persons": 1,
+   "require": [
+    "body.airborne",
+    "leg.single_support"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "leg.alternating_lifts",
+    "body.sitting"
+   ],
+   "sequence": [],
+   "ntu_id": 26
+  },
+  {
+   "id": 16,
+   "class": "hugging other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.arms_around_other",
+    "inter.facing",
+    "inter.head_to_other_head"
+   ],
+   "forbid": [
+    "inter.other_displaced",
+    "inter.separating"
+   ],
+   "sequence": [],
+   "ntu_id": 55
+  },
+  {
+   "id": 17,
+   "class": "jump up",
+   "persons": 1,
+   "require": [
+    "body.airborne"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "leg.single_support",
+    "leg.alternating_lifts",
+    "body.translating"
+   ],
+   "sequence": [],
+   "ntu_id": 27
+  },
+  {
+   "id": 18,
+   "class": "kicking other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.facing",
+    "leg.kick_forward",
+    "leg.single_support"
+   ],
+   "forbid": [
+    "inter.hand_to_other_hand",
+    "inter.arms_around_other"
+   ],
+   "sequence": [],
+   "ntu_id": 51
+  },
+  {
+   "id": 19,
+   "class": "kicking something",
+   "persons": 1,
+   "require": [
+    "leg.kick_forward",
+    "leg.single_support"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.airborne",
+    "leg.alternating_lifts"
+   ],
+   "sequence": [],
+   "ntu_id": 24
+  },
+  {
+   "id": 20,
+   "class": "make a phone call/answer phone",
+   "persons": 1,
+   "require": [
+    "hand.at_head_side",
+    "arm.flexed"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.lateral_oscillation",
+    "hand.vertical_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 28
+  },
+  {
+   "id": 21,
+   "class": "pat on back of other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.hand_to_other_back",
+    "hand.vertical_oscillation"
+   ],
+   "forbid": [
+    "inter.arms_around_other",
+    "inter.other_displaced"
+   ],
+   "sequence": [],
+   "ntu_id": 53
+  },
+  {
+   "id": 22,
+   "class": "pickup",
+   "persons": 1,
+   "require": [
+    "body.standing",
+    "hand.at_foot",
+    "head.lowered"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "body.sitting"
+   ],
+   "sequence": [],
+   "ntu_id": 6
+  },
+  {
+   "id": 23,
+   "class": "playing with phone/tablet",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "head.lowered",
+    "arm.flexed",
+    "hands.near"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.vertical_oscillation",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 29
+  },
+  {
+   "id": 24,
+   "class": "point finger at the other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.pointing_at_other",
+    "arm.extended",
+    "inter.facing"
+   ],
+   "forbid": [
+    "inter.hand_to_other_hand",
+    "inter.hand_to_other_trunk",
+    "hands.touching"
+   ],
+   "sequence": [],
+   "ntu_id": 54
+  },
+  {
+   "id": 25,
+   "class": "pointing to something with finger",
+   "persons": 1,
+   "require": [
+    "arm.extended",
+    "arm.forward_raised"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.touching",
+    "hand.lateral_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 31
+  },
+  {
+   "id": 26,
+   "class": "punching/slapping other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.facing",
+    "inter.hand_to_other_head_shoulder",
+    "arm.extended"
+   ],
+   "forbid": [
+    "inter.arms_around_other",
+    "inter.hand_to_other_hand"
+   ],
+   "sequence": [],
+   "ntu_id": 50
+  },
+  {
+   "id": 27,
+   "class": "pushing other person",
+   "persons": 2,
+   "require": [
+    "inter.two_person",
+    "inter.facing",
+    "inter.hand_to_other_trunk",
+    "inter.other_displaced",
+    "arm.extended",
+    "seq.inter.hand_to_other_trunk>inter.other_displaced"
+   ],
+   "forbid": [
+    "inter.arms_around_other"
+   ],
+   "sequence": [
+    "inter.hand_to_other_trunk",
+    "inter.other_displaced"
+   ],
+   "ntu_id": 52
+  },
+  {
+   "id": 28,
+   "class": "put on a hat/cap",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.at_head_top",
+    "seq.hand.in_front_space>hand.at_head_top"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.small_fast_oscillation",
+    "seq.hand.at_head_top>hand.in_front_space"
+   ],
+   "sequence": [
+    "hand.in_front_space",
+    "hand.at_head_top"
+   ],
+   "ntu_id": 20
+  },
+  {
+   "id": 29,
+   "class": "put something inside pocket",
+   "persons": 1,
+   "require": [
+    "hand.at_hip",
+    "arm.flexed",
+    "hand.in_front_space",
+    "seq.hand.in_front_space>hand.at_hip"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "body.translating",
+    "seq.hand.at_hip>hand.in_front_space"
+   ],
+   "sequence": [
+    "hand.in_front_space",
+    "hand.at_hip"
+   ],
+   "ntu_id": 25
+  },
+  {
+   "id": 30,
+   "class": "reading",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.torso_level",
+    "head.lowered",
+    "hand.static_hold",
+    "hands.near"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.small_fast_oscillation",
+    "hand.vertical_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 11
+  },
+  {
+   "id": 31,
+   "class": "rub two hands together",
+   "persons": 1,
+   "require": [
+    "hands.touching",
+    "hands.rubbing",
+    "hand.torso_level"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.clapping",
+    "hand.at_other_forearm"
+   ],
+   "sequence": [],
+   "ntu_id": 34
+  },
+  {
+   "id": 32,
+   "class": "salute",
+   "persons": 1,
+   "require": [
+    "hand.head_level",
+    "arm.lateral_raised",
+    "arm.flexed"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.lateral_oscillation",
+    "hands.touching"
+   ],
+   "sequence": [],
+   "ntu_id": 38
+  },
+  {
+   "id": 33,
+   "class": "sitting down",
+   "persons": 1,
+   "require": [
+    "body.standing",
+    "body.lowering",
+    "body.sitting",
+    "seq.body.standing>body.lowering",
+    "seq.body.lowering>body.sitting"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.rising",
+    "body.falling"
+   ],
+   "sequence": [
+    "body.standing",
+    "body.lowering",
+    "body.sitting"
+   ],
+   "ntu_id": 8
+  },
+  {
+   "id": 34,
+   "class": "standing up",
+   "persons": 1,
+   "require": [
+    "body.sitting",
+    "body.rising",
+    "body.standing",
+    "seq.body.sitting>body.rising",
+    "seq.body.rising>body.standing"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.lowering",
+    "body.falling"
+   ],
+   "sequence": [
+    "body.sitting",
+    "body.rising",
+    "body.standing"
+   ],
+   "ntu_id": 9
+  },
+  {
+   "id": 35,
+   "class": "take off a hat/cap",
+   "persons": 1,
+   "require": [
+    "hand.at_head_top",
+    "hand.in_front_space",
+    "seq.hand.at_head_top>hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.small_fast_oscillation",
+    "seq.hand.in_front_space>hand.at_head_top"
+   ],
+   "sequence": [
+    "hand.at_head_top",
+    "hand.in_front_space"
+   ],
+   "ntu_id": 21
+  },
+  {
+   "id": 36,
+   "class": "take off glasses",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "hand.in_front_space",
+    "hand.head_level",
+    "seq.hand.at_face>hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.at_head_top",
+    "hand.small_fast_oscillation",
+    "seq.hand.in_front_space>hand.at_face"
+   ],
+   "sequence": [
+    "hand.at_face",
+    "hand.in_front_space"
+   ],
+   "ntu_id": 19
+  },
+  {
+   "id": 37,
+   "class": "take off jacket",
+   "persons": 1,
+   "require": [
+    "hand.at_torso_front",
+    "hand.behind_torso",
+    "torso.twisted",
+    "seq.hand.at_torso_front>hand.behind_torso"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.translating",
+    "seq.hand.behind_torso>hand.at_torso_front"
+   ],
+   "sequence": [
+    "hand.at_torso_front",
+    "hand.behind_torso"
+   ],
+   "ntu_id": 15
+  },
+  {
+   "id": 38,
+   "class": "take out something from pocket",
+   "persons": 1,
+   "require": [
+    "hand.at_hip",
+    "arm.flexed",
+    "hand.in_front_space",
+    "seq.hand.at_hip>hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "body.translating",
+    "seq.hand.in_front_space>hand.at_hip"
+   ],
+   "sequence": [
+    "hand.at_hip",
+    "hand.in_front_space"
+   ],
+   "ntu_id": 25
+  },
+  {
+   "id": 39,
+   "class": "taking a selfie",
+   "persons": 1,
+   "require": [
+    "arm.extended",
+    "arm.forward_raised",
+    "hand.head_level",
+    "hand.in_front_space"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.lateral_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 32
+  },
+  {
+   "id": 40,
+   "class": "tear up paper",
+   "persons": 1,
+   "require": [
+    "hands.touching",
+    "hands.pull_apart",
+    "hand.torso_level",
+    "seq.hands.touching>hands.pull_apart"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hands.clapping",
+    "hands.rubbing",
+    "hand.wrist_twist"
+   ],
+   "sequence": [
+    "hands.touching",
+    "hands.pull_apart"
+   ],
+   "ntu_id": 13
+  },
+  {
+   "id": 41,
+   "class": "throw",
+   "persons": 1,
+   "require": [
+    "hand.fast_thrust",
+    "arm.extended"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.at_face",
+    "hands.touching"
+   ],
+   "sequence": [],
+   "ntu_id": 7
+  },
+  {
+   "id": 42,
+   "class": "touch back (backache)",
+   "persons": 1,
+   "require": [
+    "hand.behind_torso",
+    "arm.flexed"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 46
+  },
+  {
+   "id": 43,
+   "class": "touch chest (stomachache/heart pain)",
+   "persons": 1,
+   "require": [
+    "hand.at_torso_front",
+    "hand.torso_level"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "hand.at_face"
+   ],
+   "sequence": [],
+   "ntu_id": 45
+  },
+  {
+   "id": 44,
+   "class": "touch head (headache)",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "head.lowered"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.vertical_oscillation",
+    "hand.small_fast_oscillation",
+    "torso.forward_jerk"
+   ],
+   "sequence": [],
+   "ntu_id": 44
+  },
+  {
+   "id": 45,
+   "class": "touch neck (neckache)",
+   "persons": 1,
+   "require": [
+    "hand.at_neck",
+    "hand.head_level"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.vertical_oscillation"
+   ],
+   "sequence": [],
+   "ntu_id": 47
+  },
+  {
+   "id": 46,
+   "class": "typing on a keyboard",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.torso_level",
+    "hand.small_fast_oscillation",
+    "hands.both_active"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "hands.touching",
+    "hands.one_active"
+   ],
+   "sequence": [],
+   "ntu_id": 30
+  },
+  {
+   "id": 47,
+   "class": "use a fan (with hand or paper)/feeling warm",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "hand.lateral_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head"
+   ],
+   "sequence": [],
+   "ntu_id": 49
+  },
+  {
+   "id": 48,
+   "class": "wear jacket",
+   "persons": 1,
+   "require": [
+    "hand.behind_torso",
+    "hand.at_torso_front",
+    "torso.twisted",
+    "seq.hand.behind_torso>hand.at_torso_front"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "body.translating",
+    "seq.hand.at_torso_front>hand.behind_torso"
+   ],
+   "sequence": [
+    "hand.behind_torso",
+    "hand.at_torso_front"
+   ],
+   "ntu_id": 14
+  },
+  {
+   "id": 49,
+   "class": "wear on glasses",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "hand.at_face",
+    "hand.head_level",
+    "seq.hand.in_front_space>hand.at_face"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.at_head_top",
+    "hand.small_fast_oscillation",
+    "seq.hand.at_face>hand.in_front_space"
+   ],
+   "sequence": [
+    "hand.in_front_space",
+    "hand.at_face"
+   ],
+   "ntu_id": 18
+  },
+  {
+   "id": 50,
+   "class": "wipe face",
+   "persons": 1,
+   "require": [
+    "hand.at_face",
+    "hand.head_level",
+    "hand.vertical_oscillation"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "torso.forward_jerk"
+   ],
+   "sequence": [],
+   "ntu_id": 37
+  },
+  {
+   "id": 51,
+   "class": "writing",
+   "persons": 1,
+   "require": [
+    "hand.in_front_space",
+    "head.lowered",
+    "hand.small_fast_oscillation",
+    "hands.one_active"
+   ],
+   "forbid": [
+    "inter.two_person",
+    "hand.above_head",
+    "hands.clapping",
+    "hands.both_active"
+   ],
+   "sequence": [],
+   "ntu_id": 12
+  }
+ ]
+}
