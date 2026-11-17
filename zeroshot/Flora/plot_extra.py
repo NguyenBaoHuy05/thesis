@@ -120,21 +120,18 @@ def plot_beta_curve(fig_dir):
     betas = np.array([0.1, 0.3, 0.5, 1.0])
     d_48 = np.array([63.7, 63.7, 62.0, 58.7]) - 62.1
     d_110 = np.array([78.9, 80.2, 81.6, 79.8]) - 77.6
-    d_mean = np.array([71.3, 71.9, 71.8, 69.3]) - 69.9
 
     fig, ax = plt.subplots(figsize=(5.8, 3.8))
     ax.axhspan(-4.5, 0.0, color='#fee2e2', alpha=0.35, zorder=0)
     ax.axhline(0.0, color='#475569', linestyle='--', linewidth=1.2, zorder=1, label='No KG baseline (0.0%)')
 
     ax.plot(betas, d_110, 's-', color='#dc2626', linewidth=2.0, label='NTU-120 110/10', zorder=3)
-    ax.plot(betas, d_mean, '^-', color='#0f172a', linewidth=2.2, label='Mean (both splits)', zorder=4)
     ax.plot(betas, d_48, 'o-', color='#2563eb', linewidth=2.0, label='NTU-60 48/12', zorder=3)
 
-    ax.axvline(0.3, color='#059669', linestyle='--', linewidth=1.3, zorder=2, label=r'Fixed $\beta = 0.3$ (peak +2.0%)')
-    ax.scatter([0.3], [d_mean[1]], color='#059669', s=80, zorder=5)
+    ax.axvline(0.3, color='#059669', linestyle='--', linewidth=1.3, zorder=2, label=r'Fixed $\beta = 0.3$')
 
     ax.text(0.5, d_110[2] + 0.25, f'+{d_110[2]:.1f}%', ha='center', fontsize=8, color='#dc2626', fontweight='bold')
-    ax.text(0.32, d_mean[1] + 0.25, f'+{d_mean[1]:.1f}%', ha='left', fontsize=8, color='#059669', fontweight='bold')
+    ax.text(0.3, d_48[1] + 0.25, f'+{d_48[1]:.1f}%', ha='center', fontsize=8, color='#2563eb', fontweight='bold')
     ax.text(1.0, d_48[3] - 0.55, f'{d_48[3]:.1f}%', ha='center', fontsize=8, color='#2563eb', fontweight='bold')
 
     ax.set_xticks(betas)
