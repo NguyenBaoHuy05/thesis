@@ -92,21 +92,21 @@ def plot_reversed_pairs(fig_dir):
     v_plain, v_ppc = v_plain[order], v_ppc[order]
 
     y = np.arange(len(pairs))
-    fig, ax = plt.subplots(figsize=(6.8, 3.4))
+    fig, ax = plt.subplots(figsize=(7.2, 3.8))
     for k in range(len(pairs)):
         ax.plot([v_ppc[k], v_plain[k]], [y[k], y[k]], color='#cbd5e1', linewidth=2.4, zorder=1)
-        ax.text(v_ppc[k] - 0.01, y[k], f'{v_ppc[k]:.2f}', va='center', ha='right',
+        ax.text(v_ppc[k] - 0.012, y[k], f'{v_ppc[k]:.2f}', va='center', ha='right',
                 fontsize=8.5, color='#1d4ed8', fontweight='bold')
-        ax.text(v_plain[k] + 0.01, y[k], f'{v_plain[k]:.2f}', va='center', ha='left',
+        ax.text(v_plain[k] + 0.012, y[k], f'{v_plain[k]:.2f}', va='center', ha='left',
                 fontsize=8.5, color='#64748b')
 
     ax.scatter(v_plain, y, color='#94a3b8', s=55, zorder=3, label=f'KG (mean {v_plain.mean():.2f})')
     ax.scatter(v_ppc, y, color='#2563eb', s=55, zorder=4, label=f'+ ORE + PPC (mean {v_ppc.mean():.2f})')
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
-    ax.set_xlim(0.70, 1.06)
+    ax.set_xlim(0.62, 1.06)
     ax.set_xlabel('Centered Cosine Similarity (lower = more distinct)')
-    ax.legend(loc='lower left', frameon=True)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=2, frameon=True)
     ax.grid(axis='x', linestyle='--', alpha=0.35)
     plt.tight_layout()
     out = os.path.join(fig_dir, 'fig_reversed_pairs.png')
@@ -122,20 +122,20 @@ def plot_beta_curve(fig_dir):
     acc_110 = [78.9, 80.2, 81.6, 79.8]
     acc_mean = [71.3, 71.9, 71.8, 69.3]
 
-    fig, ax = plt.subplots(figsize=(5.6, 3.6))
+    fig, ax = plt.subplots(figsize=(5.8, 3.9))
     ax.plot(betas, acc_110, 's-', color='#dc2626', linewidth=2.0, label='NTU-120 110/10 (No KG: 77.6%)')
     ax.plot(betas, acc_mean, '^-', color='#0f172a', linewidth=2.2, label='Mean (No KG: 69.9%)')
     ax.plot(betas, acc_48, 'o-', color='#2563eb', linewidth=2.0, label='NTU-60 48/12 (No KG: 62.1%)')
 
     ax.axhline(69.9, color='#94a3b8', linestyle=':', linewidth=1.2)
-    ax.axvline(0.3, color='#059669', linestyle='--', linewidth=1.3, label=r'Fixed $\beta = 0.3$ (peak mean 71.9%)')
+    ax.axvline(0.3, color='#059669', linestyle='--', linewidth=1.3, label=r'Fixed $\beta = 0.3$ (peak 71.9%)')
     ax.scatter([0.3], [71.9], color='#059669', s=75, zorder=5)
 
     ax.set_xticks(betas)
     ax.set_ylim(56.5, 84.0)
     ax.set_xlabel(r'KG Weight $\beta$ (C-Fuse)')
     ax.set_ylabel('ZSL Accuracy (%)')
-    ax.legend(loc='lower left', frameon=True, fontsize=8)
+    ax.legend(loc='lower center', bbox_to_anchor=(0.5, 1.02), ncol=2, frameon=True, fontsize=8)
     ax.grid(True, linestyle='--', alpha=0.35)
     plt.tight_layout()
     out = os.path.join(fig_dir, 'fig_beta_curve.png')
@@ -257,14 +257,16 @@ def plot_qualitative_cases(fig_dir, rerun=False):
             chosen.append(int(idx))
             seen_cls.add(y[idx])
 
-    fig, axes = plt.subplots(len(chosen), 2, figsize=(8.8, 1.9 * len(chosen)))
+    from matplotlib.ticker import MaxNLocator
+    fig, axes = plt.subplots(len(chosen), 2, figsize=(11.4, 2.3 * len(chosen)))
     if len(chosen) == 1:
         axes = axes[None, :]
+    fig.subplots_adjust(wspace=0.68, hspace=0.68)
 
     for r_idx, sample_i in enumerate(chosen):
         true_k = int(y[sample_i])
         true_cls = unseen_names[true_k]
-        req_str = ', '.join(by_id[int(unseen[true_k])]['require'][:4])
+        req_str = ', '.join(by_id[int(unseen[true_k])]['require'][:3])
         for c_idx, (title, mse_row) in enumerate((('No KG', mse_no[sample_i]), ('PRIZM', mse_pr[sample_i]))):
             ax = axes[r_idx, c_idx]
             top3 = np.argsort(mse_row)[:3][::-1]   # reversed so rank #1 is on top
@@ -272,21 +274,21 @@ def plot_qualitative_cases(fig_dir, rerun=False):
             lbls = [f'✓ {unseen_names[k]}' if k == true_k else unseen_names[k] for k in top3]
             cols = ['#2563eb' if k == true_k else ('#ef4444' if k == top3[-1] else '#cbd5e1') for k in top3]
             yy = np.arange(3)
-            ax.barh(yy, vals, color=cols, height=0.58)
+            ax.barh(yy, vals, color=cols, height=0.56)
             for yv, v in zip(yy, vals):
-                ax.text(v + vals.max() * 0.02, yv, f'{v:.3f}', va='center', fontsize=8)
+                ax.text(v + vals.max() * 0.03, yv, f'{v:.3f}', va='center', fontsize=8)
             ax.set_yticks(yy)
             ax.set_yticklabels(lbls, fontsize=8.5)
-            ax.set_xlim(0, vals.max() * 1.24)
+            ax.set_xlim(0, vals.max() * 1.28)
+            ax.xaxis.set_major_locator(MaxNLocator(4))
             if r_idx == 0:
-                ax.text(0.5, 1.24, f'{title}  (Top-3 Velocity MSE, lower = closer)',
-                        transform=ax.transAxes, ha='center', fontsize=9.5, fontweight='bold', color='#0f172a')
+                ax.text(0.5, 1.30, f'{title}  (Top-3 Velocity MSE, lower = closer)',
+                        transform=ax.transAxes, ha='center', fontsize=10, fontweight='bold', color='#0f172a')
             if c_idx == 0:
-                ax.text(0.0, 1.04, f'Case {r_idx + 1}: True = "{true_cls}"   [KG require: {req_str}]',
-                        transform=ax.transAxes, fontsize=8.5, fontweight='bold', color='#1e293b')
+                ax.text(0.0, 1.07, f'Case {r_idx + 1} — True: "{true_cls}"   [KG require: {req_str}]',
+                        transform=ax.transAxes, fontsize=8.8, fontweight='bold', color='#1e293b')
             ax.grid(axis='x', linestyle='--', alpha=0.3)
 
-    plt.tight_layout(h_pad=2.0)
     out = os.path.join(fig_dir, 'fig_qualitative_cases.png')
     fig.savefig(out, dpi=300, bbox_inches='tight')
     plt.close(fig)
