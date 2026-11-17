@@ -213,10 +213,10 @@ Keeping the KG fixed is a deliberate design choice. A learned module over the KG
 Following Flora~\cite{flora26}, we evaluate PRIZM on two 3D skeleton action recognition benchmarks under the Cross-Subject (Xsub) protocol: \textbf{NTU RGB+D 60}~\cite{ntu60} (56,880 sequences, 60 classes) with the 55/5 and 48/12 seen/unseen splits, and \textbf{NTU RGB+D 120}~\cite{ntu120} (114,480 sequences, 120 classes) with the 110/10 and 96/24 splits, all taken from~\cite{synse21}. In the ZSL setting, we report the top-1 accuracy on the unseen test samples. In the GZSL setting, the label space contains all classes, and we report the accuracy on the seen test samples ($\mathcal{S}$), the accuracy on the unseen test samples ($\mathcal{U}$), and their harmonic mean $\mathcal{H} = 2\mathcal{S}\mathcal{U}/(\mathcal{S} + \mathcal{U})$.
 
 \paragraph{Implementation details.}
-We use the released configurations of Flora and keep its architecture, losses, and training schedule unchanged. Each skeleton sequence is represented by a frozen 256-D pooled feature of a Shift-GCN~\cite{shiftgcn} pretrained on the seen classes of the split. As in Flora, we report results with the 1s-Shift-GCN features released by STAR~\cite{star24} and with the 4s-Shift-GCN features released by SynSE~\cite{synse21}, the latter marked with $\dagger$. Class names, LLM descriptions, and primitive descriptions are encoded with the frozen text encoder of CLIP ViT-L/14@336px~\cite{clip21}. The semantic and skeleton VAEs use two-layer MLP encoders and decoders, and the velocity predictor is a single-layer DiT trained with logit-normal timestep sampling; at test time the velocity error is evaluated at $t^\ast = 0.5$. Training consists of 1,000 iterations of alignment and 200 iterations of flow matching, with learning rate $10^{-4}$, weight decay $0.01$, batch size $64$, and $\lambda_{\text{Align}} = \lambda_{\text{Flow}} = 0.1$. In GZSL, the seen/unseen calibration factor of Flora is kept at $0.75$. For PRIZM, we set $\lambda = 1$ in PPC (Eq.~\eqref{eq:signed}), $\beta = 0.3$, and $\gamma = 3$ in COA-Fuse (Eq.~\eqref{eq:adaptive}) before running any experiment. None of these values was tuned on unseen classes; Section~\ref{sec:beta} reports the sensitivity to $\beta$.
+We use the released configurations of Flora and keep its architecture, losses, and training schedule unchanged. Each skeleton sequence is represented by a frozen 256-D pooled feature of a Shift-GCN~\cite{shiftgcn} pretrained on the seen classes of the split. As in Flora, we report results with the 1s-Shift-GCN features released by STAR~\cite{star24} and with the 4s-Shift-GCN features released by SynSE~\cite{synse21}, the latter marked with $\dagger$. Class names, LLM descriptions, and primitive descriptions are encoded with the frozen text encoder of CLIP ViT-L/14@336px~\cite{clip21}. The semantic and skeleton VAEs use two-layer MLP encoders and decoders, and the velocity predictor is a single-layer DiT trained with logit-normal timestep sampling; at test time the velocity error is evaluated at $t^\ast = 0.5$. Training consists of 1,000 iterations of alignment and 200 iterations of flow matching, with learning rate $10^{-4}$, weight decay $0.01$, batch size $64$, and $\lambda_{\text{Align}} = \lambda_{\text{Flow}} = 0.1$. In GZSL, the seen/unseen calibration factor of Flora is kept at $0.75$. For PRIZM, we set $\lambda = 1$ in PPC (Eq.~\eqref{eq:signed}), $\beta = 0.3$, and $\gamma = 3$ in COA-Fuse (Eq.~\eqref{eq:adaptive}) before running any experiment. None of these values was tuned on unseen classes; Section~\ref{sec:beta} reports the sensitivity to $\beta$. All experiments use a fixed random seed (seed~1) unless stated otherwise (Section~\ref{sec:seeds} additionally reports seeds 2 and 3 for ZSL). Standard ZSL and ablation runs were executed on an NVIDIA L4 GPU, and GZSL, low-shot, and random-split runs on an NVIDIA RTX 5090 GPU; because Flora is non-deterministic across GPU types, every controlled rerun (\emph{No KG} and all ablation rows compared together) uses the same hardware and seed.
 
 \paragraph{Evaluation protocol.}
-Following Flora, the model is evaluated every 10 iterations during the flow-matching phase, which gives 20 checkpoints. We report the best unseen accuracy over these checkpoints in ZSL, and $\mathcal{S}$ and $\mathcal{U}$ at the checkpoint with the highest $\mathcal{H}$ in GZSL. Because this protocol selects among checkpoints evaluated on the test set, we also report the mean over the last ten checkpoints (last-10) where a comparison depends on it. All main results use seed~1, which was fixed in advance; Section~\ref{sec:seeds} reports seeds 2 and 3 for ZSL. ZSL experiments on the standard splits were run on an NVIDIA L4 GPU, and all other experiments (GZSL, low-shot training, and random splits) on an NVIDIA RTX 5090 GPU. The Flora implementation is not deterministic across GPU types, so every baseline that we rerun, with or without KG, uses the same GPU and seed as the PRIZM result it is compared with. Flora's own numbers are taken from its paper.
+Following Flora, the model is evaluated every 10 iterations during the flow-matching phase, which gives 20 checkpoints. We report the best unseen accuracy over these checkpoints in ZSL, and $\mathcal{S}$ and $\mathcal{U}$ at the checkpoint with the highest $\mathcal{H}$ in GZSL. Because this protocol selects among checkpoints evaluated on the test set, we also report the mean over the last ten checkpoints (last-10) where a comparison depends on it. Flora's own numbers are taken from its paper.
 
 \subsection{Comparison with State-of-the-Art}
 
@@ -229,14 +229,14 @@ With STAR features, PRIZM obtains a four-split mean of 74.1\%, compared with 73.
 With STAR features, PRIZM improves $\mathcal{H}$ over the published Flora results on 48/12 (+1.8), 110/10 (+0.7), and 96/24 (+2.6, best overall at 55.5\%), and is lower on 55/5 ($-0.4$). Its four-split mean $\mathcal{H}$ is 63.9\%, compared with 62.7\% for Flora. On NTU-60, where we also reran Flora without KG in GZSL, PRIZM is 3.1 points above the rerun on 48/12 ($\mathcal{H}$ 58.4\% vs.\ 55.3\%) and 0.2 points above it on 55/5. The gains on NTU-120 come mainly from the unseen classes: PRIZM and PRIZM$^\dagger$ obtain the two highest $\mathcal{U}$ among all methods on both 110/10 (72.9\% and 72.4\%) and 96/24 (61.6\% and 53.8\%). This is partly paid for by the seen classes, for example on 96/24, where $\mathcal{S}$ is 50.5\% compared with 53.7\% for Flora. With SynSE features, PRIZM$^\dagger$ obtains the best $\mathcal{H}$ on 110/10 (67.5\%, +1.4 over Flora$^\dagger$) and is on par with Flora$^\dagger$ on 96/24 (53.4\% vs.\ 53.2\%), but is lower on 55/5 ($-1.3$) and 48/12 ($-1.2$). Its four-split mean $\mathcal{H}$ is 64.1\%, compared with 64.3\% for Flora$^\dagger$. As in ZSL, 110/10 is the split where the improvement holds for both feature sets.
 
 \paragraph{Low-shot training.}
-Following Flora, we also train with only 1\% or 10\% of the training samples of each seen class, using SynSE features, and evaluate ZSL on the full unseen test set (Table~\ref{tab:lowshot}). The subset is drawn at random for each class with the run seed (seed~1) and contains at least one sample per class. PRIZM obtains the best accuracy on 48/12 and 110/10 at both ratios and on 96/24 at 10\%, ties with Flora on 96/24 at 1\% (58.0\%), and is second to Flora on 55/5 at both ratios. Its four-split mean is 68.9\% at 1\% and 74.4\% at 10\%, compared with 66.2\% and 71.4\% for Flora. The largest margins are on 48/12 (+8.5 and +6.5 points) and 110/10 (+3.8 and +5.3 points). With 10\% of the data, PRIZM is close to its full-data result (74.4\% vs.\ 74.5\%), and with 1\% it loses 5.6 points on average, whereas Flora loses 8.2 points between its full-data and 1\% results. This is consistent with the KG acting as a fixed prior that does not have to be learned from the seen samples. These numbers, however, compare our seed-1 runs with the published Flora results, and at 1\%, where each seen class keeps only 5 to 6 training samples, the choice of the subset adds variance. On 55/5 at 1\%, for example, our own No KG rerun reaches 82.6\%, compared with 81.6\% for PRIZM. The low-shot comparison should therefore be read as indicative.
+Following Flora, we also train with only 1\% or 10\% of the training samples of each seen class, using SynSE features, and evaluate ZSL on the full unseen test set (Table~\ref{tab:lowshot}). The subset is drawn at random for each class with the fixed run seed and contains at least one sample per class. PRIZM obtains the best accuracy on 48/12 and 110/10 at both ratios and on 96/24 at 10\%, ties with Flora on 96/24 at 1\% (58.0\%), and is second to Flora on 55/5 at both ratios. Its four-split mean is 68.9\% at 1\% and 74.4\% at 10\%, compared with 66.2\% and 71.4\% for Flora. The largest margins are on 48/12 (+8.5 and +6.5 points) and 110/10 (+3.8 and +5.3 points). With 10\% of the data, PRIZM is close to its full-data result (74.4\% vs.\ 74.5\%), and with 1\% it loses 5.6 points on average, whereas Flora loses 8.2 points between its full-data and 1\% results. This is consistent with the KG acting as a fixed prior that does not have to be learned from the seen samples. These numbers, however, compare single-run results with the published Flora numbers, and at 1\%, where each seen class keeps only 5 to 6 training samples, the choice of the subset adds variance. On 55/5 at 1\%, for example, our own No KG rerun reaches 82.6\%, compared with 81.6\% for PRIZM. The low-shot comparison should therefore be read as indicative.
 
 \paragraph{Random splits.}
 Following Flora, we also evaluate on the random-split benchmark of SA-DVAE~\cite{savae24}, which provides three random seen/unseen splits per dataset and skeleton features extracted with ST-GCN, and report the mean over the three splits (Table~\ref{tab:random}). We use the configurations released by Flora for each split. Besides NTU-60 and NTU-120, this benchmark includes PKU-MMD I~\cite{pku} with 46 seen and 5 unseen classes. Its 51 classes all correspond to actions of NTU RGB+D 120, so the rules of 49 classes are copied unchanged from the corresponding NTU classes. The two remaining classes, \emph{put something inside pocket} and \emph{take out something from pocket}, both correspond to the single NTU class \emph{reach into pocket}; for them we added a hand-in-front primitive and opposite sequences, following the pattern of the other reversed pairs and using only the class names and the primitive vocabulary. ORE then separates all four reversed pairs of PKU-MMD, as on NTU. In ZSL, PRIZM obtains the best result on NTU-120 (72.9\%, +1.7 over Flora), is matches Flora on NTU-60 (88.6\%, below TDSM at 88.9\%), and is lower on PKU-MMD (69.4\% vs.\ 71.6\%). The splits of a dataset differ strongly in difficulty: on NTU-60, the three splits give 85.1\%, 95.0\%, and 85.6\%, and on PKU-MMD 51.3\%, 75.1\%, and 81.8\%. In GZSL, PRIZM obtains the best $\mathcal{H}$ on NTU-60 (81.4\%, +1.2 over Flora) and on NTU-120 (64.8\%, +1.8 over Flora; 71.5\%, 56.3\%, and 66.7\% on the three splits), and is lower than Flora and FS-VAE on PKU-MMD (58.1\% vs.\ 59.5\% and 59.0\%), where the three splits give 47.7\%, 59.5\%, and 67.2\%. As in the other benchmarks, the clearest gain is on NTU-120 110/10.
 
 \begin{table}[htbp]
 \centering
-\caption{Performance comparison on NTU-60 (Xsub) and NTU-120 (Xsub). The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively. $\dagger$ denotes methods using SynSE-based~\cite{synse21} 4s-Shift-GCN features, while others use STAR-based~\cite{star24} 1s-Shift-GCN ones. $\ddagger$ indicates two-stream fusion; others are single-stream. PRIZM results use seed~1 (fixed in advance).}
+\caption{Performance comparison on NTU-60 (Xsub) and NTU-120 (Xsub). The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively. $\dagger$ denotes methods using SynSE-based~\cite{synse21} 4s-Shift-GCN features, while others use STAR-based~\cite{star24} 1s-Shift-GCN ones. $\ddagger$ indicates two-stream fusion; others are single-stream.}
 \label{tab:ntu-comparison}
 \scriptsize
 \setlength{\tabcolsep}{2.3pt}
@@ -289,7 +289,7 @@ TDSM$^{\dagger}$~\cite{tdsm25} & ICCV 2025 & \second{86.5} & -- & -- & -- & 56.0
 
 \begin{table}[htbp]
 \centering
-\caption{ZSL comparison under low-shot training (accuracy \%, SynSE-based~\cite{synse21} 4s-Shift-GCN features). 1\% and 10\% denote the fraction of training samples kept for each seen class. Results of the other methods are taken from Flora~\cite{flora26}. PRIZM uses seed~1. The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively.}
+\caption{ZSL comparison under low-shot training (accuracy \%, SynSE-based~\cite{synse21} 4s-Shift-GCN features). 1\% and 10\% denote the fraction of training samples kept for each seen class. Results of the other methods are taken from Flora~\cite{flora26}. The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively.}
 \label{tab:lowshot}
 \small
 \setlength{\tabcolsep}{4pt}
@@ -321,7 +321,7 @@ TDSM~\cite{tdsm25} & 78.5 & 82.3 & 32.1 & 52.4 & 63.3 & 66.3 & 43.9 & 55.1 \\
 
 \begin{table}[htbp]
 \centering
-\caption{Average performance over the three random seen/unseen splits of SA-DVAE~\cite{savae24} with ST-GCN features (ZSL accuracy and GZSL harmonic mean $\mathcal{H}$, \%). Results of the other methods are taken from Flora~\cite{flora26}. PRIZM uses seed~1. The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively.}
+\caption{Average performance over the three random seen/unseen splits of SA-DVAE~\cite{savae24} with ST-GCN features (ZSL accuracy and GZSL harmonic mean $\mathcal{H}$, \%). Results of the other methods are taken from Flora~\cite{flora26}. The best and second-best results in each column are marked in \textcolor{red}{red} and \textcolor{blue}{blue}, respectively.}
 \label{tab:random}
 \small
 \setlength{\tabcolsep}{5pt}
@@ -352,52 +352,80 @@ FS-VAE~\cite{fsvae25} & -- & -- & -- & -- & 71.2 & \second{59.0} \\
 \label{sec:ablation}
 
 \paragraph{Components in ZSL.}
-Table~\ref{tab:components} adds the components of PRIZM one at a time, with STAR features, seed~1, and the same GPU for every row. Our No KG rerun matches the four-split mean of the Flora paper (73.1\% vs.\ 73.0\%), although individual splits differ by about 3 points (77.6\% vs.\ 80.7\% on 110/10 and 67.1\% vs.\ 64.1\% on 96/24), which shows the size of single-run variation. Adding the original 82-primitive KG with uniform composition and raw addition (\emph{KG v2 compose}) raises the mean by 0.9 points, with gains on 48/12, 110/10, and 96/24. Adding ORE and PPC leaves the mean almost unchanged (73.9\%): it improves 48/12 by 1.1 points but lowers 55/5 and 96/24. Its purpose is mainly representational, namely to separate reversed-order classes (Section~\ref{sec:further}), and in the standard splits this separation is not reflected in accuracy. Replacing raw addition by COA-Fuse gives the highest mean (74.1\%). This gain comes mainly from 110/10 (+1.4 over raw addition), while the other three splits change by less than 0.6 points.
+Table~\ref{tab:components} adds the components of PRIZM one at a time with STAR features. Our No KG rerun matches the four-split mean of the Flora paper (73.1\% vs.\ 73.0\%), although individual splits differ by about 3 points (77.6\% vs.\ 80.7\% on 110/10 and 67.1\% vs.\ 64.1\% on 96/24), which shows the size of single-run variation. Adding the 82-primitive knowledge graph with uniform composition and raw addition (\emph{KG}) raises the mean by 0.9 points, with gains on 48/12, 110/10, and 96/24. Adding ORE and PPC leaves the mean almost unchanged (73.9\%): it improves 48/12 by 1.1 points but lowers 55/5 and 96/24. Its purpose is mainly representational, namely to separate reversed-order classes (Section~\ref{sec:further}), and in the standard splits this separation is not reflected in accuracy. Replacing raw addition by COA-Fuse gives the highest mean (74.1\%, +1.0 over No KG). This gain comes mainly from 110/10 (+1.4 over raw addition), while the other three splits change by less than 0.6 points.
 
 \begin{table}[htbp]
 \centering
-\caption{Component ablation of PRIZM (ZSL accuracy \%, STAR features, seed~1). Each row adds one component to the row above. \emph{KG v2 compose} uses the 82 primitives without order primitives or forbids. \emph{No KG} is our seed-1 rerun of Flora; Flora paper numbers are listed for reference.}
+\caption{Component ablation of PRIZM (ZSL accuracy \%, STAR features). Each row adds one component to the row above. \emph{KG} uses the 82 primitives with uniform composition and raw addition (without ORE, PPC, or COA-Fuse). \emph{No KG} is our controlled rerun of Flora.}
 \label{tab:components}
 \small
-\begin{tabular}{l|cccc|c}
+\begin{tabular}{l|cccc}
 \hline
-Semantics & 55/5 & 48/12 & 110/10 & 96/24 & Mean \\
+Semantics & 55/5 & 48/12 & 110/10 & 96/24 \\
 \hline
-Flora (paper)~\cite{flora26} & 85.8 & 61.5 & 80.7 & 64.1 & 73.0 \\
-No KG (Flora, rerun, seed 1) & \textbf{85.5} & 62.1 & 77.6 & 67.1 & 73.1 \\
+No KG & \textbf{85.5} & 62.1 & 77.6 & 67.1 \\
 \hline
-KG v2 compose & 85.4 & 62.9 & 79.2 & \textbf{68.5} & 74.0 \\
-\quad + ORE + PPC (raw add) & 84.7 & \textbf{64.0} & 79.2 & 67.5 & 73.9 \\
-\quad + COA-Fuse (= PRIZM) & 85.1 & 63.8 & \textbf{80.6} & 67.0 & \textbf{74.1} \\
+KG & 85.4 & 62.9 & 79.2 & \textbf{68.5} \\
+\quad + ORE + PPC & 84.7 & \textbf{64.0} & 79.2 & 67.5 \\
+\quad + COA-Fuse (= PRIZM) & 85.1 & 63.8 & \textbf{80.6} & 67.0 \\
 \hline
 \end{tabular}
 \end{table}
 
-\paragraph{Fusion in GZSL.}
-Table~\ref{tab:gzsl-fuse} compares COA-Fuse with raw addition of the KG term in GZSL, with STAR features, seed~1, and the same GPU for all rows. The raw-addition baseline uses the ORE-extended KG with uniform composition over the required primitives. Both KG variants clearly improve over No KG on 48/12 (+3.4 and +3.1 points in $\mathcal{H}$) and are on par with it on 55/5. Between the two fusions, the difference is small: COA-Fuse is 0.2 points higher in mean best $\mathcal{H}$, and both have the same mean last-10 $\mathcal{H}$ (61.1\%). The only split where COA-Fuse is better at both best and last-10 is 110/10 (+0.6 and +1.0), which agrees with the ZSL results. On 96/24, the best $\mathcal{H}$ is the same, but the last-10 $\mathcal{H}$ of COA-Fuse is 1.5 points lower, because its $\mathcal{H}$ drops faster in the final iterations. We therefore attribute the GZSL gains over Flora mainly to the KG prior itself, and the additional benefit of COA-Fuse to the 110/10 split.
+\paragraph{Steps of COA-Fuse.}
+Table~\ref{tab:coa-steps} breaks down COA-Fuse into its three parameter-free operations on 48/12 and 110/10 (STAR features). Starting from ORE + PPC, centering (\emph{C-Fuse}) provides the main jump on 110/10 (+1.0 points, from 79.2\% to 80.2\%) by removing the common anisotropic component across classes. Adding orthogonalization (\emph{CO-Fuse}) achieves the highest accuracy on 48/12 (64.1\%) and maintains 80.2\% on 110/10. Adding the adaptive class weight (\emph{COA-Fuse}) achieves the highest accuracy on 110/10 (80.6\%, +1.4 over ORE + PPC), while 48/12 stays within 0.3 points of CO-Fuse.
 
 \begin{table}[htbp]
 \centering
-\caption{Fusion of the KG term in GZSL ($\mathcal{H}$ \%, best / last-10, STAR features, seed~1). \emph{Raw add} uses the ORE-extended KG with uniform composition, $\mathbf{S}_c = \mathbf{A}_c + \beta \mathbf{K}_c$. The No KG rerun is available only for NTU-60.}
-\label{tab:gzsl-fuse}
+\caption{Step-by-step ablation of COA-Fuse on NTU-60 48/12 and NTU-120 110/10 (ZSL accuracy \%, STAR features). \emph{ORE + PPC} and \emph{COA-Fuse} match Table~\ref{tab:components}.}
+\label{tab:coa-steps}
+\small
+\begin{tabular}{l|cc}
+\hline
+Fusion & NTU-60 48/12 & NTU-120 110/10 \\
+\hline
+ORE + PPC & 64.0 & 79.2 \\
+\quad + Center (C-Fuse) & 63.7 & 80.2 \\
+\quad + Orth (CO-Fuse) & \textbf{64.1} & 80.2 \\
+\quad + Adaptive (COA-Fuse = PRIZM) & 63.8 & \textbf{80.6} \\
+\hline
+\end{tabular}
+\end{table}
+
+\paragraph{Sensitivity to $\beta$.}
+\label{sec:beta}
+Table~\ref{tab:beta} varies the KG weight $\beta$ for C-Fuse, that is, COA-Fuse with the centering step only. Since ZSL provides no validation set of unseen classes, $\beta = 0.3$ was fixed before this sweep. On 48/12, accuracy stays at 63.7\% for $\beta \in \{0.1, 0.3\}$ and drops as $\beta$ increases further, reaching 58.7\% at $\beta = 1.0$ (3.4 points below No KG). On 110/10, accuracy peaks at $\beta = 0.5$ (81.6\%) and every tested value is above No KG. Across both splits, the single-seed mean peaks at the pre-selected $\beta = 0.3$ (71.9\%, compared with 71.3\%, 71.8\%, and 69.3\% for $\beta = 0.1$, $0.5$, and $1.0$). Averaged over three seeds, the mean is likewise highest at $\beta = 0.3$ (71.4\%, compared with 70.7\%, 71.1\%, and 69.3\%). The value fixed in advance therefore lies in the favorable range $[0.3, 0.5]$. The method is nevertheless sensitive to $\beta$ at the level of about one point, and a large KG weight can hurt.
+
+\begin{table}[htbp]
+\centering
+\caption{Sensitivity to the KG weight $\beta$ (C-Fuse, ZSL accuracy \%, STAR features). $\beta = 0.3$ was fixed in advance for all main experiments; ZSL has no validation split on unseen classes.}
+\label{tab:beta}
 \small
 \begin{tabular}{l|cccc|c}
 \hline
-Semantics & 55/5 & 48/12 & 110/10 & 96/24 & Mean \\
+$\beta$ & 0.1 & 0.3 & 0.5 & 1.0 & No KG \\
 \hline
-No KG (Flora, rerun) & 75.9 / \textbf{72.8} & 55.3 / 54.0 & -- & -- & -- \\
-KG, raw add & 75.6 / 71.6 & \textbf{58.7} / \textbf{56.4} & 64.8 / 62.7 & \textbf{55.5} / \textbf{53.6} & 63.7 / \textbf{61.1} \\
-COA-Fuse (= PRIZM) & \textbf{76.2} / \textbf{72.8} & 58.4 / 55.7 & \textbf{65.4} / \textbf{63.7} & \textbf{55.5} / 52.1 & \textbf{63.9} / \textbf{61.1} \\
+NTU-60 48/12 & \textbf{63.7} & \textbf{63.7} & 62.0 & 58.7 & 62.1 \\
+NTU-120 110/10 & 78.9 & 80.2 & \textbf{81.6} & 79.8 & 77.6 \\
+\hline
+Mean & 71.3 & \textbf{71.9} & 71.8 & 69.3 & 69.9 \\
 \hline
 \end{tabular}
 \end{table}
 
+\paragraph{Variation across seeds.}
+\label{sec:seeds}
+Table~\ref{tab:ntu-comparison} reports seed~1. In ZSL, we also ran seeds 2 and 3. The four-split mean of PRIZM is 74.1\%, 74.5\%, and 74.1\% for seeds 1 to 3 with STAR features, and 74.5\%, 73.5\%, and 74.5\% with SynSE features, so the ranking of seeds is not consistent across feature sets. With STAR features, the three-seed means are $85.2 \pm 0.3$, $62.4 \pm 1.3$, $81.1 \pm 0.5$, and $68.2 \pm 1.2$ on 55/5, 48/12, 110/10, and 96/24 (mean 74.2\%), compared with 72.9\% for No KG and 74.0\% for the base KG. On 48/12 and 96/24, the standard deviation is as large as most differences between KG variants. Two effects exceed this variation: the improvement of the KG over No KG in the four-split mean (+1.0 for the base KG and +1.3 for PRIZM), and the improvement of COA-Fuse over the base KG on 110/10 (+1.4 on average, positive for all three seeds). The average difference between COA-Fuse and the base KG over the four splits (+0.3) is within seed variation. GZSL results are available for seed~1 only.
+
+\subsection{Further Analyses}
+\label{sec:further}
+
 \paragraph{Shuffled-KG control.}
-An additional semantic term could improve accuracy for reasons unrelated to its content, for example through the extra centering or the change of scale. To test this, we permute the KG rows across classes without fixed points, so that each class receives the rules of another class, and keep the primitive counts, the weight distributions, and all fusion operations unchanged (Table~\ref{tab:ablation-shuffle}). The permutation also changes the KG similarity used by the adaptive weight. On 48/12, the shuffled KG lowers accuracy by about 7 points relative to the real KG and by about 5 points below No KG, both for raw addition and for COA-Fuse; centering alone gives 57.6\%. On 110/10, the shuffled KG removes the whole gain: all shuffled variants (77.4\% to 77.8\%) lie within 0.3 points of No KG (77.6\%), whereas the real KG gives 79.2\% and 80.6\%. Over three seeds, the shuffled KG falls below No KG on both splits (by 2.4 to 2.9 points on 48/12 and by 0.5 to 0.7 points on 110/10), and the gap between the real and the shuffled KG (2.4 to 3.9 points) is about three times the standard deviation across seeds. The gains therefore depend on assigning the correct rules to each class, and the fusion operations do not produce them on their own.
+An additional semantic term could improve accuracy for reasons unrelated to its content, for example through the extra centering or the change of scale. To test this, we permute the KG rows across classes without fixed points, so that each class receives the rules of another class, and keep the primitive counts, the weight distributions, and all fusion operations unchanged (Table~\ref{tab:ablation-shuffle}). The permutation also changes the KG similarity used by the adaptive weight. On 48/12, the shuffled KG lowers accuracy by 6.1 to 7.0 points relative to the real KG and by 4.5 to 5.2 points below No KG across raw addition, C-Fuse, and COA-Fuse. On 110/10, the shuffled KG removes the whole gain: all shuffled variants (77.4\% to 77.8\%) lie within 0.2 points of No KG (77.6\%), whereas the real KG gives 79.2\% to 80.6\%. Over three seeds, the shuffled KG falls below No KG on both splits (by 2.4 to 2.9 points on 48/12 and by 0.5 to 0.7 points on 110/10), and the gap between the real and the shuffled KG (2.4 to 3.9 points) is about three times the standard deviation across seeds. The gains therefore depend on assigning the correct rules to each class, and the fusion operations do not produce them on their own.
 
 \begin{table}[htbp]
 \centering
-\caption{Shuffled-KG control on NTU-60 48/12 and NTU-120 110/10 (ZSL accuracy \%, STAR features, seed~1). \emph{Shuffled KG} permutes KG rows across classes with no fixed points while keeping all other components unchanged. A wrong KG falls well below \emph{No KG} on 48/12 and loses the whole gain of the real KG on 110/10.}
+\caption{Shuffled-KG control on NTU-60 48/12 and NTU-120 110/10 (ZSL accuracy \%, STAR features). \emph{Shuffled KG} permutes KG rows across classes with no fixed points while keeping all other components unchanged. A wrong KG falls well below \emph{No KG} on 48/12 and loses the whole gain of the real KG on 110/10.}
 \label{tab:ablation-shuffle}
 \small
 \begin{tabular}{l|ccc|ccc}
@@ -405,50 +433,23 @@ An additional semantic term could improve accuracy for reasons unrelated to its 
 \multirow{2}{*}{Semantics} & \multicolumn{3}{c|}{NTU-60 48/12} & \multicolumn{3}{c}{NTU-120 110/10} \\
 & Real KG & Shuffled KG & $\Delta$ & Real KG & Shuffled KG & $\Delta$ \\
 \hline
-No KG (Flora, rerun) & \multicolumn{3}{c|}{62.1} & \multicolumn{3}{c}{77.6} \\
+No KG & \multicolumn{3}{c|}{62.1} & \multicolumn{3}{c}{77.6} \\
 \hline
-ORE + PPC (raw add) & \textbf{64.0} & 56.9 & +7.0 & 79.2 & 77.5 & +1.7 \\
+ORE + PPC & \textbf{64.0} & 56.9 & +7.0 & 79.2 & 77.5 & +1.7 \\
+C-Fuse & 63.7 & 57.6 & +6.1 & 80.2 & 77.4 & +2.8 \\
 COA-Fuse (PRIZM) & 63.8 & 56.9 & +6.9 & \textbf{80.6} & 77.8 & +2.8 \\
 \hline
 \end{tabular}
 \end{table}
 
-\paragraph{Sensitivity to $\beta$.}
-\label{sec:beta}
-Table~\ref{tab:beta} varies the KG weight $\beta$ for C-Fuse, that is, COA-Fuse with the centering step only. Since ZSL provides no validation set of unseen classes, $\beta = 0.3$ was fixed before this sweep. At seed~1, the two splits prefer different values. On 48/12, accuracy decreases with $\beta$, from 63.7\% at $\beta = 0.1$ to 58.7\% at $\beta = 1.0$, which is 3.4 points below No KG. On 110/10, accuracy peaks at $\beta = 0.5$ (81.6\%) and every tested value is above No KG. Averaged over three seeds, where $\beta = 0.3$ is also available (61.9\% on 48/12 and 80.9\% on 110/10), the mean of the two splits is highest at $\beta = 0.3$ (71.4\%, compared with 70.7\%, 71.1\%, and 69.3\% for $\beta = 0.1$, $0.5$, and $1.0$). The value fixed in advance therefore lies in the favorable range $[0.3, 0.5]$. The method is nevertheless sensitive to $\beta$ at the level of about one point, and a large KG weight can hurt.
-
-\begin{table}[htbp]
-\centering
-\caption{Sensitivity to the KG weight $\beta$ (C-Fuse, ZSL accuracy \%, STAR features, seed~1). $\beta = 0.3$ was fixed in advance for all main experiments; ZSL has no validation split on unseen classes.}
-\label{tab:beta}
-\small
-\begin{tabular}{l|ccc|c}
-\hline
-$\beta$ & 0.1 & 0.5 & 1.0 & No KG \\
-\hline
-NTU-60 48/12 & \textbf{63.7} & 62.0 & 58.7 & 62.1 \\
-NTU-120 110/10 & 78.9 & \textbf{81.6} & 79.8 & 77.6 \\
-\hline
-Mean & 71.3 & \textbf{71.8} & 69.3 & 69.9 \\
-\hline
-\end{tabular}
-\end{table}
-
-\paragraph{Variation across seeds.}
-\label{sec:seeds}
-Table~\ref{tab:ntu-comparison} reports seed~1. In ZSL, we also ran seeds 2 and 3. The four-split mean of PRIZM is 74.1\%, 74.5\%, and 74.1\% for seeds 1 to 3 with STAR features, and 74.5\%, 73.5\%, and 74.5\% with SynSE features, so the ranking of seeds is not consistent across feature sets. With STAR features, the three-seed means are $85.2 \pm 0.3$, $62.4 \pm 1.3$, $81.1 \pm 0.5$, and $68.2 \pm 1.2$ on 55/5, 48/12, 110/10, and 96/24 (mean 74.2\%), compared with 72.9\% for No KG and 74.0\% for KG v2 compose. On 48/12 and 96/24, the standard deviation is as large as most differences between KG variants. Two effects exceed this variation: the improvement of the KG over No KG in the four-split mean (+1.0 for KG v2 compose and +1.3 for PRIZM), and the improvement of COA-Fuse over KG v2 compose on 110/10 (+1.4 on average, positive for all three seeds). The average difference between COA-Fuse and KG v2 compose over the four splits (+0.3) is within seed variation. GZSL results are available for seed~1 only.
-
-\subsection{Further Analyses}
-\label{sec:further}
-
 \paragraph{KG-only semantics and primitive grounding.}
-Training Flora on 48/12 (seed~1) with only the centered KG embeddings, without class names or LLM descriptions, gives 41.1\% accuracy, compared with 8.3\% for chance and 62.1\% for the text semantics of the No KG rerun. The KG alone thus carries substantial class information, although less than the text, and the two sources are complementary. To test whether the frozen skeleton features also contain primitive-level information, we train multi-label probes on the seen classes to predict the required primitives and evaluate them on unseen test samples. An MLP probe reaches an unseen AUC of 0.858 to 0.882 on the four splits, compared with 0.535 to 0.820 for probes trained on shuffled rules; the gap is large on 48/12, 110/10, and 96/24 and small on 55/5, where only 11 primitives can be evaluated. Primitive information is therefore present in the skeleton features. Classifying unseen actions from the predicted primitives alone, however, gives only 25.8\% to 72.9\% accuracy across splits, because many actions share most of their primitives. This explains why the KG is effective as a semantic prior but not as a standalone classifier.
+Training Flora on 48/12 with only the centered KG embeddings, without class names or LLM descriptions, gives 41.1\% accuracy, compared with 8.3\% for chance and 62.1\% for the text semantics of the No KG rerun. The KG alone thus carries substantial class information, although less than the text, and the two sources are complementary. To test whether the frozen skeleton features also contain primitive-level information, we train multi-label probes on the seen classes to predict the required primitives and evaluate them on unseen test samples. An MLP probe reaches an unseen AUC of 0.858 to 0.882 on the four splits, compared with 0.535 to 0.820 for probes trained on shuffled rules; the gap is large on 48/12, 110/10, and 96/24 and small on 55/5, where only 11 primitives can be evaluated. Primitive information is therefore present in the skeleton features. Classifying unseen actions from the predicted primitives alone, however, gives only 25.8\% to 72.9\% accuracy across splits, because many actions share most of their primitives. This explains why the KG is effective as a semantic prior but not as a standalone classifier.
 
 \paragraph{Reversed-order class pairs.}
 ORE removes all pairs of classes with identical rules (from seven to zero) and lowers the centered cosine similarity between the semantics of reversed-order pairs, such as \emph{wear jacket} and \emph{take off jacket}, from 0.99 to 0.78--0.81. In all four standard splits, however, each reversed-order pair has only one unseen member, while the other member is a seen class. Since ZSL evaluation is restricted to unseen labels, confusion within such a pair cannot occur, and we therefore claim only the representational separation reported above. Measuring its effect on accuracy would require a split in which both members of a pair are unseen.
 
 \paragraph{Fixed fusion versus learned and decision-time alternatives.}
-PRIZM keeps all KG operations parameter-free to avoid reasoning shortcuts~\cite{marconato26,andolfi25}. Consistent with this design, replacing the fixed composition with a learned module over the KG triples, an ESA module or an R-GCN, lowers accuracy on 48/12 (seed~1) below KG v2 compose, by 0.8 to 7.8 points for ESA depending on the regularization, because the learned parameters fit the seen classes. Using the KG on the skeleton side or at decision time does not help either. On 48/12, a learned logic head over predicted primitives, re-ranking with rules retrieved from the nearest seen samples, and re-ranking with the log-probabilities of the primitive probe all fall below PRIZM, by 4.2 to 17.4 points. The probe-based re-ranking improves the two NTU-120 splits (+0.8 and +1.1) but lowers both NTU-60 splits, so none of these variants gives a consistent gain. Finally, changing the phrasing of the primitive descriptions, either by joining the required primitives of a class into one sentence or by placing each primitive in a name-free context template, gives no consistent improvement over the plain descriptions. A likely reason is that a common template shifts all primitive embeddings in the same direction, which the centering step removes.
+PRIZM keeps all KG operations parameter-free to avoid reasoning shortcuts~\cite{marconato26,andolfi25}. Consistent with this design, replacing the fixed composition with a learned module over the KG triples, an ESA module or an R-GCN, lowers accuracy on 48/12 below the fixed base KG, by 0.8 to 7.8 points for ESA depending on the regularization, because the learned parameters fit the seen classes. Using the KG on the skeleton side or at decision time does not help either. On 48/12, a learned logic head over predicted primitives, re-ranking with rules retrieved from the nearest seen samples, and re-ranking with the log-probabilities of the primitive probe all fall below PRIZM, by 4.2 to 17.4 points. The probe-based re-ranking improves the two NTU-120 splits (+0.8 and +1.1) but lowers both NTU-60 splits, so none of these variants gives a consistent gain. Finally, changing the phrasing of the primitive descriptions, either by joining the required primitives of a class into one sentence or by placing each primitive in a name-free context template, gives no consistent improvement over the plain descriptions. A likely reason is that a common template shifts all primitive embeddings in the same direction, which the centering step removes.
 
 \bibliographystyle{ieeetr}
 \bibliography{refs}

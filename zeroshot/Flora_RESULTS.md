@@ -1,15 +1,15 @@
-# Flora experiment results
+# Flora / PRIZM experiment results
 
-Updated: 13 Nov 2026. Sections 1–3 report the current main method (3-seed means). The older sections below ("Earlier method") are the 11 Nov snapshot and use seed 1 only.
+Updated: 16 Nov 2026 (synced with `main.tex`). Sections 1–3 report the current main method (**PRIZM** = SeqKG [ORE + PPC] + COA-Fuse). Standard ZSL runs use 3-seed means on Colab L4 (with `main.tex` Table 1 reporting seed 1, fixed in advance); GZSL, low-shot, and random-split runs use seed 1 on RTX 5090. The older sections below ("Earlier method") are the 11 Nov snapshot and use seed 1 only.
 
-Protocol: paper setting (1000 + 200 iterations), Colab L4, ZSL, `best` = best checkpoint on unseen. Flora is compared with the numbers reported in its paper; Flora itself was not rerun, apart from the STAR `none` / `compose` runs listed for reference.
+Protocol: paper setting (1000 + 200 iterations), ZSL (`best` = best checkpoint on unseen) and GZSL (`best` = checkpoint with highest harmonic mean `H`). Because Flora is not deterministic across GPU types, controlled reruns (`No KG`, ablations) use the same GPU and seed as the PRIZM runs they are compared with; paper baselines are taken directly from Flora.
 
-## 1. Current main method: SeqKG + COA-Fuse (v1)
+## 1. Current main method: PRIZM (SeqKG + COA-Fuse)
 
-- **SeqKG**: KG v2 (82 primitives) plus 29 order primitives and 14 reverse-order forbids; class pairs with identical rules 7 → 0.
-- **Signed Compose**: class semantics = (1+λ)·mean(require) − λ·mean(order-forbid), λ = 1. No learned parameters.
-- **COA-Fuse**: Center (remove class-mean of the KG term), Orthogonal (remove the part along the class text), Adaptive (per-class β from text-vs-KG disagreement, clipped at 3β). No learned parameters.
-- Code: `nesy4_seqkg.py`, `nesy4_1_forbid.py`, `nesy4_1_1_fuse.py`. Details: `progress/2026-11-12_flora_nesy_notes.md`.
+- **SeqKG (ORE)**: KG v2 (82 primitives) plus 29 order primitives and 14 reverse-order forbids; class pairs with identical rules 7 → 0 (111 primitives total).
+- **Signed Compose (PPC)**: class semantics = (1+λ)·mean(require) − λ·mean(order-forbid), λ = 1. No learned parameters.
+- **COA-Fuse**: Center (remove class-mean of the KG term), Orthogonal (remove the part along the class text), Adaptive (per-class β from text-vs-KG disagreement, β = 0.3, clipped at 3β). No learned parameters.
+- Code: `nesy4_seqkg.py`, `nesy4_1_forbid.py`, `nesy4_1_1_fuse.py`. Details: `progress/2026-11-12_flora_nesy_notes.md`, `progress/2026-11-13_flora_nesy_notes.md`, `main.tex`.
 
 ### ZSL, STAR features (mean of seeds 1–3, best)
 
@@ -41,10 +41,84 @@ Notes:
 | mean | | | | −0.25 |
 
 `last10` (mean of seeds): 82.87 / 61.65 / 79.00 / 60.56 for 55/5, 48/12, 110/10, 96/24. Seed-1 reference runs in the SynSE folder (none / compose, as found there): Δ best vs none −0.37 / +1.22 / +1.25 / +2.50, vs compose −0.23 / +0.15 / −0.50 / +0.18 (55/5, 48/12, 110/10, 96/24).
+In `main.tex` Table 1 (seed 1): **PRIZM†** is 85.3 / 64.7 / 81.4 / 66.8 (4-split mean **74.5%** vs Flora† paper **74.4%**).
 
-### GZSL
+### Component ablation (ZSL, STAR features, seed 1, same GPU — from `main.tex`)
 
-Not yet run for SeqKG + COA-Fuse (STAR, use `--eval-class-chunk 16`). The only GZSL numbers so far are in the "Earlier method" sections below.
+| Semantics | 55/5 | 48/12 | 110/10 | 96/24 | Mean |
+|---|---:|---:|---:|---:|---:|
+| Flora (paper) | 85.8 | 61.5 | 80.7 | 64.1 | 73.0 |
+| No KG (Flora, rerun, seed 1) | **85.5** | 62.1 | 77.6 | 67.1 | 73.1 |
+| KG v2 compose (82 primitives, no ORE/PPC) | 85.4 | 62.9 | 79.2 | **68.5** | 74.0 |
+| + ORE + PPC (raw add) | 84.7 | **64.0** | 79.2 | 67.5 | 73.9 |
+| + COA-Fuse (= PRIZM, seed 1) | 85.1 | 63.8 | **80.6** | 67.0 | **74.1** |
+
+### COA-Fuse step-by-step ablation (17 Nov, STAR features, seed 1, same GPU session)
+
+Run in `ablation_b_samegpu/` (`best` / `last10`, %):
+
+| Fusion | 48/12 (best / last10) | 110/10 (best / last10) |
+|---|---:|---:|
+| No KG | 62.96 / 60.38 | 78.11 / 74.18 |
+| ORE + PPC | 63.96 / 61.94 | 79.22 / 76.64 |
+| + Center (C-Fuse) | 63.69 / 61.45 | 80.16 / 76.41 |
+| + Orth (CO-Fuse) | **64.08** / 61.71 | 80.16 / 76.91 |
+| + Adaptive (COA-Fuse = PRIZM) | 63.75 / **61.95** | **80.63** / **77.24** |
+
+Note: the KG runs (`ORE + PPC` and `COA-Fuse`) match the earlier L4 seed-1 numbers to 0.01 (`63.96/79.22` and `63.75/80.63`), confirming identical hardware/determinism; `C-Fuse` seed 1 (`63.69` / `80.16`) also completes the β = 0.3 entry for seed 1.
+
+### GZSL (PRIZM = SeqKG + COA-Fuse, seed 1, RTX 5090 — from `main.tex`)
+
+Scores are S / U / H (%) at the checkpoint with the largest harmonic mean `H`.
+
+| Method | Feat | 55/5 (S / U / H) | 48/12 (S / U / H) | 110/10 (S / U / H) | 96/24 (S / U / H) | Mean H |
+|---|---|---|---|---|---|---:|
+| Flora (paper) | STAR | 77.7 / 75.6 / 76.6 | 66.9 / 49.0 / 56.6 | 59.8 / 70.5 / 64.7 | 53.7 / 52.2 / 52.9 | 62.7 |
+| **PRIZM** (seed 1) | STAR | 78.0 / 74.4 / 76.2 | 70.8 / 49.7 / 58.4 | 59.6 / 72.4 / 65.4 | 50.5 / 61.6 / **55.5** | **63.9** |
+| Flora† (paper) | SynSE | 75.9 / 78.8 / 77.4 | 63.7 / 57.5 / 60.5 | 66.2 / 66.0 / 66.1 | 55.9 / 50.7 / 53.2 | **64.3** |
+| **PRIZM†** (seed 1) | SynSE | 78.3 / 74.0 / 76.1 | 68.4 / 52.3 / 59.3 | 62.9 / 72.9 / **67.5** | 53.1 / 53.8 / 53.4 | 64.1 |
+
+Notes:
+- With STAR features, PRIZM improves `H` over the Flora paper on 48/12 (+1.8), 110/10 (+0.7), and 96/24 (+2.6, best overall at 55.5%), and is −0.4 on 55/5 (4-split mean `H`: 63.9% vs 62.7%).
+- Gains on NTU-120 come mainly from unseen accuracy `U` (highest `U` among compared methods on both 110/10 and 96/24 for both feature sets), partly traded off against seen accuracy `S` (e.g., 96/24 STAR `S` 50.5% vs 53.7% for Flora).
+- With SynSE features, PRIZM† achieves the best `H` on 110/10 (67.5%, +1.4 over Flora†) and +0.2 on 96/24, while trailing on 55/5 (−1.3) and 48/12 (−1.2); 4-split mean `H` is 64.1% vs 64.3%. As in ZSL, 110/10 is the split where the gain holds for both feature sets.
+
+#### GZSL fusion ablation (H %, best / last-10, STAR features, seed 1, same GPU)
+
+| Semantics | 55/5 | 48/12 | 110/10 | 96/24 | Mean |
+|---|---|---|---|---|---:|
+| No KG (Flora, rerun) | 75.9 / **72.8** | 55.3 / 54.0 | — | — | — |
+| KG, raw add (ORE, uniform compose) | 75.6 / 71.6 | **58.7** / **56.4** | 64.8 / 62.7 | **55.5** / **53.6** | 63.7 / **61.1** |
+| COA-Fuse (= PRIZM) | **76.2** / **72.8** | 58.4 / 55.7 | **65.4** / **63.7** | **55.5** / 52.1 | **63.9** / **61.1** |
+
+- On NTU-60 vs the `No KG` rerun, PRIZM improves `H` by +3.1 on 48/12 (58.4 vs 55.3) and is slightly above on 55/5 (76.2 vs 75.9; `main.tex` notes +0.2 from unrounded values).
+- Between `raw add` and `COA-Fuse`, the mean difference is +0.2 best `H` and 0.0 last-10 `H` (61.1%). Only 110/10 improves on both best (+0.6) and last-10 (+1.0); on 96/24 best `H` ties (55.5%) while COA-Fuse drops faster in the last 10 evaluations (−1.5). The GZSL gains over Flora therefore come mainly from the KG prior itself, with COA-Fuse adding specifically on 110/10.
+
+### Low-shot ZSL training (SynSE features, seed 1, RTX 5090 — from `main.tex`)
+
+Trained on 1% or 10% of the seen training samples per class (at least 1 sample/class, sampled with seed 1), evaluated on the full unseen test set.
+
+| Method | 55/5 (1% / 10%) | 48/12 (1% / 10%) | 110/10 (1% / 10%) | 96/24 (1% / 10%) | Mean (1% / 10%) |
+|---|---|---|---|---|---|
+| Flora (paper) | **82.8** / **85.6** | 46.5 / 56.1 | 77.4 / 78.1 | **58.0** / 65.9 | 66.2 / 71.4 |
+| **PRIZM** (seed 1) | 81.6 / 84.8 | **55.0** / **62.6** | **81.2** / **83.4** | **58.0** / **66.8** | **68.9** / **74.4** |
+| Δ vs Flora paper | −1.2 / −0.8 | **+8.5** / **+6.5** | **+3.8** / **+5.3** | 0.0 / +0.9 | **+2.7** / **+3.0** |
+
+- With 10% training data, PRIZM stays close to its full-data mean (74.4% vs 74.5%); at 1% it drops 5.6 points on average vs 8.2 points for Flora.
+- Indicative only: at 1% (5–6 samples per seen class) subset choice adds variance; on 55/5 at 1%, our `No KG` rerun reaches 82.6% vs 81.6% for PRIZM.
+
+### Random splits (SA-DVAE ST-GCN features, 3-split mean, seed 1, RTX 5090 — from `main.tex`)
+
+Average ZSL accuracy and GZSL `H` (%) over the three random seen/unseen splits of SA-DVAE. PKU-MMD I (46/5) uses rules mapped from NTU-120 (49 classes unchanged; *put something inside pocket* and *take out something from pocket* split from *reach into pocket* with a hand-in-front primitive and opposite sequences; ORE separates all 4 reversed pairs).
+
+| Method | NTU-60 55/5 (ZSL / H) | NTU-120 110/10 (ZSL / H) | PKU-MMD I 46/5 (ZSL / H) |
+|---|---|---|---|
+| Flora (paper) | **88.6** / 80.2 | 71.2 / 63.0 | **71.6** / **59.5** |
+| **PRIZM** (seed 1) | **88.6** / **81.4** | **72.9** / **64.8** | 69.4 / 58.1 |
+| Δ vs Flora paper | 0.0 / +1.2 | **+1.7** / **+1.8** | −2.2 / −1.4 |
+
+- Per-split PRIZM breakdown: NTU-60 ZSL 85.1% / 95.0% / 85.6%; NTU-120 GZSL `H` 71.5% / 56.3% / 66.7%; PKU-MMD ZSL 51.3% / 75.1% / 81.8% and GZSL `H` 47.7% / 59.5% / 67.2%.
+- The three random splits vary widely in difficulty; the clearest gain over Flora again appears on NTU-120 (+1.7 ZSL, +1.8 `H`).
 
 ### Control: shuffled KG (13 Nov, `nesy0_shuffle.py`, STAR, mean of seeds 1–3, best)
 
@@ -95,9 +169,10 @@ Inverted U on both splits; the good range is β ∈ [0.3, 0.5]. 110/10 peaks at 
 
 ## 3. Still to do
 
-1. Shuffled-KG control on 55/5 and 96/24 if it goes into the paper; β sensitivity for full COA-Fuse (done for C-Fuse only).
-2. GZSL for SeqKG + COA-Fuse.
-3. ~~Per-pair accuracy for the reversed-order pairs~~: not measurable on the standard splits (see section 1).
+1. Shuffled-KG control on 55/5 and 96/24 if needed; β sensitivity for full COA-Fuse (done for C-Fuse only).
+2. `No KG` GZSL reruns on NTU-120 (110/10 and 96/24) and seeds 2–3 for GZSL / low-shot / random splits if multi-seed reporting is needed beyond seed 1.
+3. ~~GZSL for SeqKG + COA-Fuse~~: **Done (seed 1, STAR & SynSE)** — see Section 1.
+4. ~~Per-pair accuracy for the reversed-order pairs~~: not measurable on the standard splits (see section 1).
 
 ---
 
