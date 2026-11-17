@@ -110,6 +110,16 @@ def embed(lat, max_per_class, seed=0):
     return e[:len(z)], y, e[len(z):], sil
 
 
+def align_2d(ref_e, ref_y, e, y, ea, nc):
+    """Orthogonal Procrustes alignment on class centroids (preserves all pairwise t-SNE distances)."""
+    c_ref = np.array([ref_e[ref_y == k].mean(0) for k in range(nc)])
+    c_cur = np.array([e[y == k].mean(0) for k in range(nc)])
+    m_ref, m_cur = c_ref.mean(0), c_cur.mean(0)
+    u, _, vt = np.linalg.svd((c_cur - m_cur).T @ (c_ref - m_ref))
+    r = u @ vt
+    return (e - m_cur) @ r + m_ref, (ea - m_cur) @ r + m_ref
+
+
 def main():
     default_out = os.path.join(C.DRIVE_OUT, 'figures') if os.path.isdir(os.path.dirname(C.DRIVE_OUT)) \
         else os.path.join(HERE, 'output', 'figures')
@@ -143,9 +153,21 @@ def main():
     colors = [cmap(k % cmap.N) for k in range(nc)]
 
     plt.rcParams.update({'font.size': 9, 'axes.titlesize': 10})
+    emb = {m: embed(lat[m], opts.max_per_class) for m in ('none', 'prizm')}
+    e_no, y_no, ea_no, sil_no = emb['none']
+    e_pr, y_pr, ea_pr, sil_pr = emb['prizm']
+    e_pr, ea_pr = align_2d(e_no, y_no, e_pr, y_pr, ea_pr, nc)
+    panels = [('none', 'No KG', e_no, y_no, ea_no, sil_no),
+              ('prizm', 'PRIZM', e_pr, y_pr, ea_pr, sil_pr)]
+
+    all_xy = np.concatenate([e_no, ea_no, e_pr, ea_pr])
+    pad_x = 0.06 * (all_xy[:, 0].max() - all_xy[:, 0].min())
+    pad_y = 0.06 * (all_xy[:, 1].max() - all_xy[:, 1].min())
+    xlim = (all_xy[:, 0].min() - pad_x, all_xy[:, 0].max() + pad_x)
+    ylim = (all_xy[:, 1].min() - pad_y, all_xy[:, 1].max() + pad_y)
+
     fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.4))
-    for ax, (m, title) in zip(axes, (('none', 'No KG'), ('prizm', 'PRIZM'))):
-        e, y, ea, sil = embed(lat[m], opts.max_per_class)
+    for ax, (m, title, e, y, ea, sil) in zip(axes, panels):
         for k in range(nc):
             p = e[y == k]
             ax.scatter(p[:, 0], p[:, 1], s=5, color=colors[k], alpha=0.45, linewidths=0)
@@ -157,6 +179,7 @@ def main():
                 ax.annotate(names[k], (ea[k, 0], ea[k, 1]), xytext=(5, 4),
                             textcoords='offset points', fontsize=7.5, fontweight='bold',
                             color='#0f172a', zorder=20)
+        ax.set_xlim(xlim); ax.set_ylim(ylim)
         ax.set_title(f'{title}  (acc {float(lat[m]["acc"]):.1f}%, silhouette {sil:.2f})')
         ax.set_xticks([]); ax.set_yticks([])
         for s in ax.spines.values():
