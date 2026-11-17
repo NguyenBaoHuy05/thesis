@@ -1,5 +1,5 @@
 """Generate 3 compact PNG figures for PRIZM:
-  1. fig_reversed_pairs.png   : Dumbbell plot separating the 7 reversed-order pairs (KG vs + ORE + PPC).
+  1. fig_reversed_pairs.png   : Dumbbell plot separating the 7 reversed-order pairs (KG + ORE vs KG + ORE + PPC).
   2. fig_beta_curve.png       : Sensitivity curve over KG weight beta (from Table tab:beta).
   3. fig_qualitative_cases.png: Top-3 flow-velocity MSE cases on 48/12 (No KG wrong -> PRIZM right).
 
@@ -100,8 +100,8 @@ def plot_reversed_pairs(fig_dir):
         ax.text(v_plain[k] + 0.012, y[k], f'{v_plain[k]:.2f}', va='center', ha='left',
                 fontsize=8.5, color='#64748b')
 
-    ax.scatter(v_plain, y, color='#94a3b8', s=55, zorder=3, label=f'KG (mean {v_plain.mean():.2f})')
-    ax.scatter(v_ppc, y, color='#2563eb', s=55, zorder=4, label=f'+ ORE + PPC (mean {v_ppc.mean():.2f})')
+    ax.scatter(v_plain, y, color='#94a3b8', s=55, zorder=3, label=f'KG + ORE (mean {v_plain.mean():.2f})')
+    ax.scatter(v_ppc, y, color='#2563eb', s=55, zorder=4, label=f'KG + ORE + PPC (mean {v_ppc.mean():.2f})')
     ax.set_yticks(y)
     ax.set_yticklabels(labels)
     ax.set_xlim(0.62, 1.06)
