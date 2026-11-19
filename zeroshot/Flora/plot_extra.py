@@ -131,7 +131,7 @@ def plot_beta_curve(fig_dir):
     ax.axvline(0.3, color='#059669', linestyle='--', linewidth=1.3, zorder=2, label=r'Fixed $\beta = 0.3$')
 
     ax.text(0.5, d_110[2] + 0.25, f'+{d_110[2]:.1f}%', ha='center', fontsize=8, color='#dc2626', fontweight='bold')
-    ax.text(0.2, d_48[1] - 0.6, f'+{d_48[1]:.1f}%', ha='center', fontsize=8, color='#2563eb', fontweight='bold')
+    ax.text(0.285, d_48[1] - 0.5, f'+{d_48[1]:.1f}%', ha='right', fontsize=8, color='#2563eb', fontweight='bold')
     ax.text(1.0, d_48[3] - 0.55, f'{d_48[3]:.1f}%', ha='center', fontsize=8, color='#2563eb', fontweight='bold')
 
     ax.set_xticks(betas)
