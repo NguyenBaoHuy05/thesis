@@ -229,7 +229,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         logits, sim = self.concept_head(z_c)
         probs = torch.sigmoid(logits)
         raw_z = (sim - self.sim_mean) / (self.sim_std + 1e-6)
-        z_sim = 3.0 * torch.tanh(raw_z / 3.0)
+        z_sim = 4.0 * torch.tanh(raw_z / 4.0)
         return probs, sim, z_sim
 
     @torch.no_grad()
@@ -288,10 +288,13 @@ class ConceptArbitratedMappingNet(MappingNet):
         w_k = excl_k * idf * rel * boost_k
         w_m = excl_m * idf * rel * boost_m
 
-        # Symmetric normalization over total distinguishing weight (scaled by 2.0 to preserve L1=2 magnitude)
-        sum_total = w_k.sum(dim=-1, keepdim=True) + w_m.sum(dim=-1, keepdim=True)
-        diff = 2.0 * (w_k - w_m)
-        return torch.where(sum_total > 1e-6, diff / sum_total.clamp(min=1e-6), torch.zeros_like(diff))  # (C, C, P)
+        # Exact zero-sum normalization per side (+1.0 on excl_k, -1.0 on excl_m) so sum(D[k,m]) == 0
+        # This guarantees zero cardinality bias toward classes with more concepts.
+        sum_k = w_k.sum(dim=-1, keepdim=True)
+        sum_m = w_m.sum(dim=-1, keepdim=True)
+        norm_k = torch.where(sum_k > 1e-6, w_k / sum_k.clamp(min=1e-6), torch.zeros_like(w_k))
+        norm_m = torch.where(sum_m > 1e-6, w_m / sum_m.clamp(min=1e-6), torch.zeros_like(w_m))
+        return norm_k - norm_m  # (C, C, P)
 
     @torch.no_grad()
     def differential_topk_arbitrate(self, mse_fm, z_sim, diff_mat, topk=5, alpha=0.08, gate_tau=None):
