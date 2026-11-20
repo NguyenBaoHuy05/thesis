@@ -130,8 +130,8 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.center_clip = bool(getattr(args, 'center_clip', 1))
         self.use_groups = bool(getattr(args, 'use_groups', 1))
         self.lambda_soft = float(getattr(args, 'lambda_soft', 0.0))
-        self.arb_topk = int(getattr(args, 'arb_topk', 3))
-        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.025))
+        self.arb_topk = int(getattr(args, 'arb_topk', 5))
+        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
         self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
         with _preserve_rng_state():

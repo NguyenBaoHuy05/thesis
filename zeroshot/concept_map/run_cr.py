@@ -31,10 +31,10 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
-    'gf_soft':       dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=3, arb_alpha=0.025),
-    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
-    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
+    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
+    'gf_soft':       dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=5, arb_alpha=0.08),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
 }
 
 GF_EVAL_RE = re.compile(

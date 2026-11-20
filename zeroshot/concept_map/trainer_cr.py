@@ -276,11 +276,11 @@ class ConceptArbitratedTrainer(Trainer):
         self.best_accuracy[0] = max(self.best_accuracy[0], acc)
         self.logger.info(f'Iter {nb_iter}: ZSL Accuracy: {acc:.2f}% ')
 
-        # Diagnostic sweep over alpha (with a=0.00 = pure untouched Flora DiT!)
-        for a in (0.0, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04):
+        # Diagnostic sweep over alpha (with a=0.000 = pure untouched Flora DiT!)
+        for a in (0.0, 0.04, 0.06, 0.08, 0.10, 0.15, 0.20, 0.30):
             p_a = m.differential_topk_arbitrate(mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=a)
             acc_a = 100.0 * (p_a == labels).float().mean().item()
-            self.logger.info(f'Iter {nb_iter}: [a={a:.3f}] ZSL Accuracy: {acc_a:.2f}%')
+            self.logger.info(f'Iter {nb_iter}: [a={a:.2f}] ZSL Accuracy: {acc_a:.2f}%')
         m.train()
 
     def train(self):
