@@ -132,6 +132,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.lambda_soft = float(getattr(args, 'lambda_soft', 0.0))
         self.arb_topk = int(getattr(args, 'arb_topk', 5))
         self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
+        self.arb_gate_tau = float(getattr(args, 'arb_gate_tau', 0.15))
         self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
         with _preserve_rng_state():
@@ -282,31 +283,42 @@ class ConceptArbitratedMappingNet(MappingNet):
         return norm_k - norm_m  # (C, C, P)
 
     @torch.no_grad()
-    def differential_topk_arbitrate(self, mse_fm, z_sim, diff_mat, topk=3, alpha=0.08):
-        """Arbitrate among DiT's top-K candidates using differential concept evidence.
+    def differential_topk_arbitrate(self, mse_fm, z_sim, diff_mat, topk=5, alpha=0.08, gate_tau=None):
+        """Uncertainty-Gated Differential Top-K Arbitration.
 
         mse_fm  : (B, C) DiT velocity MSE (lower = better)
         z_sim   : (B, P) standardized concept activation per primitive
         diff_mat: (C, C, P) differential concept weight tensor D[k, m, p]
+        gate_tau: uncertainty gate temperature tau > 0 (g(x) = exp(-m1/tau)); <=0 disables gating
         """
         if alpha <= 0.0 or topk <= 1:
             return torch.argmin(mse_fm, dim=1)
 
+        if gate_tau is None:
+            gate_tau = self.arb_gate_tau
+
         B, C = mse_fm.shape
-        K = min(int(topk), C)
+        # Adaptive Top-K: avoid arbitrating over 100% of classes when C is small (e.g., C=5 -> K=2)
+        K = min(int(topk), max(2, C // 2), C)
         top_mse, top_idx = torch.topk(mse_fm, k=K, dim=1, largest=False)  # (B, K)
         c1_idx = top_idx[:, 0]                                            # (B,)
         e1 = top_mse[:, 0:1].clamp(min=1e-6)                              # (B, 1)
         rel_gap = (top_mse - e1) / e1                                     # (B, K) >= 0, col 0 == 0
 
+        # Uncertainty gate: attenuate concept override when DiT has a large Top-1 vs Top-2 margin
+        if gate_tau > 0.0 and K >= 2:
+            m1 = rel_gap[:, 1:2]                                          # (B, 1) >= 0
+            gate = torch.exp(-m1 / float(gate_tau))                       # (B, 1) in (0, 1]
+        else:
+            gate = 1.0
+
         # Gather D[c_k, c_1, :] for each sample b and candidate k in 0..K-1 -> (B, K, P)
-        b_idx = torch.arange(B, device=mse_fm.device).unsqueeze(1).expand(B, K)
         c1_rep = c1_idx.unsqueeze(1).expand(B, K)
         d_k1 = diff_mat[top_idx, c1_rep]  # (B, K, P)
 
         # Differential concept score: (B, K)
         delta_s = (d_k1 * z_sim.unsqueeze(1)).sum(dim=-1)
-        utility = -rel_gap + alpha * delta_s  # (B, K), utility[:, 0] == 0
+        utility = -rel_gap + (alpha * gate) * delta_s  # (B, K), utility[:, 0] == 0
         best_in_k = torch.argmax(utility, dim=1)
         return top_idx[torch.arange(B, device=mse_fm.device), best_in_k]
 
@@ -318,7 +330,8 @@ class ConceptArbitratedMappingNet(MappingNet):
         _, _, z_sim = self.infer_concepts(skeleton_data)
         diff_mat = self.build_pairwise_diff_matrix(unseen_classes)
         preds = self.differential_topk_arbitrate(
-            mse_fm, z_sim, diff_mat, topk=self.arb_topk, alpha=self.arb_alpha
+            mse_fm, z_sim, diff_mat,
+            topk=self.arb_topk, alpha=self.arb_alpha, gate_tau=self.arb_gate_tau,
         )
         return {'predictions_idx': preds, 'mse_fm': mse_fm, 'z_sim': z_sim}
 

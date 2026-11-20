@@ -31,10 +31,11 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
-    'gf_soft':       dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=5, arb_alpha=0.08),
-    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
-    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08),
+    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
+    'gf_nogate':     dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.0),
+    'gf_soft':       dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
 }
 
 GF_EVAL_RE = re.compile(
@@ -74,6 +75,8 @@ def run_single(opts):
         vcfg['arb_alpha'] = opts.arb_alpha
     if opts.arb_topk is not None:
         vcfg['arb_topk'] = opts.arb_topk
+    if opts.arb_gate_tau is not None:
+        vcfg['arb_gate_tau'] = opts.arb_gate_tau
     vcfg['concept_bank'] = os.path.abspath(opts.concept_bank)
     vcfg['concept_ann'] = os.path.abspath(opts.concept_ann)
     vcfg['concept_iters'] = opts.concept_iters
@@ -109,6 +112,7 @@ def main():
     ap.add_argument('--concept-lr', type=float, default=1e-3)
     ap.add_argument('--arb-alpha', '--arb_alpha', dest='arb_alpha', type=float, default=None)
     ap.add_argument('--arb-topk', '--arb_topk', '--arb_top_k', dest='arb_topk', type=int, default=None)
+    ap.add_argument('--arb-gate-tau', '--arb_gate_tau', dest='arb_gate_tau', type=float, default=None)
     ap.add_argument('--force', action='store_true')
     ap.add_argument('--single', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--task', default=None, help=argparse.SUPPRESS)
@@ -147,6 +151,8 @@ def main():
                     cmd += ['--arb-alpha', str(opts.arb_alpha)]
                 if opts.arb_topk is not None:
                     cmd += ['--arb-topk', str(opts.arb_topk)]
+                if opts.arb_gate_tau is not None:
+                    cmd += ['--arb-gate-tau', str(opts.arb_gate_tau)]
                 if opts.force:
                     cmd.append('--force')
                 print(f'\n[run] {variant} | split={t} | seed={s}')
@@ -155,7 +161,7 @@ def main():
     print(f'\n=== Group-Factorized CLIPConceptHead + Differential Top-K Arbitration (feat={opts.feat}) ===')
     hdr = (
         f'{"Variant":<14} {"Split":<6} {"Best":>7} {"Last10":>7} {"C-Only":>7} '
-        f'{"HeadAUC":>8} {"SeenAUC":>8} {"UnseenC":>8}  Differential Top-3 AlphaSweep (a=0.00 is Flora)'
+        f'{"HeadAUC":>8} {"SeenAUC":>8} {"UnseenC":>8}  Uncertainty-Gated Diff Top-K AlphaSweep (a=0.00 is Flora)'
     )
     print(hdr)
     print('-' * (len(hdr) + 12))

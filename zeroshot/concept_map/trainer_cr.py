@@ -147,7 +147,7 @@ class ConceptArbitratedTrainer(Trainer):
         self.logger.info(
             f'[GF-CA] Multi-Axis Concepts attached: P={W_req.shape[1]}, seen-cov={int(seen_mask.sum())}/{W_req.shape[1]}, '
             f'axes={num_groups} (use_groups={m.use_groups}), center_clip={m.center_clip}, '
-            f'lambda_soft={m.lambda_soft}, topk={m.arb_topk}, alpha={m.arb_alpha}'
+            f'lambda_soft={m.lambda_soft}, topk={m.arb_topk}, alpha={m.arb_alpha}, gate_tau={m.arb_gate_tau}'
         )
 
     def train_concept_stage(self):
@@ -270,15 +270,17 @@ class ConceptArbitratedTrainer(Trainer):
         diff_mat = m.build_pairwise_diff_matrix(self.unseen_classes)
 
         preds = m.differential_topk_arbitrate(
-            mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=m.arb_alpha
+            mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=m.arb_alpha, gate_tau=m.arb_gate_tau
         )
         acc = 100.0 * (preds == labels).float().mean().item()
         self.best_accuracy[0] = max(self.best_accuracy[0], acc)
         self.logger.info(f'Iter {nb_iter}: ZSL Accuracy: {acc:.2f}% ')
 
-        # Diagnostic sweep over alpha (with a=0.000 = pure untouched Flora DiT!)
+        # Diagnostic sweep over alpha (with a=0.00 = pure untouched Flora DiT!)
         for a in (0.0, 0.04, 0.06, 0.08, 0.10, 0.15, 0.20, 0.30):
-            p_a = m.differential_topk_arbitrate(mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=a)
+            p_a = m.differential_topk_arbitrate(
+                mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=a, gate_tau=m.arb_gate_tau
+            )
             acc_a = 100.0 * (p_a == labels).float().mean().item()
             self.logger.info(f'Iter {nb_iter}: [a={a:.2f}] ZSL Accuracy: {acc_a:.2f}%')
         m.train()
