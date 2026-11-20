@@ -45,11 +45,13 @@ def _preserve_rng_state():
 
 
 class ConceptEncoder(nn.Module):
-    """MLP mapping frozen 256-D skeleton features to sub-action concept latent z_c."""
+    """Dual-modal concept encoder fusing Cross-Modal VAE latent mu_vae with raw skeleton skip."""
 
-    def __init__(self, ske_dim, concept_dim=256, hidden_dim=512, dropout=0.3):
+    def __init__(self, ske_dim, latent_dim=768, concept_dim=256, hidden_dim=512,
+                 dropout=0.25, use_vae_latent=True):
         super().__init__()
-        self.net = nn.Sequential(
+        self.use_vae_latent = bool(use_vae_latent)
+        self.ske_net = nn.Sequential(
             nn.LayerNorm(ske_dim),
             nn.Linear(ske_dim, hidden_dim),
             nn.GELU(),
@@ -57,18 +59,35 @@ class ConceptEncoder(nn.Module):
             nn.Linear(hidden_dim, concept_dim),
             nn.LayerNorm(concept_dim),
             nn.GELU(),
-            nn.Dropout(dropout * 0.5),
         )
+        if self.use_vae_latent:
+            self.vae_net = nn.Sequential(
+                nn.LayerNorm(latent_dim),
+                nn.Linear(latent_dim, concept_dim),
+                nn.GELU(),
+                nn.Dropout(dropout),
+            )
+            self.out_norm = nn.LayerNorm(concept_dim)
+        else:
+            self.vae_net = None
+            self.out_norm = None
 
-    def forward(self, ske):
-        return self.net(ske)
+    def encode_vae_latent(self, mu_vae):
+        """Encode pooled Cross-Modal VAE latent (mu_ske or mu_text) into concept space."""
+        return self.out_norm(self.vae_net(mu_vae))
+
+    def forward(self, ske, mu_vae=None):
+        h_ske = self.ske_net(ske)
+        if self.use_vae_latent and mu_vae is not None:
+            return self.out_norm(self.vae_net(mu_vae) + 0.5 * h_ske)
+        return h_ske
 
 
 class GroupFactorizedCLIPConceptHead(nn.Module):
     """Centered CLIP concept head with shared global projection + low-rank axis adapters."""
 
     def __init__(self, concept_dim, prim_emb, prim_groups, num_groups,
-                 center_clip=True, use_groups=True, group_rank=32):
+                 center_clip=True, use_groups=True, group_rank=64):
         super().__init__()
         self.center_clip = bool(center_clip)
         self.use_groups = bool(use_groups)
@@ -97,7 +116,7 @@ class GroupFactorizedCLIPConceptHead(nn.Module):
             self.group_down = None
             self.group_up = None
 
-        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(12.0)))
         self.bias = nn.Parameter(torch.tensor(-1.5))
 
     def compute_similarity(self, z_c):
@@ -121,7 +140,7 @@ class GroupFactorizedCLIPConceptHead(nn.Module):
 
     def forward(self, z_c):
         sim = self.compute_similarity(z_c)
-        scale = self.logit_scale.exp().clamp(max=15.0)
+        scale = self.logit_scale.exp().clamp(max=20.0)
         logits = scale * sim + self.bias
         return logits, sim
 
@@ -134,6 +153,8 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.concept_dim = int(getattr(args, 'concept_dim', 256))
         self.center_clip = bool(getattr(args, 'center_clip', 1))
         self.use_groups = bool(getattr(args, 'use_groups', 1))
+        self.use_vae_latent = bool(getattr(args, 'use_vae_latent', 1))
+        self.lambda_vae_c = float(getattr(args, 'lambda_vae_c', 0.15))
         self.lambda_soft = float(getattr(args, 'lambda_soft', 0.0))
         self.arb_topk = int(getattr(args, 'arb_topk', 5))
         self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
@@ -141,7 +162,12 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
         with _preserve_rng_state():
-            self.concept_encoder = ConceptEncoder(args.ske_dim, self.concept_dim)
+            self.concept_encoder = ConceptEncoder(
+                args.ske_dim,
+                latent_dim=args.latent_dim,
+                concept_dim=self.concept_dim,
+                use_vae_latent=self.use_vae_latent,
+            )
         self.concept_head = None
 
         # Populated by Trainer via attach_concepts(...)
@@ -192,26 +218,111 @@ class ConceptArbitratedMappingNet(MappingNet):
             return self.shiftgcn(skeleton_data).mean(3).mean(2)
         return skeleton_data
 
-    def forward_concept_stage(self, skeleton_data, seen_classes, label_idx):
-        """Train ConceptEncoder + GroupFactorizedCLIPConceptHead on seen classes."""
+    def _get_vae_ske_mu(self, ske_256):
+        """Extract Cross-Modal VAE skeleton mean mu_ske[:, -1] cleanly in token-wise pass."""
+        if not self.use_vae_latent:
+            return None
+        # Encoder layers are purely token-wise, so single-token pass equals pooled mu_ske[:, -1]
+        _, mu_ske, _ = self.motion_encoder(ske_256.unsqueeze(1))
+        return mu_ske[:, 0, :]
+
+    def _masked_concept_bce(self, logits, targets):
+        bce_mat = F.binary_cross_entropy_with_logits(
+            logits, targets, pos_weight=self.pos_weight, reduction='none'
+        )
+        mask_cov = self.seen_prim_mask.unsqueeze(0)
+        denom_cov = (mask_cov.sum() * logits.shape[0]).clamp(min=1.0)
+        return (bce_mat * mask_cov).sum() / denom_cov
+
+    def forward_phase1(self, skeleton_data, attuned_semantics, seen_classes, label_idx):
+        """Flora Phase 1 Cross-Modal VAE + Dual-Modal Concept Grounding on (mu_ske, mu_text)."""
+        for p in self.velocity_predictor.parameters():
+            p.requires_grad = False
+        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder, self.semantic_decoder):
+            for p in mod.parameters():
+                p.requires_grad = True
+        if self.kg_gate is not None:
+            self.kg_gate.requires_grad_(True)
+
+        skeleton_embedding, semantics_embedding = self.prepare_embedding(
+            skeleton_data, seen_classes, label_idx, attuned_semantics
+        )
+        z0_text, mu_text, log_var_text = self.semantic_encoder(semantics_embedding)
+        z1_ske, mu_ske, log_var_ske = self.motion_encoder(skeleton_embedding)
+
+        loss_mu = F.mse_loss(mu_text, mu_ske, reduction='mean')
+        loss_log_var = F.mse_loss(log_var_text, log_var_ske, reduction='mean')
+        recon_loss_s2s = F.mse_loss(self.motion_decoder(z1_ske), skeleton_embedding, reduction='mean')
+        recon_loss_t2t = F.mse_loss(self.semantic_decoder(z0_text), semantics_embedding, reduction='mean')
+        recon_loss_s2t = F.mse_loss(self.semantic_decoder(z1_ske), semantics_embedding, reduction='mean')
+        recon_loss_t2s = F.mse_loss(self.motion_decoder(z0_text), skeleton_embedding, reduction='mean')
+        loss_recon = (recon_loss_s2s + recon_loss_t2t + recon_loss_s2t + recon_loss_t2s) / 4.0
+
+        total_loss = loss_recon + self.args.lambda_align * (loss_mu + loss_log_var)
+
+        # Ground BOTH VAE modalities (mu_ske, mu_text) onto the 6-axis MSK-CB space
+        if self.lambda_vae_c > 0.0 and self.use_vae_latent and self.concept_head is not None:
+            self.concept_encoder.vae_net.requires_grad_(True)
+            self.concept_encoder.out_norm.requires_grad_(True)
+            self.concept_head.requires_grad_(True)
+
+            seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
+            targets = self.class_concepts[seen_idx[label_idx]]
+            z_vae_ske = self.concept_encoder.encode_vae_latent(mu_ske[:, -1, :])
+            z_vae_txt = self.concept_encoder.encode_vae_latent(mu_text[:, -1, :])
+            logits_ske, _ = self.concept_head(z_vae_ske)
+            logits_txt, _ = self.concept_head(z_vae_txt)
+            loss_vae_c = 0.5 * (
+                self._masked_concept_bce(logits_ske, targets)
+                + self._masked_concept_bce(logits_txt, targets)
+            )
+            total_loss = total_loss + self.lambda_vae_c * loss_vae_c
+
+        return {
+            'loss': total_loss,
+            'loss_mu': loss_mu,
+            'loss_log_var': loss_log_var,
+            'loss_recon': loss_recon,
+        }
+
+    def forward_phase2(self, skeleton_data, skeleton_data_contraastive, label_idx,
+                       label_idx_contrastive, seen_classes, attuned_semantics):
+        self.concept_encoder.requires_grad_(False)
+        if self.concept_head is not None:
+            self.concept_head.requires_grad_(False)
+        return super().forward_phase2(
+            skeleton_data, skeleton_data_contraastive, label_idx,
+            label_idx_contrastive, seen_classes, attuned_semantics,
+        )
+
+    def forward_concept_stage(self, skeleton_data, seen_classes, label_idx, attuned_semantics=None):
+        """Train Dual-Modal ConceptEncoder + GroupFactorizedCLIPConceptHead on frozen Cross-Modal VAE latents."""
         ske_256 = self._get_ske_256(skeleton_data)
-        z_c = self.concept_encoder(ske_256)
+        with torch.no_grad():
+            mu_ske_p = self._get_vae_ske_mu(ske_256)
+        z_c = self.concept_encoder(ske_256, mu_vae=mu_ske_p)
         logits, _ = self.concept_head(z_c)
 
         seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
         global_cls = seen_idx[label_idx]
         targets = self.class_concepts[global_cls]
 
-        # 1) Hard Masked Pos-Weighted BCE on seen-covered primitives
-        bce_mat = F.binary_cross_entropy_with_logits(
-            logits, targets, pos_weight=self.pos_weight, reduction='none'
-        )
-        mask_cov = self.seen_prim_mask.unsqueeze(0)
-        denom_cov = (mask_cov.sum() * logits.shape[0]).clamp(min=1.0)
-        loss_hard = (bce_mat * mask_cov).sum() / denom_cov
+        # 1) Hard Masked Pos-Weighted BCE on skeleton + VAE latent
+        loss_hard = self._masked_concept_bce(logits, targets)
 
-        # 2) Soft Cross-Modal LLM Distillation on uncovered primitives (1 - seen_prim_mask)
+        # 2) Dual-Modal Text-Latent Concept Anchoring (transfers through shared Cross-Modal VAE space)
+        if self.use_vae_latent and attuned_semantics is not None:
+            with torch.no_grad():
+                sem_batch = attuned_semantics[global_cls]
+                _, mu_txt, _ = self.semantic_encoder(sem_batch)
+                mu_txt_p = mu_txt[:, -1, :]
+            z_txt = self.concept_encoder.encode_vae_latent(mu_txt_p)
+            logits_txt, _ = self.concept_head(z_txt)
+            loss_hard = loss_hard + 0.5 * self._masked_concept_bce(logits_txt, targets)
+
+        # 3) Soft Cross-Modal LLM Distillation on uncovered primitives (1 - seen_prim_mask)
         loss_soft = loss_hard.new_tensor(0.0)
+        mask_cov = self.seen_prim_mask.unsqueeze(0)
         mask_uncov = 1.0 - mask_cov
         if self.lambda_soft > 0.0 and mask_uncov.sum() > 0:
             soft_t = self.soft_text_targets[global_cls]
@@ -222,10 +333,12 @@ class ConceptArbitratedMappingNet(MappingNet):
         return loss_hard + self.lambda_soft * loss_soft
 
     @torch.no_grad()
-    def infer_concepts(self, skeleton_data):
-        """Return (probs, sim, z_sim) where z_sim is smoothly bounded training-standardized activation."""
+    def infer_concepts(self, skeleton_data, mu_ske_p=None):
+        """Return (probs, sim, z_sim) using Cross-Modal VAE latent mu_ske_p + skeleton residual."""
         ske_256 = self._get_ske_256(skeleton_data)
-        z_c = self.concept_encoder(ske_256)
+        if mu_ske_p is None:
+            mu_ske_p = self._get_vae_ske_mu(ske_256)
+        z_c = self.concept_encoder(ske_256, mu_vae=mu_ske_p)
         logits, sim = self.concept_head(z_c)
         probs = torch.sigmoid(logits)
         raw_z = (sim - self.sim_mean) / (self.sim_std + 1e-6)
@@ -233,12 +346,12 @@ class ConceptArbitratedMappingNet(MappingNet):
         return probs, sim, z_sim
 
     @torch.no_grad()
-    def compute_fm_mse(self, skeleton_data, candidate_classes, attuned_semantics):
+    def compute_fm_mse(self, skeleton_data, candidate_classes, attuned_semantics, return_mu=False):
         """Exact Flora DiT flow-matching velocity MSE matrix (B, N_cand), lower = better."""
         ske_256 = self._get_ske_256(skeleton_data)
         B = ske_256.shape[0]
         ske_rep = ske_256.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
-        z1_ske, _, _ = self.motion_encoder(ske_rep)
+        z1_ske, mu_ske, _ = self.motion_encoder(ske_rep)
         z0_text, _, _ = self.semantic_encoder(attuned_semantics[candidate_classes])
 
         timestep = torch.ones(B, device=ske_256.device) * self.args.step_ratio
@@ -254,7 +367,10 @@ class ConceptArbitratedMappingNet(MappingNet):
             pred_velocity = self.velocity_predictor(z_time, time_batch)
             target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
             mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
-        return torch.cat(mse_error_list, dim=1)  # (B, N_cand)
+        mse_fm = torch.cat(mse_error_list, dim=1)  # (B, N_cand)
+        if return_mu:
+            return mse_fm, mu_ske[:, -1, :]
+        return mse_fm
 
     @torch.no_grad()
     def build_pairwise_diff_matrix(self, candidate_classes):
@@ -338,10 +454,10 @@ class ConceptArbitratedMappingNet(MappingNet):
 
     @torch.no_grad()
     def predict_zsl(self, skeleton_data, unseen_classes, attuned_semantics, label):
-        mse_fm = self.compute_fm_mse(skeleton_data, unseen_classes, attuned_semantics)
+        mse_fm, mu_ske_p = self.compute_fm_mse(skeleton_data, unseen_classes, attuned_semantics, return_mu=True)
         if self.arb_alpha <= 0.0:
             return {'predictions_idx': torch.argmin(mse_fm, dim=1), 'mse_fm': mse_fm}
-        _, _, z_sim = self.infer_concepts(skeleton_data)
+        _, _, z_sim = self.infer_concepts(skeleton_data, mu_ske_p=mu_ske_p)
         diff_mat = self.build_pairwise_diff_matrix(unseen_classes)
         preds = self.differential_topk_arbitrate(
             mse_fm, z_sim, diff_mat,

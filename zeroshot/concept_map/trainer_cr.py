@@ -84,15 +84,24 @@ class ConceptArbitratedTrainer(Trainer):
                 list(self.mapping_model.concept_encoder.parameters())
                 + list(self.mapping_model.concept_head.parameters())
             )
+            vae_concept_params = (
+                list(self.mapping_model.concept_encoder.vae_net.parameters())
+                + list(self.mapping_model.concept_encoder.out_norm.parameters())
+                + list(self.mapping_model.concept_head.parameters())
+                if self.mapping_model.use_vae_latent and self.mapping_model.lambda_vae_c > 0.0
+                else []
+            )
             concept_ids = {id(p) for p in concept_params}
             flora_params = [p for p in self.mapping_model.parameters() if id(p) not in concept_ids]
+            # Include VAE-concept projection & head in Phase 1 optimizer when grounding Cross-Modal VAE
+            phase1_params = flora_params + vae_concept_params
             concept_lr = float(getattr(self.args, 'concept_lr', 1e-3))
-            self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=5e-2)
+            self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=3e-2)
 
         self.optimizer_mapping = optim.AdamW(
-            flora_params, lr=self.args.lr, weight_decay=self.args.weight_decay
+            phase1_params, lr=self.args.lr, weight_decay=self.args.weight_decay
         )
-        self.logger.info('Loading optimizers (Flora + Group-Factorized Concept) done.')
+        self.logger.info('Loading optimizers (Flora + Dual-Modal VAE Concept) done.')
 
     def _init_concepts(self):
         cmap_dir = os.path.dirname(os.path.abspath(__file__))
@@ -108,7 +117,7 @@ class ConceptArbitratedTrainer(Trainer):
         seen_mask = (seen_counts > 0).astype(np.float32)
         n_seen = float(len(self.seen_classes))
         neg_counts = np.maximum(n_seen - seen_counts, 1.0)
-        pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 5.0).astype(np.float32)
+        pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 8.0).astype(np.float32)
 
         # IDF specificity weight across all classes (uses concept annotations only, no test labels)
         df = W_req.sum(axis=0)
@@ -151,11 +160,18 @@ class ConceptArbitratedTrainer(Trainer):
         )
 
     def train_concept_stage(self):
-        """Train Group-Factorized Centered CLIPConceptHead and calibrate per-concept stats."""
+        """Train Dual-Modal ConceptEncoder + GroupFactorizedCLIPConceptHead and calibrate stats."""
         n_iters = int(getattr(self.args, 'concept_iters', 500))
         m = self.mapping_model
+        m.motion_encoder.eval()
+        m.semantic_encoder.eval()
+        m.motion_encoder.requires_grad_(False)
+        m.semantic_encoder.requires_grad_(False)
+        m.concept_encoder.requires_grad_(True)
+        m.concept_head.requires_grad_(True)
         m.concept_encoder.train()
         m.concept_head.train()
+        attuned_sem = self.current_attuned_semantics()
         scheduler = optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer_concept, T_max=max(1, n_iters), eta_min=1e-5
         )
@@ -172,7 +188,7 @@ class ConceptArbitratedTrainer(Trainer):
             label_idx = label_idx.to(self.device, non_blocking=True)
             targets = self.train_target_lookup[label_idx]
 
-            loss = m.forward_concept_stage(gt_motion, self.seen_classes, targets)
+            loss = m.forward_concept_stage(gt_motion, self.seen_classes, targets, attuned_semantics=attuned_sem)
             self.optimizer_concept.zero_grad()
             loss.backward()
             self.optimizer_concept.step()
@@ -268,8 +284,10 @@ class ConceptArbitratedTrainer(Trainer):
                 gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
                 label_idx = label_idx.to(self.device, non_blocking=True)
                 labels = self.zsl_target_lookup[label_idx]
-                mse_fm = m.compute_fm_mse(gt_motion, self.unseen_classes, self.current_attuned_semantics())
-                _, _, z_sim = m.infer_concepts(gt_motion)
+                mse_fm, mu_ske_p = m.compute_fm_mse(
+                    gt_motion, self.unseen_classes, self.current_attuned_semantics(), return_mu=True
+                )
+                _, _, z_sim = m.infer_concepts(gt_motion, mu_ske_p=mu_ske_p)
                 mse_all.append(mse_fm)
                 zsim_all.append(z_sim)
                 labels_all.append(labels)
