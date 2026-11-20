@@ -1,11 +1,13 @@
-"""Runner for Concept-Augmented Motion Mapping (Cách A — Direction 1).
+"""Runner for Group-Factorized Centered CLIPConceptHead + Differential Top-K Arbitration.
 
-Tests motion-side concept fusion directly inside Flora's Phase-1 & Phase-2 (no post-hoc re-ranking):
-  - ca_concat_soft : Concat [ske_256 || gamma * soft_proto(p_hat)] into motion_encoder/decoder (gamma=0.5)
-  - ca_concat_q    : Concat [ske_256 || gamma * q_clip] into motion_encoder/decoder (gamma=0.5)
-  - ca_concat_s1   : Concat soft_proto with stronger gamma=1.0
-  - ca_lat_soft    : Residual skip mu_ske += gamma * soft_proto in latent space (gamma=0.2)
-  - ca_lat_q       : Residual skip mu_ske += gamma * q_clip in latent space (gamma=0.2)
+Ablates each new component cleanly on 48/12 and 110/10:
+  - gf_arb       : Full model (Centered CLIP + 7 Body-Part Group Heads + Soft Text Distill + Top-3 Diff Arbitration)
+  - gf_no_soft   : Without Soft LLM Text Distillation (lambda_soft=0.0)
+  - gf_no_group  : Single shared CLIP projection without 7 Body-Part Group Heads (use_groups=0)
+  - gf_uncentered: Uncentered CLIP primitive space (center_clip=0, use_groups=0, lambda_soft=0)
+
+Note: Every variant logs `a=0.00` (pure untouched Flora DiT baseline) alongside `a in {0.03, 0.05, 0.08, 0.12, 0.20}`
+in AlphaSweep, so you get the exact same-run Flora baseline and the arbitrated accuracy in ONE run!
 
 Usage (Colab):
   !python zeroshot/concept_map/run_cr.py --feat star --tasks 48 110 --seeds 1 --force
@@ -28,34 +30,34 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'flora_base':     dict(fusion_mode='none',       concept_rep='soft_proto', gamma_c=0.0),
-    'ca_concat_soft': dict(fusion_mode='concat',     concept_rep='soft_proto', gamma_c=0.5),
-    'ca_concat_q':    dict(fusion_mode='concat',     concept_rep='q_clip',     gamma_c=0.5),
-    'ca_concat_s1':   dict(fusion_mode='concat',     concept_rep='soft_proto', gamma_c=1.0),
-    'ca_lat_soft':    dict(fusion_mode='latent_add', concept_rep='soft_proto', gamma_c=0.2),
-    'ca_lat_q':       dict(fusion_mode='latent_add', concept_rep='q_clip',     gamma_c=0.2),
+    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=3, arb_alpha=0.08),
+    'gf_no_soft':    dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
 }
 
-CA_EVAL_RE = re.compile(
-    r'\[CA-EVAL\] Unseen Concept Head AUC=([\d.nan]+) \(AP=([\d.nan]+), n_prims=(\d+)\) \| '
+GF_EVAL_RE = re.compile(
+    r'\[GF-EVAL\] Unseen Concept Head AUC=([\d.nan]+) \(AP=([\d.nan]+), n_prims=(\d+)\) \| '
     r'Seen-cov AUC=([\d.nan]+) \(\d+\), Unseen-only AUC=([\d.nan]+) \(\d+\) \| '
-    r'Concept-only ZSL=([\d.nan]+)%'
+    r'IDF Concept-only ZSL=([\d.nan]+)%'
 )
 
 
-def parse_ca_log(run_dir):
-    acc_list, _ = C.read_log(run_dir)
+def parse_gf_log(run_dir):
+    acc_list, tags = C.read_log(run_dir)
     if not acc_list:
         return None
     text = open(os.path.join(run_dir, 'run.log'), encoding='utf-8').read()
-    m = CA_EVAL_RE.search(text)
+    m = GF_EVAL_RE.search(text)
     return {
         'best': max(acc_list),
         'last10': sum(acc_list[-10:]) / min(len(acc_list), 10),
         'head_auc': float(m.group(1)) if m else float('nan'),
         'head_ap': float(m.group(2)) if m else float('nan'),
+        'seen_auc': float(m.group(4)) if m else float('nan'),
         'unseen_auc': float(m.group(5)) if m else float('nan'),
         'c_only_zsl': float(m.group(6)) if m else float('nan'),
+        'tags': {k: max(v) for k, v in tags.items()},
     }
 
 
@@ -63,13 +65,15 @@ def run_single(opts):
     os.chdir(FLORA_DIR)
     C.set_feat(opts.feat)
     import utils.utils as U
-    from trainer_cr import ConceptAugmentedTrainer
+    from trainer_cr import ConceptArbitratedTrainer
 
     task = C.SPLITS[opts.task][0]
     prims, rules = C.kg_for_task(task, opts.concept_prims, opts.concept_rules)
     vcfg = dict(VARIANTS[opts.variant])
-    if opts.gamma_c is not None:
-        vcfg['gamma_c'] = opts.gamma_c
+    if opts.arb_alpha is not None:
+        vcfg['arb_alpha'] = opts.arb_alpha
+    if opts.arb_topk is not None:
+        vcfg['arb_topk'] = opts.arb_topk
     vcfg['concept_prims'] = prims
     vcfg['concept_rules'] = rules
     vcfg['concept_iters'] = opts.concept_iters
@@ -84,24 +88,25 @@ def run_single(opts):
     flora_ov = dict(kg_mode='none', setting=opts.setting)
     args = C.build_args(task, opts.seed, out_dir, flora_overrides=flora_ov, extra=vcfg)
     U.init_seed(args.seed)
-    ConceptAugmentedTrainer(args).train()
+    ConceptArbitratedTrainer(args).train()
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Concept-Augmented Motion Mapping (Cách A) runner')
+    ap = argparse.ArgumentParser(description='Group-Factorized CLIPConceptHead + Differential Top-K Arbitration')
     ap.add_argument('--feat', choices=['star', 'synse', 'sadave'], default='star')
     ap.add_argument('--setting', choices=['ZSL', 'GZSL'], default='ZSL')
-    ap.add_argument('--tasks', nargs='+', default=['48', '110'])
+    ap.add_argument('--tasks', '--splits', dest='tasks', nargs='+', default=['48', '110'])
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
-    ap.add_argument('--variants', nargs='+',
-                    default=['ca_concat_soft', 'ca_concat_q', 'ca_lat_soft', 'ca_lat_q'])
-    ap.add_argument('--out-root', default=DRIVE_OUT_CR if os.path.isdir('/content/drive/MyDrive')
+    ap.add_argument('--variants', nargs='+', default=['gf_arb', 'gf_no_soft', 'gf_no_group', 'gf_uncentered'])
+    ap.add_argument('--out-root', '--out_dir', dest='out_root',
+                    default=DRIVE_OUT_CR if os.path.isdir('/content/drive/MyDrive')
                     else os.path.join(CMAP_DIR, 'runs'))
     ap.add_argument('--concept-prims', default='kg/primitive_v2.json')
     ap.add_argument('--concept-rules', default='kg/kg_rules_v2.json')
-    ap.add_argument('--concept-iters', type=int, default=400)
+    ap.add_argument('--concept-iters', type=int, default=500)
     ap.add_argument('--concept-lr', type=float, default=1e-3)
-    ap.add_argument('--gamma-c', type=float, default=None)
+    ap.add_argument('--arb-alpha', '--arb_alpha', dest='arb_alpha', type=float, default=None)
+    ap.add_argument('--arb-topk', '--arb_topk', '--arb_top_k', dest='arb_topk', type=int, default=None)
     ap.add_argument('--force', action='store_true')
     ap.add_argument('--single', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--task', default=None, help=argparse.SUPPRESS)
@@ -136,30 +141,36 @@ def main():
                     '--concept-iters', str(opts.concept_iters),
                     '--concept-lr', str(opts.concept_lr),
                 ]
-                if opts.gamma_c is not None:
-                    cmd += ['--gamma-c', str(opts.gamma_c)]
+                if opts.arb_alpha is not None:
+                    cmd += ['--arb-alpha', str(opts.arb_alpha)]
+                if opts.arb_topk is not None:
+                    cmd += ['--arb-topk', str(opts.arb_topk)]
                 if opts.force:
                     cmd.append('--force')
                 print(f'\n[run] {variant} | split={t} | seed={s}')
                 subprocess.run(cmd, check=True)
 
-    print(f'\n=== Concept-Augmented Motion Mapping Summary (feat={opts.feat}, setting={opts.setting}) ===')
-    hdr = f'{"Variant":<16} {"Split":<6} {"Best":>7} {"Last10":>7} {"C-Only":>7} {"HeadAUC":>8} {"HeadAP":>7} {"UnseenC":>8}'
+    print(f'\n=== Group-Factorized CLIPConceptHead + Differential Top-K Arbitration (feat={opts.feat}) ===')
+    hdr = (
+        f'{"Variant":<14} {"Split":<6} {"Best":>7} {"Last10":>7} {"C-Only":>7} '
+        f'{"HeadAUC":>8} {"SeenAUC":>8} {"UnseenC":>8}  Differential Top-3 AlphaSweep (a=0.00 is Flora)'
+    )
     print(hdr)
-    print('-' * len(hdr))
+    print('-' * (len(hdr) + 12))
     for variant in opts.variants:
         for t in opts.tasks:
             task = C.SPLITS[t][0]
             for s in opts.seeds:
                 run_dir = os.path.join(opts.out_root, opts.feat, variant, f'{task}_{opts.setting}_seed{s}')
-                res = parse_ca_log(run_dir)
+                res = parse_gf_log(run_dir)
                 if not res:
-                    print(f'{variant:<16} {t:<6}   (incomplete)')
+                    print(f'{variant:<14} {t:<6}   (incomplete)')
                 else:
+                    sw = ' '.join(f'{k}:{v:.2f}' for k, v in sorted(res['tags'].items()))
                     print(
-                        f'{variant:<16} {t:<6} '
+                        f'{variant:<14} {t:<6} '
                         f'{res["best"]:7.2f} {res["last10"]:7.2f} {res["c_only_zsl"]:7.2f} '
-                        f'{res["head_auc"]:8.4f} {res["head_ap"]:7.4f} {res["unseen_auc"]:8.4f}'
+                        f'{res["head_auc"]:8.4f} {res["seen_auc"]:8.4f} {res["unseen_auc"]:8.4f}  {sw}'
                     )
 
 

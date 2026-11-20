@@ -1,25 +1,27 @@
-"""Concept-Augmented Motion Mapping (Cách A — Direction 1).
+"""Group-Factorized Centered CLIPConceptHead + Differential Top-K Concept Arbitration.
 
-Two-stage motion-side concept grounding built on Flora:
-  Stage 0 (Concept Encoder):
-    Frozen 256-D skeleton -> ConceptEncoder -> CLIPConceptHead -> concept probs p_hat (B, P)
-    and continuous CLIP concept vector q_clip (B, 768).
-    Trained with Masked Pos-Weighted BCE only (no seen-class InfoNCE shortcut, no GRL).
-    Frozen after Stage 0; produces a centered, scale-matched concept motion embedding m_c (B, 768):
-      - concept_rep='soft_proto': m_c = sum_p p_hat_p * e_p (explicitly reconstructed from concept bank)
-      - concept_rep='q_clip'    : m_c = q_clip (continuous CLIP projection)
-  Stage 1 & 2 (Flora Phase-1 Alignment & Phase-2 DiT Flow Matching):
-    Injects m_c directly into the motion side (no post-hoc score re-ranking!):
-      - fusion_mode='concat'    : motion_encoder / motion_decoder operate on [ske_256 || gamma * m_c]
-      - fusion_mode='latent_add': adds gamma * m_c to motion latent (motion-side residual skip)
-      - fusion_mode='none'      : pure Flora baseline
+Addresses all 5 bottlenecks identified in Step-1 diagnostics:
+  1. Centered CLIP Concept Space: removes the shared anisotropic CLIP mean vector across all P primitives
+     so primitive prototypes spread uniformly across the hypersphere.
+  2. Group-Factorized Multi-Head Projection: combines a shared global projection W_global (for cross-group
+     zero-shot transfer to unseen-only primitives) with G=7 body-part-specific projections W_g
+     (hand, interaction, body, arm, torso, leg, head) so multiple body parts can activate simultaneously
+     without pulling against each other.
+  3. Cross-Modal Soft LLM Distillation: distills soft concept targets from seen-class LLM text embeddings
+     onto uncovered primitives (1 - seen_prim_mask) so unseen-only primitives receive soft semantic
+     supervision during training without violating zero-shot separation.
+  4. Untouched Flora VAE + DiT Backbone: keeps Flora's Phase-1 & Phase-2 completely uncorrupted.
+  5. IDF-Weighted Differential Top-K Arbitration: at test time, compares DiT's top-1 candidate c_1 against
+     top-K alternatives c_k (k=2..K) ONLY on their distinguishing primitives (R_{c_k} \\ R_{c_1} and
+     R_{c_1} \\ R_{c_k}, weighted by IDF specificity and forbid polarity) against the relative DiT
+     velocity gap (e_k - e_1) / e_1. Shared primitives cancel out identically to zero.
 """
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.fm import MappingNet, Encoder, Decoder
+from models.fm import MappingNet
 
 
 class ConceptEncoder(nn.Module):
@@ -41,68 +43,122 @@ class ConceptEncoder(nn.Module):
         return self.net(ske)
 
 
-class CLIPConceptHead(nn.Module):
-    """Projects z_c into frozen CLIP space and scores cosine similarity to concept prototypes."""
+class GroupFactorizedCLIPConceptHead(nn.Module):
+    """Centered CLIP concept head with shared global projection + G body-part group projections."""
 
-    def __init__(self, concept_dim, prim_emb):
+    def __init__(self, concept_dim, prim_emb, prim_groups, num_groups,
+                 center_clip=True, use_groups=True):
         super().__init__()
-        self.register_buffer('prim_emb', F.normalize(prim_emb.float(), dim=-1))  # (P, 768)
-        self.proj = nn.Linear(concept_dim, prim_emb.shape[-1])
-        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
-        self.bias = nn.Parameter(torch.tensor(-2.0))
+        self.center_clip = bool(center_clip)
+        self.use_groups = bool(use_groups)
+        self.num_groups = int(num_groups)
+        clip_dim = prim_emb.shape[-1]
+
+        e = F.normalize(prim_emb.float(), dim=-1)
+        if self.center_clip:
+            e = F.normalize(e - e.mean(dim=0, keepdim=True), dim=-1)
+        self.register_buffer('prim_emb', e)  # (P, 768)
+        self.register_buffer('prim_groups', prim_groups.long())  # (P,) in 0..G-1
+
+        # Shared global projection transfers alignment to rare / unseen-only concepts
+        self.global_proj = nn.Linear(concept_dim, clip_dim)
+        # Group-specific projections allow simultaneous activation across distinct body parts
+        if self.use_groups:
+            self.group_projs = nn.ModuleList([
+                nn.Linear(concept_dim, clip_dim) for _ in range(self.num_groups)
+            ])
+            for gp in self.group_projs:
+                nn.init.normal_(gp.weight, std=0.01)
+                nn.init.constant_(gp.bias, 0.0)
+        else:
+            self.group_projs = None
+
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(12.0)))
+        self.bias = nn.Parameter(torch.tensor(-1.5))
+
+    def compute_similarity(self, z_c):
+        """Return (B, P) cosine similarities between group-projected z_c and centered prim_emb."""
+        q_glob = self.global_proj(z_c)  # (B, 768)
+        if not self.use_groups or self.group_projs is None:
+            q = F.normalize(q_glob, dim=-1)
+            return q @ self.prim_emb.t()
+
+        # Stack G group-specific queries: (B, G, 768)
+        q_groups = torch.stack(
+            [F.normalize(q_glob + gp(z_c), dim=-1) for gp in self.group_projs],
+            dim=1,
+        )
+        # Gather the group query corresponding to each primitive p: (B, P, 768)
+        g_idx = self.prim_groups.view(1, -1, 1).expand(z_c.shape[0], -1, q_glob.shape[-1])
+        q_per_prim = torch.gather(q_groups, dim=1, index=g_idx)  # (B, P, 768)
+        sim = (q_per_prim * self.prim_emb.unsqueeze(0)).sum(dim=-1)  # (B, P)
+        return sim
 
     def forward(self, z_c):
-        q = F.normalize(self.proj(z_c), dim=-1)  # (B, 768)
+        sim = self.compute_similarity(z_c)
         scale = self.logit_scale.exp().clamp(max=50.0)
-        logits = scale * (q @ self.prim_emb.t()) + self.bias
-        return logits, q
+        logits = scale * sim + self.bias
+        return logits, sim
 
 
-class ConceptAugmentedMappingNet(MappingNet):
-    """Flora MappingNet with motion-side Concept-Augmented representation."""
+class ConceptArbitratedMappingNet(MappingNet):
+    """Flora MappingNet paired with Group-Factorized Centered CLIPConceptHead & Differential Top-K Arbitration."""
 
     def __init__(self, args):
         super().__init__(args)
         self.concept_dim = int(getattr(args, 'concept_dim', 256))
-        self.fusion_mode = getattr(args, 'fusion_mode', 'concat')     # none | concat | latent_add
-        self.concept_rep = getattr(args, 'concept_rep', 'soft_proto') # soft_proto | q_clip
-        self.gamma_c = float(getattr(args, 'gamma_c', 0.5))
-        self.clip_dim = 768
-
-        # If concat mode, rebuild motion_encoder / motion_decoder for input_dim = ske_dim + 768
-        if self.fusion_mode == 'concat':
-            aug_dim = args.ske_dim + self.clip_dim
-            self.motion_encoder = Encoder(input_dim=aug_dim, output_dim=args.latent_dim)
-            self.motion_decoder = Decoder(input_dim=args.latent_dim, output_dim=aug_dim)
+        self.center_clip = bool(getattr(args, 'center_clip', 1))
+        self.use_groups = bool(getattr(args, 'use_groups', 1))
+        self.lambda_soft = float(getattr(args, 'lambda_soft', 0.2))
+        self.arb_topk = int(getattr(args, 'arb_topk', 3))
+        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
+        self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
         self.concept_encoder = ConceptEncoder(args.ske_dim, self.concept_dim)
         self.concept_head = None
 
-        # Buffers populated by Trainer
-        self.register_buffer('class_concepts', None)    # (N_cls, P)
-        self.register_buffer('seen_prim_mask', None)    # (P,)
-        self.register_buffer('pos_weight', None)        # (P,)
-        self.register_buffer('prim_emb', None)          # (P, 768)
-        self.register_buffer('class_proto_clip', None)  # (N_cls, 768)
-        self.register_buffer('mc_mean', torch.zeros(1, self.clip_dim))
-        self.register_buffer('ske_scale', torch.tensor(1.0))
+        # Populated by Trainer via attach_concepts(...)
+        self.register_buffer('class_concepts', None)   # (N_cls, P) binary require
+        self.register_buffer('class_forbids', None)    # (N_cls, P) binary forbid
+        self.register_buffer('seen_prim_mask', None)   # (P,)
+        self.register_buffer('pos_weight', None)       # (P,)
+        self.register_buffer('idf_weight', None)       # (P,) IDF specificity
+        self.register_buffer('soft_text_targets', None)# (N_cls, P) soft CLIP text teacher
+        self.register_buffer('sim_mean', None)         # (1, P) training-set mean of concept sim
+        self.register_buffer('sim_std', None)          # (1, P) training-set std of concept sim
 
-    def attach_concepts(self, class_concepts, seen_prim_mask, pos_weight, prim_emb):
+    def attach_concepts(self, class_concepts, class_forbids, seen_prim_mask,
+                        pos_weight, idf_weight, prim_emb, prim_groups, num_groups):
         device = next(self.parameters()).device
+        P = class_concepts.shape[1]
         self.class_concepts = class_concepts.to(device=device, dtype=torch.float32)
+        self.class_forbids = class_forbids.to(device=device, dtype=torch.float32)
         self.seen_prim_mask = seen_prim_mask.to(device=device, dtype=torch.float32)
         self.pos_weight = pos_weight.to(device=device, dtype=torch.float32)
-        self.prim_emb = F.normalize(prim_emb.to(device=device, dtype=torch.float32), dim=-1)
+        self.idf_weight = idf_weight.to(device=device, dtype=torch.float32)
+        self.sim_mean = torch.zeros(1, P, device=device)
+        self.sim_std = torch.ones(1, P, device=device)
 
-        # Centered class concept prototype in CLIP space (for C-Only diagnostic)
-        w_req = self.class_concepts / self.class_concepts.sum(dim=1, keepdim=True).clamp(min=1.0)
-        proto = w_req @ self.prim_emb
-        proto = proto - proto.mean(dim=0, keepdim=True)
-        self.class_proto_clip = F.normalize(proto, dim=-1)
+        self.concept_head = GroupFactorizedCLIPConceptHead(
+            self.concept_dim,
+            prim_emb.to(device),
+            prim_groups.to(device),
+            num_groups=num_groups,
+            center_clip=self.center_clip,
+            use_groups=self.use_groups,
+        ).to(device)
 
-        self.concept_head = CLIPConceptHead(self.concept_dim, self.prim_emb).to(device)
-        self.mc_mean = self.mc_mean.to(device)
-        self.ske_scale = self.ske_scale.to(device)
+        # Build parameter-free soft concept teacher from Flora's class text embeddings (LLM half)
+        with torch.no_grad():
+            # class_embeddings: (N_cls, L+1, 1536), last token [-1], LLM description half [768:]
+            cls_llm = self.class_embeddings[:, -1, 768:].to(device=device, dtype=torch.float32)
+            cls_llm = F.normalize(cls_llm, dim=-1)
+            if self.center_clip:
+                cls_llm = F.normalize(cls_llm - cls_llm.mean(dim=0, keepdim=True), dim=-1)
+            sim_t = cls_llm @ self.concept_head.prim_emb.t()  # (N_cls, P)
+            # Standardize per class so soft teacher probabilities span (0.05, 0.95) smoothly
+            sim_t_z = (sim_t - sim_t.mean(dim=1, keepdim=True)) / (sim_t.std(dim=1, keepdim=True) + 1e-6)
+            self.soft_text_targets = torch.sigmoid(1.5 * sim_t_z - 0.5).detach()
 
     def _get_ske_256(self, skeleton_data):
         if not self.args.use_features:
@@ -110,189 +166,142 @@ class ConceptAugmentedMappingNet(MappingNet):
         return skeleton_data
 
     def forward_concept_stage(self, skeleton_data, seen_classes, label_idx):
-        """Stage 0: train ConceptEncoder + CLIPConceptHead with Masked Pos-Weighted BCE."""
+        """Train ConceptEncoder + GroupFactorizedCLIPConceptHead on seen classes."""
         ske_256 = self._get_ske_256(skeleton_data)
         z_c = self.concept_encoder(ske_256)
         logits, _ = self.concept_head(z_c)
+
         seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
-        targets = self.class_concepts[seen_idx[label_idx]]
-        loss_mat = F.binary_cross_entropy_with_logits(
+        global_cls = seen_idx[label_idx]
+        targets = self.class_concepts[global_cls]
+
+        # 1) Hard Masked Pos-Weighted BCE on seen-covered primitives
+        bce_mat = F.binary_cross_entropy_with_logits(
             logits, targets, pos_weight=self.pos_weight, reduction='none'
         )
-        mask = self.seen_prim_mask.unsqueeze(0)
-        denom = (mask.sum() * logits.shape[0]).clamp(min=1.0)
-        return (loss_mat * mask).sum() / denom
+        mask_cov = self.seen_prim_mask.unsqueeze(0)
+        denom_cov = (mask_cov.sum() * logits.shape[0]).clamp(min=1.0)
+        loss_hard = (bce_mat * mask_cov).sum() / denom_cov
+
+        # 2) Soft Cross-Modal LLM Distillation on uncovered primitives (1 - seen_prim_mask)
+        loss_soft = loss_hard.new_tensor(0.0)
+        mask_uncov = 1.0 - mask_cov
+        if self.lambda_soft > 0.0 and mask_uncov.sum() > 0:
+            soft_t = self.soft_text_targets[global_cls]
+            soft_mat = F.binary_cross_entropy_with_logits(logits, soft_t, reduction='none')
+            denom_uncov = (mask_uncov.sum() * logits.shape[0]).clamp(min=1.0)
+            loss_soft = (soft_mat * mask_uncov).sum() / denom_uncov
+
+        return loss_hard + self.lambda_soft * loss_soft
 
     @torch.no_grad()
-    def infer_concept_raw(self, ske_256):
-        """Return (probs, q_clip, m_c_raw) from the frozen concept branch."""
-        z_c = self.concept_encoder(ske_256)
-        logits, q_clip = self.concept_head(z_c)
-        probs = torch.sigmoid(logits)
-        if self.concept_rep == 'soft_proto':
-            # Reconstruct motion concept embedding strictly from frozen CLIP concept dictionary
-            w = probs / probs.sum(dim=1, keepdim=True).clamp(min=1e-6)
-            m_c = F.normalize(w @ self.prim_emb, dim=-1)
-        elif self.concept_rep == 'q_clip':
-            m_c = q_clip
-        else:
-            raise ValueError(f'unknown concept_rep: {self.concept_rep}')
-        return probs, q_clip, m_c
-
-    @torch.no_grad()
-    def infer_concept_centered(self, ske_256):
-        """Centered, L2-normalized, scale-matched concept motion embedding (B, 768)."""
-        _, _, m_c = self.infer_concept_raw(ske_256)
-        m_centered = F.normalize(m_c - self.mc_mean, dim=-1)
-        return m_centered * self.ske_scale
-
-    def _augment_skeleton_tokens(self, skeleton_data):
-        """Build (B, L+1, D_in) motion input for motion_encoder."""
+    def infer_concepts(self, skeleton_data):
+        """Return (probs, sim, z_sim) where z_sim is training-standardized concept activation."""
         ske_256 = self._get_ske_256(skeleton_data)
-        if self.fusion_mode == 'concat' and self.gamma_c > 0.0:
-            mc = self.infer_concept_centered(ske_256)  # (B, 768)
-            ske_in = torch.cat([ske_256, self.gamma_c * mc], dim=-1)  # (B, 1024)
-        else:
-            ske_in = ske_256
-        return ske_in.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
+        z_c = self.concept_encoder(ske_256)
+        logits, sim = self.concept_head(z_c)
+        probs = torch.sigmoid(logits)
+        z_sim = (sim - self.sim_mean) / (self.sim_std + 1e-6)
+        return probs, sim, z_sim
 
-    def _encode_motion(self, skeleton_data):
-        ske_tokens = self._augment_skeleton_tokens(skeleton_data)
-        z1_ske, mu_ske, log_var_ske = self.motion_encoder(ske_tokens)
-        if self.fusion_mode == 'latent_add' and self.gamma_c > 0.0:
-            ske_256 = self._get_ske_256(skeleton_data)
-            _, _, m_c = self.infer_concept_raw(ske_256)
-            mc_dir = F.normalize(m_c - self.mc_mean, dim=-1).unsqueeze(1)  # (B, 1, 768)
-            # Match typical latent norm smoothly
-            lat_scale = mu_ske.detach().norm(dim=-1, keepdim=True).clamp(min=1e-6)
-            delta = self.gamma_c * mc_dir * lat_scale
-            mu_ske = mu_ske + delta
-            z1_ske = z1_ske + delta
-        return ske_tokens, z1_ske, mu_ske, log_var_ske
+    @torch.no_grad()
+    def compute_fm_mse(self, skeleton_data, candidate_classes, attuned_semantics):
+        """Exact Flora DiT flow-matching velocity MSE matrix (B, N_cand), lower = better."""
+        ske_256 = self._get_ske_256(skeleton_data)
+        B = ske_256.shape[0]
+        ske_rep = ske_256.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
+        z1_ske, _, _ = self.motion_encoder(ske_rep)
+        z0_text, _, _ = self.semantic_encoder(attuned_semantics[candidate_classes])
 
-    def prepare_embedding(self, skeleton_data, seen_classes, label_idx, attuned_semantics):
-        ske_tokens = self._augment_skeleton_tokens(skeleton_data)
-        semantics_seen = attuned_semantics[seen_classes]
-        semantics_embedding = semantics_seen[label_idx]
-        return ske_tokens, semantics_embedding
+        timestep = torch.ones(B, device=ske_256.device) * self.args.step_ratio
+        class_chunk = self.args.eval_class_chunk or len(candidate_classes)
+        mse_error_list = []
+        for start in range(0, len(candidate_classes), class_chunk):
+            z0_chunk = z0_text[start:start + class_chunk]
+            n_class = z0_chunk.shape[0]
+            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
+            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
+            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
+            z_time = self.psi(time_batch, z0_batch, z1_batch)
+            pred_velocity = self.velocity_predictor(z_time, time_batch)
+            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
+            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
+        return torch.cat(mse_error_list, dim=1)  # (B, N_cand)
 
-    def forward_phase1(self, skeleton_data, attuned_semantics, seen_classes, label_idx):
-        for p in self.velocity_predictor.parameters():
-            p.requires_grad = False
-        for mod in (self.concept_encoder, self.concept_head):
-            if mod is not None:
-                for p in mod.parameters():
-                    p.requires_grad = False
-        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder, self.semantic_decoder):
-            for p in mod.parameters():
-                p.requires_grad = True
+    @torch.no_grad()
+    def build_pairwise_diff_matrix(self, candidate_classes):
+        """Precompute (N_cand, N_cand, P) IDF-weighted differential concept tensor D[k, m, p].
 
-        semantics_seen = attuned_semantics[seen_classes]
-        semantics_embedding = semantics_seen[label_idx]
-        skeleton_embedding, z1_ske, mu_ske, log_var_ske = self._encode_motion(skeleton_data)
-        z0_text, mu_text, log_var_text = self.semantic_encoder(semantics_embedding)
+        For candidate pair (c_k, c_m):
+          - Shared required primitives (R_{c_k} & R_{c_m}) are ZEROED OUT.
+          - Primitives in R_{c_k} \\ R_{c_m} receive positive IDF weight (boosted if in F_{c_m}).
+          - Primitives in R_{c_m} \\ R_{c_k} receive negative IDF weight (boosted if in F_{c_k}).
+        """
+        cand_idx = torch.as_tensor(candidate_classes, device=self.class_concepts.device, dtype=torch.long)
+        req = self.class_concepts[cand_idx]   # (C, P)
+        forb = self.class_forbids[cand_idx]   # (C, P)
+        idf = self.idf_weight.view(1, 1, -1)  # (1, 1, P)
 
-        loss_mu = F.mse_loss(mu_text, mu_ske, reduction='mean')
-        loss_log_var = F.mse_loss(log_var_text, log_var_ske, reduction='mean')
-        recon_loss_s2s = F.mse_loss(self.motion_decoder(z1_ske), skeleton_embedding, reduction='mean')
-        recon_loss_t2t = F.mse_loss(self.semantic_decoder(z0_text), semantics_embedding, reduction='mean')
-        recon_loss_s2t = F.mse_loss(self.semantic_decoder(z1_ske), semantics_embedding, reduction='mean')
-        recon_loss_t2s = F.mse_loss(self.motion_decoder(z0_text), skeleton_embedding, reduction='mean')
-        loss_recon = (recon_loss_s2s + recon_loss_t2t + recon_loss_s2t + recon_loss_t2s) / 4.0
-        total_loss = loss_recon + self.args.lambda_align * (loss_mu + loss_log_var)
-        return {
-            'loss': total_loss,
-            'loss_mu': loss_mu,
-            'loss_log_var': loss_log_var,
-            'loss_recon': loss_recon,
-        }
+        # Exclusive required primitives: req_k * (1 - req_m) -> shape (C, C, P)
+        excl_k = req.unsqueeze(1) * (1.0 - req.unsqueeze(0))
+        excl_m = req.unsqueeze(0) * (1.0 - req.unsqueeze(1))
 
-    def forward_phase2(self, skeleton_data, skeleton_data_contraastive, label_idx,
-                       label_idx_contrastive, seen_classes, attuned_semantics):
-        for p in self.velocity_predictor.parameters():
-            p.requires_grad = True
-        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder,
-                    self.semantic_decoder, self.concept_encoder, self.concept_head):
-            if mod is not None:
-                for p in mod.parameters():
-                    p.requires_grad = False
+        # Boost weight when the other class explicitly forbids the primitive
+        boost_k = 1.0 + (self.arb_forbid_boost - 1.0) * forb.unsqueeze(0)
+        boost_m = 1.0 + (self.arb_forbid_boost - 1.0) * forb.unsqueeze(1)
 
-        semantics_seen = attuned_semantics[seen_classes]
-        sem_pos = semantics_seen[label_idx]
-        sem_con = semantics_seen[label_idx_contrastive]
-        z0_text, _, _ = self.semantic_encoder(sem_pos)
-        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
-        z0_text_con, _, _ = self.semantic_encoder(sem_con)
-        _, z1_ske_con, _, _ = self._encode_motion(skeleton_data_contraastive)
+        w_k = excl_k * idf * boost_k
+        w_m = excl_m * idf * boost_m
 
-        time_steps = self.time_step_sampler.sample_time(z0_text)
-        z_time = self.psi(time_steps, z0_text, z1_ske)
-        target_velocity = self.Dt_psi(time_steps, z0_text, z1_ske)
-        pred_velocity = self.velocity_predictor(z_time, time_steps)
-        flow_matching_loss = F.mse_loss(pred_velocity, target_velocity, reduction='mean')
+        # Normalize each side over its exclusive distinguishing primitives (0 if identical rules)
+        sum_k = w_k.sum(dim=-1, keepdim=True)
+        sum_m = w_m.sum(dim=-1, keepdim=True)
+        norm_k = torch.where(sum_k > 1e-6, w_k / sum_k.clamp(min=1e-6), torch.zeros_like(w_k))
+        norm_m = torch.where(sum_m > 1e-6, w_m / sum_m.clamp(min=1e-6), torch.zeros_like(w_m))
+        return norm_k - norm_m  # (C, C, P)
 
-        target_velocity_con = self.Dt_psi(time_steps, z0_text_con, z1_ske_con)
-        flow_matching_loss_con = F.mse_loss(pred_velocity, target_velocity_con, reduction='mean')
-        total_loss = flow_matching_loss - self.args.lambda_cfm * flow_matching_loss_con
-        return {
-            'loss': total_loss,
-            'loss_flow_matching': flow_matching_loss,
-            'loss_flow_matching_contrastive': flow_matching_loss_con,
-        }
+    @torch.no_grad()
+    def differential_topk_arbitrate(self, mse_fm, z_sim, diff_mat, topk=3, alpha=0.08):
+        """Arbitrate among DiT's top-K candidates using differential concept evidence.
+
+        mse_fm  : (B, C) DiT velocity MSE (lower = better)
+        z_sim   : (B, P) standardized concept activation per primitive
+        diff_mat: (C, C, P) differential concept weight tensor D[k, m, p]
+        """
+        if alpha <= 0.0 or topk <= 1:
+            return torch.argmin(mse_fm, dim=1)
+
+        B, C = mse_fm.shape
+        K = min(int(topk), C)
+        top_mse, top_idx = torch.topk(mse_fm, k=K, dim=1, largest=False)  # (B, K)
+        c1_idx = top_idx[:, 0]                                            # (B,)
+        e1 = top_mse[:, 0:1].clamp(min=1e-6)                              # (B, 1)
+        rel_gap = (top_mse - e1) / e1                                     # (B, K) >= 0, col 0 == 0
+
+        # Gather D[c_k, c_1, :] for each sample b and candidate k in 0..K-1 -> (B, K, P)
+        b_idx = torch.arange(B, device=mse_fm.device).unsqueeze(1).expand(B, K)
+        c1_rep = c1_idx.unsqueeze(1).expand(B, K)
+        d_k1 = diff_mat[top_idx, c1_rep]  # (B, K, P)
+
+        # Differential concept score: (B, K)
+        delta_s = (d_k1 * z_sim.unsqueeze(1)).sum(dim=-1)
+        utility = -rel_gap + alpha * delta_s  # (B, K), utility[:, 0] == 0
+        best_in_k = torch.argmax(utility, dim=1)
+        return top_idx[torch.arange(B, device=mse_fm.device), best_in_k]
 
     @torch.no_grad()
     def predict_zsl(self, skeleton_data, unseen_classes, attuned_semantics, label):
-        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
-        B = z1_ske.shape[0]
-        semantics_embedding = attuned_semantics[unseen_classes]
-        z0_text, _, _ = self.semantic_encoder(semantics_embedding)
+        mse_fm = self.compute_fm_mse(skeleton_data, unseen_classes, attuned_semantics)
+        if self.arb_alpha <= 0.0:
+            return {'predictions_idx': torch.argmin(mse_fm, dim=1), 'mse_fm': mse_fm}
+        _, _, z_sim = self.infer_concepts(skeleton_data)
+        diff_mat = self.build_pairwise_diff_matrix(unseen_classes)
+        preds = self.differential_topk_arbitrate(
+            mse_fm, z_sim, diff_mat, topk=self.arb_topk, alpha=self.arb_alpha
+        )
+        return {'predictions_idx': preds, 'mse_fm': mse_fm, 'z_sim': z_sim}
 
-        timestep = torch.ones(B, device=z1_ske.device) * self.args.step_ratio
-        class_chunk = self.args.eval_class_chunk or len(unseen_classes)
-        mse_error_list = []
-        for start in range(0, len(unseen_classes), class_chunk):
-            z0_chunk = z0_text[start:start + class_chunk]
-            n_class = z0_chunk.shape[0]
-            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
-            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
-            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
-            z_time = self.psi(time_batch, z0_batch, z1_batch)
-            pred_velocity = self.velocity_predictor(z_time, time_batch)
-            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
-            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
-        mse_error_list = torch.cat(mse_error_list, dim=1)
-        return {'predictions_idx': torch.argmin(mse_error_list, dim=1)}
 
-    @torch.no_grad()
-    def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
-        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
-        B = z1_ske.shape[0]
-        z0_text, _, _ = self.semantic_encoder(attuned_semantics)
-
-        timestep = torch.ones(B, device=z1_ske.device) * self.args.step_ratio
-        n_total = len(seen_classes) + len(unseen_classes)
-        class_chunk = self.args.eval_class_chunk or n_total
-        mse_error_list = []
-        for start in range(0, n_total, class_chunk):
-            z0_chunk = z0_text[start:start + class_chunk]
-            n_class = z0_chunk.shape[0]
-            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
-            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
-            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
-            z_time = self.psi(time_batch, z0_batch, z1_batch)
-            pred_velocity = self.velocity_predictor(z_time, time_batch)
-            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
-            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
-        mse_error_list = torch.cat(mse_error_list, dim=1)
-        mse_seen_min = torch.min(mse_error_list[:, seen_classes], dim=1).values
-        mse_unseen_min = torch.min(mse_error_list[:, unseen_classes], dim=1).values
-        ratio = mse_seen_min / mse_unseen_min
-        row_seen = (ratio > self.args.calibration_factor).unsqueeze(1)
-        row_unseen = ~row_seen
-        col_seen = torch.zeros(1, n_total, dtype=torch.bool, device=z1_ske.device)
-        col_seen[:, seen_classes] = True
-        col_unseen = torch.zeros(1, n_total, dtype=torch.bool, device=z1_ske.device)
-        col_unseen[:, unseen_classes] = True
-        mse_error_list[row_seen & col_seen] = 1e6
-        mse_error_list[row_unseen & col_unseen] = 1e6
-        return {'predictions_idx': torch.argmin(mse_error_list, dim=1)}
+# Backward-compatible alias
+ConceptResidualMappingNet = ConceptArbitratedMappingNet
+ConceptAugmentedMappingNet = ConceptArbitratedMappingNet

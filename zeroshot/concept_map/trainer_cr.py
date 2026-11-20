@@ -1,21 +1,23 @@
-"""Trainer for Concept-Augmented Motion Mapping (Cách A — Direction 1).
-
-Training pipeline:
-  Stage 0: Train ConceptEncoder + CLIPConceptHead on seen 256-D skeleton features
-           with Masked Pos-Weighted BCE only (~400 iters, ~4s). Freeze & calibrate
-           training-set mean and scale of m_c; log unseen concept AUC/AP & Top-5 demo.
-  Phase 1: Flora VAE alignment on concept-augmented motion representations.
-  Phase 2: Flora DiT flow matching (pure DiT inference, no post-hoc score tuning).
-"""
+"""Trainer for Group-Factorized Centered CLIPConceptHead + Differential Top-K Arbitration."""
+import json
 import os
 import numpy as np
 import torch
-import torch.nn.functional as F
 import torch.optim as optim
 
 from trainer import Trainer
 from kg_semantics import PrimitiveKG, embed_texts
-from model_cr import ConceptAugmentedMappingNet
+from model_cr import ConceptArbitratedMappingNet
+
+
+PART_ORDER = ('hand', 'interaction', 'body', 'arm', 'torso', 'leg', 'head')
+
+
+def _load_prim_groups(prim_path):
+    prims = json.load(open(prim_path, encoding='utf-8'))
+    part_to_idx = {p: i for i, p in enumerate(PART_ORDER)}
+    groups = [part_to_idx.get(item.get('part', 'body'), 2) for item in prims]
+    return np.array(groups, dtype=np.int64), len(PART_ORDER)
 
 
 def _binary_auc(y_true, y_score):
@@ -66,17 +68,16 @@ def _macro_concept_metrics(y_true_mat, y_score_mat):
             len(aucs))
 
 
-class ConceptAugmentedTrainer(Trainer):
-    """Flora Trainer with Stage-0 Concept Encoder + Motion-Side Concept Fusion."""
+class ConceptArbitratedTrainer(Trainer):
+    """Flora Trainer with Group-Factorized Centered CLIPConceptHead & Differential Top-K Arbitration."""
 
     def load_mapping_model(self):
-        self.mapping_model = ConceptAugmentedMappingNet(args=self.args)
-        self.logger.info('Loading ConceptAugmentedMappingNet (Cách A) done.')
+        self.mapping_model = ConceptArbitratedMappingNet(args=self.args)
+        self.logger.info('Loading ConceptArbitratedMappingNet done.')
         self.mapping_model.cuda()
         self.mapping_model.train()
         self._init_concepts()
 
-        # Separate optimizer for Stage-0 concept branch; Flora optimizer for Phase 1 & 2
         concept_params = (
             list(self.mapping_model.concept_encoder.parameters())
             + list(self.mapping_model.concept_head.parameters())
@@ -88,19 +89,25 @@ class ConceptAugmentedTrainer(Trainer):
         self.optimizer_mapping = optim.AdamW(
             flora_params, lr=self.args.lr, weight_decay=self.args.weight_decay
         )
-        self.logger.info('Loading optimizers (concept + Flora) done.')
+        self.logger.info('Loading optimizers (Flora + Group-Factorized Concept) done.')
 
     def _init_concepts(self):
         prims_path = getattr(self.args, 'concept_prims', 'kg/primitive_v2.json')
         rules_path = getattr(self.args, 'concept_rules', 'kg/kg_rules_v2.json')
         self.kg_concept = PrimitiveKG(prims_path, rules_path, self.num_classes, forbid_weight=0.5)
         W_req = (self.kg_concept.W > 0).astype(np.float32)
+        W_forb = (self.kg_concept.W < 0).astype(np.float32)
         seen_counts = W_req[self.seen_classes].sum(axis=0)
         seen_mask = (seen_counts > 0).astype(np.float32)
         n_seen = float(len(self.seen_classes))
         neg_counts = np.maximum(n_seen - seen_counts, 1.0)
         pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 10.0).astype(np.float32)
 
+        # IDF specificity weight across all classes (uses rules only, no test labels)
+        df = W_req.sum(axis=0)
+        idf_w = (np.log((self.num_classes + 1.0) / (df + 1.0)) + 1.0).astype(np.float32)
+
+        prim_groups, num_groups = _load_prim_groups(prims_path)
         kg_dir = os.path.dirname(os.path.abspath(prims_path))
         p_stem = os.path.splitext(os.path.basename(prims_path))[0]
         cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
@@ -115,27 +122,30 @@ class ConceptAugmentedTrainer(Trainer):
         prim_pooled = prim_tok[:, -1, :].detach()
 
         self.class_concepts_np = W_req
+        self.class_forbids_np = W_forb
         self.seen_mask_np = seen_mask
+        self.idf_w_np = idf_w
         self.mapping_model.attach_concepts(
             torch.from_numpy(W_req),
+            torch.from_numpy(W_forb),
             torch.from_numpy(seen_mask),
             torch.from_numpy(pos_w),
+            torch.from_numpy(idf_w),
             prim_pooled,
+            torch.from_numpy(prim_groups),
+            num_groups=num_groups,
         )
         m = self.mapping_model
         self.logger.info(
-            f'[CA] Concepts attached: P={W_req.shape[1]}, seen-cov={int(seen_mask.sum())}/{W_req.shape[1]}, '
-            f'fusion={m.fusion_mode}, rep={m.concept_rep}, gamma={m.gamma_c}'
+            f'[GF-CA] Concepts attached: P={W_req.shape[1]}, seen-cov={int(seen_mask.sum())}/{W_req.shape[1]}, '
+            f'groups={num_groups} (use_groups={m.use_groups}), center_clip={m.center_clip}, '
+            f'lambda_soft={m.lambda_soft}, topk={m.arb_topk}, alpha={m.arb_alpha}'
         )
 
     def train_concept_stage(self):
-        """Stage 0: train & freeze ConceptEncoder + CLIPConceptHead, calibrate mean/scale, evaluate."""
-        n_iters = int(getattr(self.args, 'concept_iters', 400))
+        """Train Group-Factorized Centered CLIPConceptHead and calibrate per-concept stats."""
+        n_iters = int(getattr(self.args, 'concept_iters', 500))
         m = self.mapping_model
-        if m.fusion_mode == 'none' or m.gamma_c == 0.0:
-            self.logger.info('[CA] fusion_mode=none / gamma=0 -> skipping Stage 0.')
-            return
-
         m.concept_encoder.train()
         m.concept_head.train()
         avg_loss = 0.0
@@ -151,47 +161,42 @@ class ConceptAugmentedTrainer(Trainer):
             self.optimizer_concept.step()
             avg_loss += loss.item()
             if it % 100 == 0 or it == n_iters:
-                self.logger.info(f'Stage 0 Concept. Iter {it}/{n_iters} : BCE Loss. {avg_loss / min(100, it):.5f}')
+                self.logger.info(f'Stage 0 GF-Concept. Iter {it}/{n_iters} : Loss. {avg_loss / min(100, it):.5f}')
                 avg_loss = 0.0
 
-        # Freeze concept branch and calibrate training-set mean & skeleton norm scale
         m.concept_encoder.eval()
         m.concept_head.eval()
         for mod in (m.concept_encoder, m.concept_head):
             for p in mod.parameters():
                 p.requires_grad = False
 
-        mc_list, ske_norms = [], []
+        # Calibrate per-primitive mean & std of similarity on the seen training set
+        sim_list = []
         with torch.no_grad():
             for gt_motion, _, _, _, _ in self.data_loader['train']:
                 gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
-                ske_256 = m._get_ske_256(gt_motion)
-                _, _, m_c = m.infer_concept_raw(ske_256)
-                mc_list.append(m_c.cpu())
-                ske_norms.append(ske_256.norm(dim=-1).cpu())
-        mc_all = torch.cat(mc_list, dim=0)
-        m.mc_mean.copy_(mc_all.mean(dim=0, keepdim=True).to(self.device))
-        m.ske_scale.copy_(torch.cat(ske_norms, dim=0).mean().to(self.device))
-        self.logger.info(f'[CA] Calibrated mc_mean & ske_scale={m.ske_scale.item():.3f}.')
-
+                _, sim, _ = m.infer_concepts(gt_motion)
+                sim_list.append(sim.cpu())
+        sim_all = torch.cat(sim_list, dim=0)
+        m.sim_mean.copy_(sim_all.mean(dim=0, keepdim=True).to(self.device))
+        m.sim_std.copy_(sim_all.std(dim=0, unbiased=False, keepdim=True).clamp(min=1e-4).to(self.device))
+        self.logger.info('[GF-CA] Calibrated per-primitive sim_mean & sim_std on training set.')
         self.eval_unseen_concepts()
 
     @torch.no_grad()
     def eval_unseen_concepts(self):
         m = self.mapping_model
         m.eval()
-        probs_all, mc_all, labels_all = [], [], []
+        probs_all, zsim_all, labels_all = [], [], []
         for gt_motion, label_idx, _, _, _ in self.zsl_loader:
             gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
-            ske_256 = m._get_ske_256(gt_motion)
-            probs, _, m_c = m.infer_concept_raw(ske_256)
-            mc_cent = F.normalize(m_c - m.mc_mean, dim=-1)
+            probs, _, z_sim = m.infer_concepts(gt_motion)
             probs_all.append(probs.cpu().numpy())
-            mc_all.append(mc_cent.cpu().numpy())
+            zsim_all.append(z_sim.cpu().numpy())
             labels_all.append(label_idx.cpu().numpy())
 
         probs_te = np.concatenate(probs_all, axis=0)
-        mc_te = np.concatenate(mc_all, axis=0)
+        zsim_te = np.concatenate(zsim_all, axis=0)
         y_te_cls = np.concatenate(labels_all, axis=0)
         y_te_c = self.class_concepts_np[y_te_cls]
 
@@ -204,17 +209,20 @@ class ConceptAugmentedTrainer(Trainer):
             if len(uncov_idx) > 0 else (float('nan'), float('nan'), 0)
         )
 
-        # Concept-only ZSL via cosine to centered class concept prototypes
-        protos_u = m.class_proto_clip[self.unseen_classes].cpu().numpy()  # (N_u, 768)
-        scores_u = mc_te @ protos_u.T
+        # IDF-weighted Concept-only ZSL accuracy on unseen test samples
+        req_u = self.class_concepts_np[self.unseen_classes] * self.idf_w_np[None, :]
+        req_u = req_u / np.maximum(req_u.sum(axis=1, keepdims=True), 1e-6)
+        forb_u = self.class_forbids_np[self.unseen_classes] * self.idf_w_np[None, :]
+        forb_u = forb_u / np.maximum(forb_u.sum(axis=1, keepdims=True), 1e-6)
+        scores_u = zsim_te @ req_u.T - 0.3 * (zsim_te @ forb_u.T)
         unseen_lookup = {int(c): i for i, c in enumerate(self.unseen_classes)}
         y_local = np.array([unseen_lookup[int(c)] for c in y_te_cls])
         c_only_acc = 100.0 * float((np.argmax(scores_u, axis=1) == y_local).mean())
 
         self.logger.info(
-            f'[CA-EVAL] Unseen Concept Head AUC={head_auc:.4f} (AP={head_ap:.4f}, n_prims={n_eval}) | '
+            f'[GF-EVAL] Unseen Concept Head AUC={head_auc:.4f} (AP={head_ap:.4f}, n_prims={n_eval}) | '
             f'Seen-cov AUC={cov_auc:.4f} ({n_cov}), Unseen-only AUC={uncov_auc:.4f} ({n_uncov}) | '
-            f'Concept-only ZSL={c_only_acc:.2f}%'
+            f'IDF Concept-only ZSL={c_only_acc:.2f}%'
         )
 
         seen_demo = set()
@@ -224,15 +232,58 @@ class ConceptAugmentedTrainer(Trainer):
             if cid in seen_demo:
                 continue
             seen_demo.add(cid)
-            top5 = np.argsort(-probs_te[i])[:5]
+            top5 = np.argsort(-zsim_te[i])[:5]
             gt_prims = [prim_ids[p] for p in np.nonzero(y_te_c[i] > 0)[0]]
-            pred_str = ', '.join(f'{prim_ids[p]}:{probs_te[i, p]:.2f}' for p in top5)
-            self.logger.info(f'[CA-DEMO] class_id={cid+1} | GT={gt_prims} | Top5=[{pred_str}]')
+            pred_str = ', '.join(f'{prim_ids[p]}:{probs_te[i, p]:.2f}(z={zsim_te[i, p]:+.1f})' for p in top5)
+            self.logger.info(f'[GF-DEMO] class_id={cid+1} | GT={gt_prims} | Top5=[{pred_str}]')
             if len(seen_demo) >= 3:
                 break
         m.train()
 
+    def test_zsl(self, nb_iter):
+        """Evaluate Differential Top-K Arbitration across alpha sweep at zero extra forward cost."""
+        m = self.mapping_model
+        m.eval()
+        mse_all, zsim_all, labels_all = [], [], []
+        for gt_motion, label_idx, _, _, _ in self.zsl_loader:
+            with torch.no_grad():
+                gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
+                label_idx = label_idx.to(self.device, non_blocking=True)
+                labels = self.zsl_target_lookup[label_idx]
+                mse_fm = m.compute_fm_mse(gt_motion, self.unseen_classes, self.current_attuned_semantics())
+                _, _, z_sim = m.infer_concepts(gt_motion)
+                mse_all.append(mse_fm)
+                zsim_all.append(z_sim)
+                labels_all.append(labels)
+
+        mse_fm = torch.cat(mse_all, dim=0)
+        z_sim = torch.cat(zsim_all, dim=0)
+        labels = torch.cat(labels_all, dim=0)
+        diff_mat = m.build_pairwise_diff_matrix(self.unseen_classes)
+
+        preds = m.differential_topk_arbitrate(
+            mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=m.arb_alpha
+        )
+        acc = 100.0 * (preds == labels).float().mean().item()
+        self.best_accuracy[0] = max(self.best_accuracy[0], acc)
+        self.logger.info(f'Iter {nb_iter}: ZSL Accuracy: {acc:.2f}% ')
+
+        # Diagnostic sweep over alpha (with a=0.00 = pure untouched Flora DiT!)
+        for a in (0.0, 0.03, 0.05, 0.08, 0.12, 0.20):
+            p_a = m.differential_topk_arbitrate(mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=a)
+            acc_a = 100.0 * (p_a == labels).float().mean().item()
+            self.logger.info(f'Iter {nb_iter}: [a={a:.2f}] ZSL Accuracy: {acc_a:.2f}%')
+        m.train()
+
     def train(self):
-        self.train_concept_stage()
+        # 1) Train Flora Phase 1 first so Flora RNG stream matches vanilla Flora!
         self.train_learning_phase()
+        # 2) Train Group-Factorized Centered CLIPConceptHead (Stage 0)
+        self.train_concept_stage()
+        # 3) Train Flora Phase 2 DiT with Differential Top-K Concept Arbitration at eval time
         self.train_deciding_phase()
+
+
+# Backward-compatible aliases
+ConceptResidualTrainer = ConceptArbitratedTrainer
+ConceptAugmentedTrainer = ConceptArbitratedTrainer
