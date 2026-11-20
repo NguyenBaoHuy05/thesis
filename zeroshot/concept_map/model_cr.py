@@ -1,42 +1,29 @@
-"""Decoupled Dual-Branch Concept-Residual MappingNet (Direction 1).
+"""Concept-Augmented Motion Mapping (Cách A — Direction 1).
 
-Architecture:
-  - Concept Branch (independent of Flora's VAE reconstruction):
-      256-D skeleton -> ConceptEncoder -> z_c (D_c) -> CLIPConceptHead -> q_c (768-D CLIP space)
-      Trained with Masked Pos-Weighted BCE against frozen CLIP primitive embeddings
-      + optional continuous Concept-Prototype alignment loss.
-  - Residual Branch (Flora's VAE + DiT flow matching):
-      Full latent_dim (768) preserved so Flora's alignment & Phase-2 DiT are not distorted.
-      Optional Gradient Reversal Layer (GRL) adversary gently suppresses concept leakage in z_r.
-  - Dual-Path Inference:
-      Combines standardized Residual Flow-Matching score (-MSE) with Concept-Space score
-      (cosine to centered class concept prototypes or probabilistic rule consistency).
+Two-stage motion-side concept grounding built on Flora:
+  Stage 0 (Concept Encoder):
+    Frozen 256-D skeleton -> ConceptEncoder -> CLIPConceptHead -> concept probs p_hat (B, P)
+    and continuous CLIP concept vector q_clip (B, 768).
+    Trained with Masked Pos-Weighted BCE only (no seen-class InfoNCE shortcut, no GRL).
+    Frozen after Stage 0; produces a centered, scale-matched concept motion embedding m_c (B, 768):
+      - concept_rep='soft_proto': m_c = sum_p p_hat_p * e_p (explicitly reconstructed from concept bank)
+      - concept_rep='q_clip'    : m_c = q_clip (continuous CLIP projection)
+  Stage 1 & 2 (Flora Phase-1 Alignment & Phase-2 DiT Flow Matching):
+    Injects m_c directly into the motion side (no post-hoc score re-ranking!):
+      - fusion_mode='concat'    : motion_encoder / motion_decoder operate on [ske_256 || gamma * m_c]
+      - fusion_mode='latent_add': adds gamma * m_c to motion latent (motion-side residual skip)
+      - fusion_mode='none'      : pure Flora baseline
 """
 import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from models.fm import MappingNet
-
-
-class _GradReverse(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x, lambd):
-        ctx.lambd = float(lambd)
-        return x.view_as(x)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return -ctx.lambd * grad_output, None
-
-
-def grad_reverse(x, lambd):
-    return _GradReverse.apply(x, lambd)
+from models.fm import MappingNet, Encoder, Decoder
 
 
 class ConceptEncoder(nn.Module):
-    """Dedicated MLP mapping frozen 256-D skeleton features to sub-action concept latents z_c."""
+    """MLP mapping frozen 256-D skeleton features to sub-action concept latent z_c."""
 
     def __init__(self, ske_dim, concept_dim=256, hidden_dim=512, dropout=0.2):
         super().__init__()
@@ -64,86 +51,71 @@ class CLIPConceptHead(nn.Module):
         self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
         self.bias = nn.Parameter(torch.tensor(-2.0))
 
-    def encode_clip(self, z_c):
-        return F.normalize(self.proj(z_c), dim=-1)  # (B, 768)
-
     def forward(self, z_c):
-        q = self.encode_clip(z_c)
+        q = F.normalize(self.proj(z_c), dim=-1)  # (B, 768)
         scale = self.logit_scale.exp().clamp(max=50.0)
         logits = scale * (q @ self.prim_emb.t()) + self.bias
         return logits, q
 
 
-class LinearConceptHead(nn.Module):
-    """Linear multi-label concept head (ablation baseline against CLIPConceptHead)."""
-
-    def __init__(self, concept_dim, num_concepts):
-        super().__init__()
-        self.head = nn.Linear(concept_dim, num_concepts)
-
-    def encode_clip(self, z_c):
-        return None
-
-    def forward(self, z_c):
-        return self.head(z_c), None
-
-
-def _zscore_rows(x, eps=1e-6):
-    return (x - x.mean(dim=1, keepdim=True)) / (x.std(dim=1, unbiased=False, keepdim=True) + eps)
-
-
-class ConceptResidualMappingNet(MappingNet):
-    """Decoupled Concept-Residual MappingNet built on Flora's MappingNet."""
+class ConceptAugmentedMappingNet(MappingNet):
+    """Flora MappingNet with motion-side Concept-Augmented representation."""
 
     def __init__(self, args):
         super().__init__(args)
         self.concept_dim = int(getattr(args, 'concept_dim', 256))
-        self.lambda_concept = float(getattr(args, 'lambda_concept', 1.0))
-        self.lambda_proto = float(getattr(args, 'lambda_proto', 0.5))
-        self.lambda_adv = float(getattr(args, 'lambda_adv', 0.02))
-        self.concept_alpha = float(getattr(args, 'concept_alpha', 0.25))
-        self.concept_score_mode = getattr(args, 'concept_score', 'proto')  # proto | prob | both
-        self.concept_head_type = getattr(args, 'concept_head', 'clip')
+        self.fusion_mode = getattr(args, 'fusion_mode', 'concat')     # none | concat | latent_add
+        self.concept_rep = getattr(args, 'concept_rep', 'soft_proto') # soft_proto | q_clip
+        self.gamma_c = float(getattr(args, 'gamma_c', 0.5))
+        self.clip_dim = 768
+
+        # If concat mode, rebuild motion_encoder / motion_decoder for input_dim = ske_dim + 768
+        if self.fusion_mode == 'concat':
+            aug_dim = args.ske_dim + self.clip_dim
+            self.motion_encoder = Encoder(input_dim=aug_dim, output_dim=args.latent_dim)
+            self.motion_decoder = Decoder(input_dim=args.latent_dim, output_dim=aug_dim)
 
         self.concept_encoder = ConceptEncoder(args.ske_dim, self.concept_dim)
         self.concept_head = None
-        self.adv_head = None
 
-        # Populated by Trainer via attach_concepts(...)
-        self.register_buffer('class_concepts', None)       # (N_cls, P) binary require
-        self.register_buffer('class_forbids', None)        # (N_cls, P) binary forbid
-        self.register_buffer('seen_prim_mask', None)       # (P,)
-        self.register_buffer('pos_weight', None)           # (P,)
-        self.register_buffer('class_proto_clip', None)     # (N_cls, 768) centered & L2-normed
+        # Buffers populated by Trainer
+        self.register_buffer('class_concepts', None)    # (N_cls, P)
+        self.register_buffer('seen_prim_mask', None)    # (P,)
+        self.register_buffer('pos_weight', None)        # (P,)
+        self.register_buffer('prim_emb', None)          # (P, 768)
+        self.register_buffer('class_proto_clip', None)  # (N_cls, 768)
+        self.register_buffer('mc_mean', torch.zeros(1, self.clip_dim))
+        self.register_buffer('ske_scale', torch.tensor(1.0))
 
-    def attach_concepts(self, class_concepts, class_forbids, seen_prim_mask, pos_weight, prim_emb):
+    def attach_concepts(self, class_concepts, seen_prim_mask, pos_weight, prim_emb):
         device = next(self.parameters()).device
         self.class_concepts = class_concepts.to(device=device, dtype=torch.float32)
-        self.class_forbids = class_forbids.to(device=device, dtype=torch.float32)
         self.seen_prim_mask = seen_prim_mask.to(device=device, dtype=torch.float32)
         self.pos_weight = pos_weight.to(device=device, dtype=torch.float32)
+        self.prim_emb = F.normalize(prim_emb.to(device=device, dtype=torch.float32), dim=-1)
 
-        prim_norm = F.normalize(prim_emb.to(device=device, dtype=torch.float32), dim=-1)  # (P, 768)
-        # Centered class concept prototype in CLIP space (parameter-free)
+        # Centered class concept prototype in CLIP space (for C-Only diagnostic)
         w_req = self.class_concepts / self.class_concepts.sum(dim=1, keepdim=True).clamp(min=1.0)
-        proto = w_req @ prim_norm  # (N_cls, 768)
+        proto = w_req @ self.prim_emb
         proto = proto - proto.mean(dim=0, keepdim=True)
         self.class_proto_clip = F.normalize(proto, dim=-1)
 
-        if self.concept_head_type == 'clip':
-            self.concept_head = CLIPConceptHead(self.concept_dim, prim_norm).to(device)
-        elif self.concept_head_type == 'linear':
-            self.concept_head = LinearConceptHead(self.concept_dim, class_concepts.shape[1]).to(device)
-        else:
-            raise ValueError(f'unknown concept_head: {self.concept_head_type}')
+        self.concept_head = CLIPConceptHead(self.concept_dim, self.prim_emb).to(device)
+        self.mc_mean = self.mc_mean.to(device)
+        self.ske_scale = self.ske_scale.to(device)
 
-        # Adversarial concept probe on Flora's residual latent mu_ske (768 -> P)
-        self.adv_head = nn.Sequential(
-            nn.LayerNorm(self.args.latent_dim),
-            nn.Linear(self.args.latent_dim, class_concepts.shape[1]),
-        ).to(device)
+    def _get_ske_256(self, skeleton_data):
+        if not self.args.use_features:
+            return self.shiftgcn(skeleton_data).mean(3).mean(2)
+        return skeleton_data
 
-    def _masked_bce(self, logits, targets):
+    def forward_concept_stage(self, skeleton_data, seen_classes, label_idx):
+        """Stage 0: train ConceptEncoder + CLIPConceptHead with Masked Pos-Weighted BCE."""
+        ske_256 = self._get_ske_256(skeleton_data)
+        z_c = self.concept_encoder(ske_256)
+        logits, _ = self.concept_head(z_c)
+        seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
+        targets = self.class_concepts[seen_idx[label_idx]]
         loss_mat = F.binary_cross_entropy_with_logits(
             logits, targets, pos_weight=self.pos_weight, reduction='none'
         )
@@ -151,29 +123,74 @@ class ConceptResidualMappingNet(MappingNet):
         denom = (mask.sum() * logits.shape[0]).clamp(min=1.0)
         return (loss_mat * mask).sum() / denom
 
-    def _get_ske_256(self, skeleton_data):
-        if not self.args.use_features:
-            return self.shiftgcn(skeleton_data).mean(3).mean(2)
-        return skeleton_data
+    @torch.no_grad()
+    def infer_concept_raw(self, ske_256):
+        """Return (probs, q_clip, m_c_raw) from the frozen concept branch."""
+        z_c = self.concept_encoder(ske_256)
+        logits, q_clip = self.concept_head(z_c)
+        probs = torch.sigmoid(logits)
+        if self.concept_rep == 'soft_proto':
+            # Reconstruct motion concept embedding strictly from frozen CLIP concept dictionary
+            w = probs / probs.sum(dim=1, keepdim=True).clamp(min=1e-6)
+            m_c = F.normalize(w @ self.prim_emb, dim=-1)
+        elif self.concept_rep == 'q_clip':
+            m_c = q_clip
+        else:
+            raise ValueError(f'unknown concept_rep: {self.concept_rep}')
+        return probs, q_clip, m_c
+
+    @torch.no_grad()
+    def infer_concept_centered(self, ske_256):
+        """Centered, L2-normalized, scale-matched concept motion embedding (B, 768)."""
+        _, _, m_c = self.infer_concept_raw(ske_256)
+        m_centered = F.normalize(m_c - self.mc_mean, dim=-1)
+        return m_centered * self.ske_scale
+
+    def _augment_skeleton_tokens(self, skeleton_data):
+        """Build (B, L+1, D_in) motion input for motion_encoder."""
+        ske_256 = self._get_ske_256(skeleton_data)
+        if self.fusion_mode == 'concat' and self.gamma_c > 0.0:
+            mc = self.infer_concept_centered(ske_256)  # (B, 768)
+            ske_in = torch.cat([ske_256, self.gamma_c * mc], dim=-1)  # (B, 1024)
+        else:
+            ske_in = ske_256
+        return ske_in.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
+
+    def _encode_motion(self, skeleton_data):
+        ske_tokens = self._augment_skeleton_tokens(skeleton_data)
+        z1_ske, mu_ske, log_var_ske = self.motion_encoder(ske_tokens)
+        if self.fusion_mode == 'latent_add' and self.gamma_c > 0.0:
+            ske_256 = self._get_ske_256(skeleton_data)
+            _, _, m_c = self.infer_concept_raw(ske_256)
+            mc_dir = F.normalize(m_c - self.mc_mean, dim=-1).unsqueeze(1)  # (B, 1, 768)
+            # Match typical latent norm smoothly
+            lat_scale = mu_ske.detach().norm(dim=-1, keepdim=True).clamp(min=1e-6)
+            delta = self.gamma_c * mc_dir * lat_scale
+            mu_ske = mu_ske + delta
+            z1_ske = z1_ske + delta
+        return ske_tokens, z1_ske, mu_ske, log_var_ske
+
+    def prepare_embedding(self, skeleton_data, seen_classes, label_idx, attuned_semantics):
+        ske_tokens = self._augment_skeleton_tokens(skeleton_data)
+        semantics_seen = attuned_semantics[seen_classes]
+        semantics_embedding = semantics_seen[label_idx]
+        return ske_tokens, semantics_embedding
 
     def forward_phase1(self, skeleton_data, attuned_semantics, seen_classes, label_idx):
         for p in self.velocity_predictor.parameters():
             p.requires_grad = False
-        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder,
-                    self.semantic_decoder, self.concept_encoder):
-            for p in mod.parameters():
-                p.requires_grad = True
-        for mod in (self.concept_head, self.adv_head):
+        for mod in (self.concept_encoder, self.concept_head):
             if mod is not None:
                 for p in mod.parameters():
-                    p.requires_grad = True
+                    p.requires_grad = False
+        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder, self.semantic_decoder):
+            for p in mod.parameters():
+                p.requires_grad = True
 
-        # --- 1) Residual Branch: Flora's VAE alignment ---
-        skeleton_embedding, semantics_embedding = self.prepare_embedding(
-            skeleton_data, seen_classes, label_idx, attuned_semantics
-        )
+        semantics_seen = attuned_semantics[seen_classes]
+        semantics_embedding = semantics_seen[label_idx]
+        skeleton_embedding, z1_ske, mu_ske, log_var_ske = self._encode_motion(skeleton_data)
         z0_text, mu_text, log_var_text = self.semantic_encoder(semantics_embedding)
-        z1_ske, mu_ske, log_var_ske = self.motion_encoder(skeleton_embedding)
 
         loss_mu = F.mse_loss(mu_text, mu_ske, reduction='mean')
         loss_log_var = F.mse_loss(log_var_text, log_var_ske, reduction='mean')
@@ -182,115 +199,55 @@ class ConceptResidualMappingNet(MappingNet):
         recon_loss_s2t = F.mse_loss(self.semantic_decoder(z1_ske), semantics_embedding, reduction='mean')
         recon_loss_t2s = F.mse_loss(self.motion_decoder(z0_text), skeleton_embedding, reduction='mean')
         loss_recon = (recon_loss_s2s + recon_loss_t2t + recon_loss_s2t + recon_loss_t2s) / 4.0
-        loss_flora = loss_recon + self.args.lambda_align * (loss_mu + loss_log_var)
-
-        seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
-        global_cls = seen_idx[label_idx]
-        targets = self.class_concepts[global_cls]  # (B, P)
-
-        # --- 2) Concept Branch (decoupled from VAE reconstruction) ---
-        loss_concept = loss_flora.new_tensor(0.0)
-        loss_proto = loss_flora.new_tensor(0.0)
-        if self.concept_head is not None and self.lambda_concept > 0.0:
-            ske_256 = self._get_ske_256(skeleton_data)
-            z_c = self.concept_encoder(ske_256)
-            logits_c, q_clip = self.concept_head(z_c)
-            loss_concept = self._masked_bce(logits_c, targets)
-            if q_clip is not None and self.lambda_proto > 0.0:
-                # Contrastive alignment to seen class concept prototypes in centered CLIP space
-                seen_protos = self.class_proto_clip[seen_idx]  # (N_seen, 768)
-                q_centered = F.normalize(q_clip - q_clip.mean(dim=0, keepdim=True), dim=-1)
-                proto_logits = 10.0 * (q_centered @ seen_protos.t())
-                loss_proto = F.cross_entropy(proto_logits, label_idx)
-
-        # --- 3) Adversarial GRL suppression of concept leakage in Residual latent mu_ske ---
-        loss_adv = loss_flora.new_tensor(0.0)
-        if self.adv_head is not None and self.lambda_adv > 0.0:
-            mu_res_pool = mu_ske.mean(dim=1)  # (B, 768)
-            adv_logits = self.adv_head(grad_reverse(mu_res_pool, self.lambda_adv))
-            loss_adv = self._masked_bce(adv_logits, targets)
-
-        total_loss = (
-            loss_flora
-            + self.lambda_concept * loss_concept
-            + self.lambda_proto * loss_proto
-            + loss_adv  # adv_head gets full grad; motion_encoder gets -lambda_adv * grad via GRL
-        )
+        total_loss = loss_recon + self.args.lambda_align * (loss_mu + loss_log_var)
         return {
             'loss': total_loss,
             'loss_mu': loss_mu,
             'loss_log_var': loss_log_var,
             'loss_recon': loss_recon,
-            'loss_concept': loss_concept,
-            'loss_proto': loss_proto,
-            'loss_adv': loss_adv,
         }
 
     def forward_phase2(self, skeleton_data, skeleton_data_contraastive, label_idx,
                        label_idx_contrastive, seen_classes, attuned_semantics):
-        for mod in (self.concept_encoder, self.concept_head, self.adv_head):
+        for p in self.velocity_predictor.parameters():
+            p.requires_grad = True
+        for mod in (self.semantic_encoder, self.motion_encoder, self.motion_decoder,
+                    self.semantic_decoder, self.concept_encoder, self.concept_head):
             if mod is not None:
                 for p in mod.parameters():
                     p.requires_grad = False
-        return super().forward_phase2(
-            skeleton_data, skeleton_data_contraastive, label_idx,
-            label_idx_contrastive, seen_classes, attuned_semantics
-        )
+
+        semantics_seen = attuned_semantics[seen_classes]
+        sem_pos = semantics_seen[label_idx]
+        sem_con = semantics_seen[label_idx_contrastive]
+        z0_text, _, _ = self.semantic_encoder(sem_pos)
+        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
+        z0_text_con, _, _ = self.semantic_encoder(sem_con)
+        _, z1_ske_con, _, _ = self._encode_motion(skeleton_data_contraastive)
+
+        time_steps = self.time_step_sampler.sample_time(z0_text)
+        z_time = self.psi(time_steps, z0_text, z1_ske)
+        target_velocity = self.Dt_psi(time_steps, z0_text, z1_ske)
+        pred_velocity = self.velocity_predictor(z_time, time_steps)
+        flow_matching_loss = F.mse_loss(pred_velocity, target_velocity, reduction='mean')
+
+        target_velocity_con = self.Dt_psi(time_steps, z0_text_con, z1_ske_con)
+        flow_matching_loss_con = F.mse_loss(pred_velocity, target_velocity_con, reduction='mean')
+        total_loss = flow_matching_loss - self.args.lambda_cfm * flow_matching_loss_con
+        return {
+            'loss': total_loss,
+            'loss_flow_matching': flow_matching_loss,
+            'loss_flow_matching_contrastive': flow_matching_loss_con,
+        }
 
     @torch.no_grad()
-    def extract_concept_latents(self, skeleton_data):
-        """Return (probs, q_clip, z_c, mu_res) for diagnostics and concept inference."""
-        ske_256 = self._get_ske_256(skeleton_data)
-        z_c = self.concept_encoder(ske_256)
-        logits, q_clip = self.concept_head(z_c)
-        probs = torch.sigmoid(logits)
-
-        ske_rep = ske_256.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
-        _, mu_ske, _ = self.motion_encoder(ske_rep)
-        mu_res = mu_ske.mean(dim=1)
-        return probs, q_clip, z_c, mu_res
-
-    @torch.no_grad()
-    def compute_concept_class_scores(self, skeleton_data, candidate_classes):
-        """Return (B, N_cand) concept-based class affinity scores."""
-        probs, q_clip, _, _ = self.extract_concept_latents(skeleton_data)
-        cand_idx = torch.as_tensor(candidate_classes, device=probs.device, dtype=torch.long)
-
-        s_proto = None
-        if q_clip is not None:
-            q_centered = F.normalize(q_clip - q_clip.mean(dim=0, keepdim=True), dim=-1)
-            protos = self.class_proto_clip[cand_idx]  # (N_cand, 768)
-            s_proto = q_centered @ protos.t()
-
-        # Probabilistic rule-consistency score: mean log p(require) + 0.5 * mean log(1 - p(forbid))
-        p_clamped = probs.clamp(1e-4, 1.0 - 1e-4)
-        req = self.class_concepts[cand_idx]  # (N_cand, P)
-        forb = self.class_forbids[cand_idx]  # (N_cand, P)
-        req_w = req / req.sum(dim=1, keepdim=True).clamp(min=1.0)
-        forb_w = forb / forb.sum(dim=1, keepdim=True).clamp(min=1.0)
-        has_forb = (forb.sum(dim=1) > 0).float().unsqueeze(0)
-        s_prob = (
-            torch.log(p_clamped) @ req_w.t()
-            + 0.5 * has_forb * (torch.log(1.0 - p_clamped) @ forb_w.t())
-        )
-
-        if self.concept_score_mode == 'proto' and s_proto is not None:
-            return s_proto
-        if self.concept_score_mode == 'prob' or s_proto is None:
-            return s_prob
-        return 0.5 * (_zscore_rows(s_proto) + _zscore_rows(s_prob))
-
-    @torch.no_grad()
-    def predict_zsl_scores(self, skeleton_data, unseen_classes, attuned_semantics):
-        """Return (s_fm, s_concept) each of shape (B, N_unseen) where higher = better."""
-        ske_256 = self._get_ske_256(skeleton_data)
-        B = ske_256.shape[0]
-        ske_rep = ske_256.unsqueeze(1).expand(-1, self.args.max_length + 1, -1)
-        z1_ske, _, _ = self.motion_encoder(ske_rep)
+    def predict_zsl(self, skeleton_data, unseen_classes, attuned_semantics, label):
+        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
+        B = z1_ske.shape[0]
         semantics_embedding = attuned_semantics[unseen_classes]
         z0_text, _, _ = self.semantic_encoder(semantics_embedding)
 
-        timestep = torch.ones(B, device=ske_256.device) * self.args.step_ratio
+        timestep = torch.ones(B, device=z1_ske.device) * self.args.step_ratio
         class_chunk = self.args.eval_class_chunk or len(unseen_classes)
         mse_error_list = []
         for start in range(0, len(unseen_classes), class_chunk):
@@ -303,20 +260,39 @@ class ConceptResidualMappingNet(MappingNet):
             pred_velocity = self.velocity_predictor(z_time, time_batch)
             target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
             mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
-        mse_all = torch.cat(mse_error_list, dim=1)  # (B, N_unseen)
-        s_fm = -mse_all
-        s_concept = self.compute_concept_class_scores(skeleton_data, unseen_classes)
-        return s_fm, s_concept
+        mse_error_list = torch.cat(mse_error_list, dim=1)
+        return {'predictions_idx': torch.argmin(mse_error_list, dim=1)}
 
     @torch.no_grad()
-    def predict_zsl(self, skeleton_data, unseen_classes, attuned_semantics, label):
-        s_fm, s_concept = self.predict_zsl_scores(skeleton_data, unseen_classes, attuned_semantics)
-        if self.concept_alpha == 0.0:
-            scores = s_fm
-        else:
-            scores = _zscore_rows(s_fm) + self.concept_alpha * _zscore_rows(s_concept)
-        return {
-            'predictions_idx': torch.argmax(scores, dim=1),
-            's_fm': s_fm,
-            's_concept': s_concept,
-        }
+    def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
+        _, z1_ske, _, _ = self._encode_motion(skeleton_data)
+        B = z1_ske.shape[0]
+        z0_text, _, _ = self.semantic_encoder(attuned_semantics)
+
+        timestep = torch.ones(B, device=z1_ske.device) * self.args.step_ratio
+        n_total = len(seen_classes) + len(unseen_classes)
+        class_chunk = self.args.eval_class_chunk or n_total
+        mse_error_list = []
+        for start in range(0, n_total, class_chunk):
+            z0_chunk = z0_text[start:start + class_chunk]
+            n_class = z0_chunk.shape[0]
+            z0_batch = z0_chunk.unsqueeze(0).expand(B, -1, -1, -1).reshape(B * n_class, *z0_chunk.shape[1:])
+            z1_batch = z1_ske.unsqueeze(1).expand(-1, n_class, -1, -1).reshape(B * n_class, *z1_ske.shape[1:])
+            time_batch = timestep.unsqueeze(1).expand(-1, n_class).reshape(-1)
+            z_time = self.psi(time_batch, z0_batch, z1_batch)
+            pred_velocity = self.velocity_predictor(z_time, time_batch)
+            target_velocity = self.Dt_psi(time_batch, z0_batch, z1_batch)
+            mse_error_list.append(F.mse_loss(pred_velocity, target_velocity, reduction='none').mean((1, 2)).view(B, n_class))
+        mse_error_list = torch.cat(mse_error_list, dim=1)
+        mse_seen_min = torch.min(mse_error_list[:, seen_classes], dim=1).values
+        mse_unseen_min = torch.min(mse_error_list[:, unseen_classes], dim=1).values
+        ratio = mse_seen_min / mse_unseen_min
+        row_seen = (ratio > self.args.calibration_factor).unsqueeze(1)
+        row_unseen = ~row_seen
+        col_seen = torch.zeros(1, n_total, dtype=torch.bool, device=z1_ske.device)
+        col_seen[:, seen_classes] = True
+        col_unseen = torch.zeros(1, n_total, dtype=torch.bool, device=z1_ske.device)
+        col_unseen[:, unseen_classes] = True
+        mse_error_list[row_seen & col_seen] = 1e6
+        mse_error_list[row_unseen & col_unseen] = 1e6
+        return {'predictions_idx': torch.argmin(mse_error_list, dim=1)}
