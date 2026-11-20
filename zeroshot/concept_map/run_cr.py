@@ -31,12 +31,12 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'gf_arb':        dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
-    'gf_novae':      dict(center_clip=1, use_groups=1, use_vae_latent=0, lambda_vae_c=0.0,  lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
-    'gf_nogate':     dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.0),
-    'gf_soft':       dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.2, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
-    'gf_no_group':   dict(center_clip=1, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
-    'gf_uncentered': dict(center_clip=0, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.08, arb_gate_tau=0.15),
+    'gf_arb':        dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
+    'gf_novae':      dict(center_clip=1, use_groups=1, use_vae_latent=0, lambda_vae_c=0.0,  lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
+    'gf_nogate':     dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.0),
+    'gf_soft':       dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.2, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
 }
 
 GF_EVAL_RE = re.compile(
@@ -109,8 +109,8 @@ def main():
                     else os.path.join(CMAP_DIR, 'runs'))
     ap.add_argument('--concept-bank', default=os.path.join(CMAP_DIR, 'concepts', 'concept_bank_v1.json'))
     ap.add_argument('--concept-ann', default=os.path.join(CMAP_DIR, 'concepts', 'ntu120_concept_annotations.json'))
-    ap.add_argument('--concept-iters', type=int, default=500)
-    ap.add_argument('--concept-lr', type=float, default=1e-3)
+    ap.add_argument('--concept-iters', type=int, default=250)
+    ap.add_argument('--concept-lr', type=float, default=5e-4)
     ap.add_argument('--arb-alpha', '--arb_alpha', dest='arb_alpha', type=float, default=None)
     ap.add_argument('--arb-topk', '--arb_topk', '--arb_top_k', dest='arb_topk', type=int, default=None)
     ap.add_argument('--arb-gate-tau', '--arb_gate_tau', dest='arb_gate_tau', type=float, default=None)

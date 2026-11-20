@@ -157,7 +157,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.lambda_vae_c = float(getattr(args, 'lambda_vae_c', 0.15))
         self.lambda_soft = float(getattr(args, 'lambda_soft', 0.0))
         self.arb_topk = int(getattr(args, 'arb_topk', 5))
-        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
+        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.05))
         self.arb_gate_tau = float(getattr(args, 'arb_gate_tau', 0.15))
         self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
