@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from trainer import Trainer
 from kg_semantics import PrimitiveKG, embed_texts
-from model_cr import ConceptArbitratedMappingNet
+from model_cr import ConceptArbitratedMappingNet, _preserve_rng_state
 
 
 PART_ORDER = ('hand', 'interaction', 'body', 'arm', 'torso', 'leg', 'head')
@@ -76,16 +76,18 @@ class ConceptArbitratedTrainer(Trainer):
         self.logger.info('Loading ConceptArbitratedMappingNet done.')
         self.mapping_model.cuda()
         self.mapping_model.train()
-        self._init_concepts()
 
-        concept_params = (
-            list(self.mapping_model.concept_encoder.parameters())
-            + list(self.mapping_model.concept_head.parameters())
-        )
-        concept_ids = {id(p) for p in concept_params}
-        flora_params = [p for p in self.mapping_model.parameters() if id(p) not in concept_ids]
-        concept_lr = float(getattr(self.args, 'concept_lr', 1e-3))
-        self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=1e-2)
+        with _preserve_rng_state():
+            self._init_concepts()
+            concept_params = (
+                list(self.mapping_model.concept_encoder.parameters())
+                + list(self.mapping_model.concept_head.parameters())
+            )
+            concept_ids = {id(p) for p in concept_params}
+            flora_params = [p for p in self.mapping_model.parameters() if id(p) not in concept_ids]
+            concept_lr = float(getattr(self.args, 'concept_lr', 1e-3))
+            self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=1e-2)
+
         self.optimizer_mapping = optim.AdamW(
             flora_params, lr=self.args.lr, weight_decay=self.args.weight_decay
         )
@@ -269,17 +271,18 @@ class ConceptArbitratedTrainer(Trainer):
         self.logger.info(f'Iter {nb_iter}: ZSL Accuracy: {acc:.2f}% ')
 
         # Diagnostic sweep over alpha (with a=0.00 = pure untouched Flora DiT!)
-        for a in (0.0, 0.03, 0.05, 0.08, 0.12, 0.20):
+        for a in (0.0, 0.01, 0.015, 0.02, 0.025, 0.03, 0.04):
             p_a = m.differential_topk_arbitrate(mse_fm, z_sim, diff_mat, topk=m.arb_topk, alpha=a)
             acc_a = 100.0 * (p_a == labels).float().mean().item()
-            self.logger.info(f'Iter {nb_iter}: [a={a:.2f}] ZSL Accuracy: {acc_a:.2f}%')
+            self.logger.info(f'Iter {nb_iter}: [a={a:.3f}] ZSL Accuracy: {acc_a:.2f}%')
         m.train()
 
     def train(self):
         # 1) Train Flora Phase 1 first so Flora RNG stream matches vanilla Flora!
         self.train_learning_phase()
-        # 2) Train Group-Factorized Centered CLIPConceptHead (Stage 0)
-        self.train_concept_stage()
+        # 2) Train Group-Factorized Centered CLIPConceptHead (Stage 0) inside isolated RNG
+        with _preserve_rng_state():
+            self.train_concept_stage()
         # 3) Train Flora Phase 2 DiT with Differential Top-K Concept Arbitration at eval time
         self.train_deciding_phase()
 

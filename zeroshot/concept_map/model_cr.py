@@ -16,12 +16,32 @@ Addresses all 5 bottlenecks identified in Step-1 diagnostics:
      R_{c_1} \\ R_{c_k}, weighted by IDF specificity and forbid polarity) against the relative DiT
      velocity gap (e_k - e_1) / e_1. Shared primitives cancel out identically to zero.
 """
+import contextlib
 import math
+import random
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 from models.fm import MappingNet
+
+
+@contextlib.contextmanager
+def _preserve_rng_state():
+    """Save and restore Python, NumPy, PyTorch CPU & CUDA RNG states so Flora's RNG stream is untouched."""
+    py_state = random.getstate()
+    np_state = np.random.get_state()
+    cpu_state = torch.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    try:
+        yield
+    finally:
+        random.setstate(py_state)
+        np.random.set_state(np_state)
+        torch.set_rng_state(cpu_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
 
 
 class ConceptEncoder(nn.Module):
@@ -109,12 +129,13 @@ class ConceptArbitratedMappingNet(MappingNet):
         self.concept_dim = int(getattr(args, 'concept_dim', 256))
         self.center_clip = bool(getattr(args, 'center_clip', 1))
         self.use_groups = bool(getattr(args, 'use_groups', 1))
-        self.lambda_soft = float(getattr(args, 'lambda_soft', 0.2))
+        self.lambda_soft = float(getattr(args, 'lambda_soft', 0.0))
         self.arb_topk = int(getattr(args, 'arb_topk', 3))
-        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.08))
+        self.arb_alpha = float(getattr(args, 'arb_alpha', 0.025))
         self.arb_forbid_boost = float(getattr(args, 'arb_forbid_boost', 1.5))
 
-        self.concept_encoder = ConceptEncoder(args.ske_dim, self.concept_dim)
+        with _preserve_rng_state():
+            self.concept_encoder = ConceptEncoder(args.ske_dim, self.concept_dim)
         self.concept_head = None
 
         # Populated by Trainer via attach_concepts(...)

@@ -30,10 +30,10 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=3, arb_alpha=0.08),
-    'gf_no_soft':    dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
-    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
-    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.08),
+    'gf_arb':        dict(center_clip=1, use_groups=1, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
+    'gf_soft':       dict(center_clip=1, use_groups=1, lambda_soft=0.2, arb_topk=3, arb_alpha=0.025),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, lambda_soft=0.0, arb_topk=3, arb_alpha=0.025),
 }
 
 GF_EVAL_RE = re.compile(
@@ -97,7 +97,7 @@ def main():
     ap.add_argument('--setting', choices=['ZSL', 'GZSL'], default='ZSL')
     ap.add_argument('--tasks', '--splits', dest='tasks', nargs='+', default=['48', '110'])
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
-    ap.add_argument('--variants', nargs='+', default=['gf_arb', 'gf_no_soft', 'gf_no_group', 'gf_uncentered'])
+    ap.add_argument('--variants', nargs='+', default=['gf_arb', 'gf_soft', 'gf_no_group', 'gf_uncentered'])
     ap.add_argument('--out-root', '--out_dir', dest='out_root',
                     default=DRIVE_OUT_CR if os.path.isdir('/content/drive/MyDrive')
                     else os.path.join(CMAP_DIR, 'runs'))
