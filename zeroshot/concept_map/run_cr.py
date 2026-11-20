@@ -1,17 +1,14 @@
-"""Step-1 prototype runner for Direction 1 (Disentangled Concept-Residual Mapping).
+"""Runner for Decoupled Dual-Branch Concept-Residual Mapping (Direction 1).
 
-Runs isolated subprocesses per (variant, split, seed) using Flora's pre-extracted 256-D features
-and compares:
-  - flora_base  : lambda_c=0, lambda_orth=0 (sanity check against Flora baseline)
-  - cr_no_orth  : D_c=256, lambda_c=0.1, lambda_orth=0.0, CLIP-anchored head
-  - cr_orth     : D_c=256, lambda_c=0.1, lambda_orth=0.1, CLIP-anchored head
-  - cr_linear   : D_c=256, lambda_c=0.1, lambda_orth=0.1, Linear head (ablation)
-  - cr_cbm_only : D_c=768 (D_r=0), lambda_c=0.1, lambda_orth=0.0 (pure bottleneck ablation)
+Compares variants on pre-extracted 256-D features (STAR / SynSE):
+  - flora_base  : Flora baseline (lambda_c=0, lambda_proto=0, lambda_adv=0, alpha=0)
+  - cr_dual     : Decoupled ConceptEncoder (CLIP head + proto align) + Dual-Path Inference (alpha=0.25)
+  - cr_dual_grl : cr_dual + GRL adversarial concept suppression on Residual latent (lambda_adv=0.05)
+  - cr_prob     : cr_dual using probabilistic rule-consistency score instead of continuous CLIP prototype
+  - cr_linear   : Ablation replacing CLIPConceptHead with LinearConceptHead (prob score)
 
 Usage (Colab):
-  !python zeroshot/concept_map/run_cr.py --tasks 48 110 --seeds 1
-  !python zeroshot/concept_map/run_cr.py --tasks 48 110 --seeds 1 --variants flora_base cr_no_orth cr_orth
-  !python zeroshot/concept_map/run_cr.py --tasks 48 110 --seeds 1 --feat synse
+  !python zeroshot/concept_map/run_cr.py --tasks 48 110 --seeds 1 --force
 """
 import argparse
 import os
@@ -31,24 +28,30 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'flora_base':  dict(concept_dim=256, lambda_concept=0.0, lambda_orth=0.0, concept_head='clip'),
-    'cr_no_orth':  dict(concept_dim=256, lambda_concept=0.1, lambda_orth=0.0, concept_head='clip'),
-    'cr_orth':     dict(concept_dim=256, lambda_concept=0.1, lambda_orth=0.1, concept_head='clip'),
-    'cr_orth_s2':  dict(concept_dim=256, lambda_concept=0.2, lambda_orth=0.2, concept_head='clip'),
-    'cr_linear':   dict(concept_dim=256, lambda_concept=0.1, lambda_orth=0.1, concept_head='linear'),
-    'cr_cbm_only': dict(concept_dim=768, lambda_concept=0.1, lambda_orth=0.0, concept_head='clip'),
+    'flora_base':  dict(concept_dim=256, lambda_concept=0.0, lambda_proto=0.0, lambda_adv=0.0,
+                        concept_alpha=0.0, concept_head='clip', concept_score='proto'),
+    'cr_dual':     dict(concept_dim=256, lambda_concept=1.0, lambda_proto=0.5, lambda_adv=0.0,
+                        concept_alpha=0.25, concept_head='clip', concept_score='proto'),
+    'cr_dual_grl': dict(concept_dim=256, lambda_concept=1.0, lambda_proto=0.5, lambda_adv=0.05,
+                        concept_alpha=0.25, concept_head='clip', concept_score='proto'),
+    'cr_prob':     dict(concept_dim=256, lambda_concept=1.0, lambda_proto=0.5, lambda_adv=0.05,
+                        concept_alpha=0.25, concept_head='clip', concept_score='prob'),
+    'cr_both':     dict(concept_dim=256, lambda_concept=1.0, lambda_proto=0.5, lambda_adv=0.05,
+                        concept_alpha=0.25, concept_head='clip', concept_score='both'),
+    'cr_linear':   dict(concept_dim=256, lambda_concept=1.0, lambda_proto=0.0, lambda_adv=0.05,
+                        concept_alpha=0.25, concept_head='linear', concept_score='prob'),
 }
 
 CR_EVAL_RE = re.compile(
     r'\[CR-EVAL\] Unseen Concept Head AUC=([\d.nan]+) \(AP=([\d.nan]+), n_prims=(\d+)\) \| '
     r'Seen-cov AUC=([\d.nan]+) \(\d+\), Unseen-only AUC=([\d.nan]+) \(\d+\) \| '
+    r'Concept-only ZSL=([\d.nan]+)% \| '
     r'Probe\(z_c\) AUC=([\d.nan]+), Leakage Probe\(z_r\) AUC=([\d.nan]+)'
 )
 
 
 def parse_cr_log(run_dir):
-    """Return dict with ZSL best/last10 and CR-EVAL concept metrics."""
-    acc_list, _ = C.read_log(run_dir)
+    acc_list, tags = C.read_log(run_dir)
     if not acc_list:
         return None
     text = open(os.path.join(run_dir, 'run.log'), encoding='utf-8').read()
@@ -57,9 +60,11 @@ def parse_cr_log(run_dir):
         'best': max(acc_list),
         'last10': sum(acc_list[-10:]) / min(len(acc_list), 10),
         'head_auc': float(m.group(1)) if m else float('nan'),
-        'head_ap': float(m.group(2)) if m else float('nan'),
-        'probe_zc': float(m.group(6)) if m else float('nan'),
-        'probe_zr': float(m.group(7)) if m else float('nan'),
+        'unseen_auc': float(m.group(5)) if m else float('nan'),
+        'c_only_zsl': float(m.group(6)) if m else float('nan'),
+        'probe_zc': float(m.group(7)) if m else float('nan'),
+        'probe_zr': float(m.group(8)) if m else float('nan'),
+        'tags': {k: max(v) for k, v in tags.items()},
     }
     return out
 
@@ -77,11 +82,14 @@ def run_single(opts):
         vcfg['concept_dim'] = opts.concept_dim
     if opts.lambda_concept is not None:
         vcfg['lambda_concept'] = opts.lambda_concept
-    if opts.lambda_orth is not None:
-        vcfg['lambda_orth'] = opts.lambda_orth
+    if opts.lambda_proto is not None:
+        vcfg['lambda_proto'] = opts.lambda_proto
+    if opts.lambda_adv is not None:
+        vcfg['lambda_adv'] = opts.lambda_adv
+    if opts.concept_alpha is not None:
+        vcfg['concept_alpha'] = opts.concept_alpha
     vcfg['concept_prims'] = prims
     vcfg['concept_rules'] = rules
-    vcfg['text_concept_weight'] = opts.text_concept_weight
 
     out_dir = os.path.join(opts.out_root, opts.feat, opts.variant, f'{task}_{opts.setting}_seed{opts.seed}')
     os.makedirs(out_dir, exist_ok=True)
@@ -96,22 +104,22 @@ def run_single(opts):
 
 
 def main():
-    ap = argparse.ArgumentParser(description='Step-1 Concept-Residual Mapping prototype runner')
+    ap = argparse.ArgumentParser(description='Decoupled Concept-Residual Mapping runner')
     ap.add_argument('--feat', choices=['star', 'synse', 'sadave'], default='star')
     ap.add_argument('--setting', choices=['ZSL', 'GZSL'], default='ZSL')
     ap.add_argument('--tasks', nargs='+', default=['48', '110'])
     ap.add_argument('--seeds', nargs='+', type=int, default=[1])
-    ap.add_argument('--variants', nargs='+', default=['flora_base', 'cr_no_orth', 'cr_orth', 'cr_linear'])
+    ap.add_argument('--variants', nargs='+', default=['flora_base', 'cr_dual', 'cr_dual_grl', 'cr_prob', 'cr_linear'])
     ap.add_argument('--out-root', default=DRIVE_OUT_CR if os.path.isdir('/content/drive/MyDrive')
                     else os.path.join(CMAP_DIR, 'runs'))
     ap.add_argument('--concept-prims', default='kg/primitive_v2.json')
     ap.add_argument('--concept-rules', default='kg/kg_rules_v2.json')
-    ap.add_argument('--text-concept-weight', type=float, default=0.5)
     ap.add_argument('--concept-dim', type=int, default=None)
     ap.add_argument('--lambda-concept', type=float, default=None)
-    ap.add_argument('--lambda-orth', type=float, default=None)
+    ap.add_argument('--lambda-proto', type=float, default=None)
+    ap.add_argument('--lambda-adv', type=float, default=None)
+    ap.add_argument('--concept-alpha', type=float, default=None)
     ap.add_argument('--force', action='store_true')
-    # Internal subprocess flags
     ap.add_argument('--single', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--task', default=None, help=argparse.SUPPRESS)
     ap.add_argument('--seed', type=int, default=1, help=argparse.SUPPRESS)
@@ -142,24 +150,28 @@ def main():
                     '--out-root', opts.out_root,
                     '--concept-prims', opts.concept_prims,
                     '--concept-rules', opts.concept_rules,
-                    '--text-concept-weight', str(opts.text_concept_weight),
                 ]
-                if opts.concept_dim is not None:
-                    cmd += ['--concept-dim', str(opts.concept_dim)]
-                if opts.lambda_concept is not None:
-                    cmd += ['--lambda-concept', str(opts.lambda_concept)]
-                if opts.lambda_orth is not None:
-                    cmd += ['--lambda-orth', str(opts.lambda_orth)]
+                for flag, val in (
+                    ('--concept-dim', opts.concept_dim),
+                    ('--lambda-concept', opts.lambda_concept),
+                    ('--lambda-proto', opts.lambda_proto),
+                    ('--lambda-adv', opts.lambda_adv),
+                    ('--concept-alpha', opts.concept_alpha),
+                ):
+                    if val is not None:
+                        cmd += [flag, str(val)]
                 if opts.force:
                     cmd.append('--force')
                 print(f'\n[run] {variant} | split={t} | seed={s}')
                 subprocess.run(cmd, check=True)
 
-    # Summary table
-    print(f'\n=== Concept-Residual Step-1 Summary (feat={opts.feat}, setting={opts.setting}) ===')
-    hdr = f'{"Variant":<13} {"Split":<6} {"Seed":<5} {"Best":>7} {"Last10":>7} {"HeadAUC":>8} {"HeadAP":>7} {"P(z_c)":>7} {"Leak(z_r)":>9}'
+    print(f'\n=== Concept-Residual Summary (feat={opts.feat}, setting={opts.setting}) ===')
+    hdr = (
+        f'{"Variant":<13} {"Split":<6} {"Best":>7} {"Last10":>7} {"C-Only":>7} '
+        f'{"HeadAUC":>8} {"UnseenC":>8} {"P(z_c)":>7} {"Leak(z_r)":>9}  AlphaSweep'
+    )
     print(hdr)
-    print('-' * len(hdr))
+    print('-' * (len(hdr) + 18))
     for variant in opts.variants:
         for t in opts.tasks:
             task = C.SPLITS[t][0]
@@ -167,13 +179,14 @@ def main():
                 run_dir = os.path.join(opts.out_root, opts.feat, variant, f'{task}_{opts.setting}_seed{s}')
                 res = parse_cr_log(run_dir)
                 if not res:
-                    print(f'{variant:<13} {t:<6} {s:<5}   (incomplete)')
+                    print(f'{variant:<13} {t:<6}   (incomplete)')
                 else:
+                    sw = ' '.join(f'{k}:{v:.2f}' for k, v in sorted(res['tags'].items()))
                     print(
-                        f'{variant:<13} {t:<6} {s:<5} '
-                        f'{res["best"]:7.2f} {res["last10"]:7.2f} '
-                        f'{res["head_auc"]:8.4f} {res["head_ap"]:7.4f} '
-                        f'{res["probe_zc"]:7.4f} {res["probe_zr"]:9.4f}'
+                        f'{variant:<13} {t:<6} '
+                        f'{res["best"]:7.2f} {res["last10"]:7.2f} {res["c_only_zsl"]:7.2f} '
+                        f'{res["head_auc"]:8.4f} {res["unseen_auc"]:8.4f} '
+                        f'{res["probe_zc"]:7.4f} {res["probe_zr"]:9.4f}  {sw}'
                     )
 
 
