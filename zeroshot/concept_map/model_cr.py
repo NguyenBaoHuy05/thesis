@@ -201,13 +201,10 @@ class ConceptArbitratedMappingNet(MappingNet):
         seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
         global_cls = seen_idx[label_idx]
         targets = self.class_concepts[global_cls]
-        # Slight label smoothing prevents seen-class memorization and keeps logits calibrated
-        eps = 0.05
-        targets_smooth = targets * (1.0 - eps) + (1.0 - targets) * (0.5 * eps)
 
         # 1) Hard Masked Pos-Weighted BCE on seen-covered primitives
         bce_mat = F.binary_cross_entropy_with_logits(
-            logits, targets_smooth, pos_weight=self.pos_weight, reduction='none'
+            logits, targets, pos_weight=self.pos_weight, reduction='none'
         )
         mask_cov = self.seen_prim_mask.unsqueeze(0)
         denom_cov = (mask_cov.sum() * logits.shape[0]).clamp(min=1.0)
@@ -232,7 +229,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         logits, sim = self.concept_head(z_c)
         probs = torch.sigmoid(logits)
         raw_z = (sim - self.sim_mean) / (self.sim_std + 1e-6)
-        z_sim = 2.0 * torch.tanh(raw_z / 2.0)
+        z_sim = 3.0 * torch.tanh(raw_z / 3.0)
         return probs, sim, z_sim
 
     @torch.no_grad()
@@ -291,9 +288,9 @@ class ConceptArbitratedMappingNet(MappingNet):
         w_k = excl_k * idf * rel * boost_k
         w_m = excl_m * idf * rel * boost_m
 
-        # Symmetric normalization over total distinguishing weight (prevents 1 noisy exclusive primitive = 1.0)
+        # Symmetric normalization over total distinguishing weight (scaled by 2.0 to preserve L1=2 magnitude)
         sum_total = w_k.sum(dim=-1, keepdim=True) + w_m.sum(dim=-1, keepdim=True)
-        diff = w_k - w_m
+        diff = 2.0 * (w_k - w_m)
         return torch.where(sum_total > 1e-6, diff / sum_total.clamp(min=1e-6), torch.zeros_like(diff))  # (C, C, P)
 
     @torch.no_grad()

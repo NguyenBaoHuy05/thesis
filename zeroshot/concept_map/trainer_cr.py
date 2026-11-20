@@ -108,7 +108,7 @@ class ConceptArbitratedTrainer(Trainer):
         seen_mask = (seen_counts > 0).astype(np.float32)
         n_seen = float(len(self.seen_classes))
         neg_counts = np.maximum(n_seen - seen_counts, 1.0)
-        pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 10.0).astype(np.float32)
+        pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 5.0).astype(np.float32)
 
         # IDF specificity weight across all classes (uses concept annotations only, no test labels)
         df = W_req.sum(axis=0)
