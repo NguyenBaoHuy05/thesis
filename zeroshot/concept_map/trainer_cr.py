@@ -6,7 +6,8 @@ import torch
 import torch.optim as optim
 
 from trainer import Trainer
-from kg_semantics import PrimitiveKG, embed_texts
+from kg_semantics import embed_texts
+from concepts.concept_loader import MultiAxisConceptBank
 from model_cr import ConceptArbitratedMappingNet, _preserve_rng_state
 
 
@@ -94,29 +95,34 @@ class ConceptArbitratedTrainer(Trainer):
         self.logger.info('Loading optimizers (Flora + Group-Factorized Concept) done.')
 
     def _init_concepts(self):
-        prims_path = getattr(self.args, 'concept_prims', 'kg/primitive_v2.json')
-        rules_path = getattr(self.args, 'concept_rules', 'kg/kg_rules_v2.json')
-        self.kg_concept = PrimitiveKG(prims_path, rules_path, self.num_classes, forbid_weight=0.5)
-        W_req = (self.kg_concept.W > 0).astype(np.float32)
-        W_forb = (self.kg_concept.W < 0).astype(np.float32)
+        cmap_dir = os.path.dirname(os.path.abspath(__file__))
+        default_bank = os.path.join(cmap_dir, 'concepts', 'concept_bank_v1.json')
+        default_ann = os.path.join(cmap_dir, 'concepts', 'ntu120_concept_annotations.json')
+        bank_path = getattr(self.args, 'concept_bank', default_bank)
+        ann_path = getattr(self.args, 'concept_ann', default_ann)
+
+        self.concept_bank = MultiAxisConceptBank(bank_path, ann_path, self.num_classes)
+        W_req = self.concept_bank.W_req
+        W_forb = self.concept_bank.W_forb
         seen_counts = W_req[self.seen_classes].sum(axis=0)
         seen_mask = (seen_counts > 0).astype(np.float32)
         n_seen = float(len(self.seen_classes))
         neg_counts = np.maximum(n_seen - seen_counts, 1.0)
         pos_w = np.clip(neg_counts / np.maximum(seen_counts, 1.0), 1.0, 10.0).astype(np.float32)
 
-        # IDF specificity weight across all classes (uses rules only, no test labels)
+        # IDF specificity weight across all classes (uses concept annotations only, no test labels)
         df = W_req.sum(axis=0)
         idf_w = (np.log((self.num_classes + 1.0) / (df + 1.0)) + 1.0).astype(np.float32)
 
-        prim_groups, num_groups = _load_prim_groups(prims_path)
-        kg_dir = os.path.dirname(os.path.abspath(prims_path))
-        p_stem = os.path.splitext(os.path.basename(prims_path))[0]
-        cache = os.path.join(kg_dir, f'{p_stem}_clip_L{self.args.max_length}.pt')
+        prim_groups = self.concept_bank.group_indices
+        num_groups = self.concept_bank.num_groups
+        c_dir = os.path.dirname(os.path.abspath(bank_path))
+        c_stem = os.path.splitext(os.path.basename(bank_path))[0]
+        cache = os.path.join(c_dir, f'{c_stem}_clip_L{self.args.max_length}.pt')
         prim_tok = embed_texts(
             self.mapping_model.tokenizer,
             self.mapping_model.text_encoder,
-            self.kg_concept.prim_text,
+            self.concept_bank.concept_texts,
             self.args.max_length,
             'cuda',
             cache,
@@ -139,8 +145,8 @@ class ConceptArbitratedTrainer(Trainer):
         )
         m = self.mapping_model
         self.logger.info(
-            f'[GF-CA] Concepts attached: P={W_req.shape[1]}, seen-cov={int(seen_mask.sum())}/{W_req.shape[1]}, '
-            f'groups={num_groups} (use_groups={m.use_groups}), center_clip={m.center_clip}, '
+            f'[GF-CA] Multi-Axis Concepts attached: P={W_req.shape[1]}, seen-cov={int(seen_mask.sum())}/{W_req.shape[1]}, '
+            f'axes={num_groups} (use_groups={m.use_groups}), center_clip={m.center_clip}, '
             f'lambda_soft={m.lambda_soft}, topk={m.arb_topk}, alpha={m.arb_alpha}'
         )
 
@@ -228,7 +234,7 @@ class ConceptArbitratedTrainer(Trainer):
         )
 
         seen_demo = set()
-        prim_ids = self.kg_concept.prim_ids
+        prim_ids = self.concept_bank.concept_ids
         for i in range(len(y_te_cls)):
             cid = int(y_te_cls[i])
             if cid in seen_demo:

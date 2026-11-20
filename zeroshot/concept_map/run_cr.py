@@ -15,6 +15,7 @@ Usage (Colab):
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -68,22 +69,23 @@ def run_single(opts):
     from trainer_cr import ConceptArbitratedTrainer
 
     task = C.SPLITS[opts.task][0]
-    prims, rules = C.kg_for_task(task, opts.concept_prims, opts.concept_rules)
     vcfg = dict(VARIANTS[opts.variant])
     if opts.arb_alpha is not None:
         vcfg['arb_alpha'] = opts.arb_alpha
     if opts.arb_topk is not None:
         vcfg['arb_topk'] = opts.arb_topk
-    vcfg['concept_prims'] = prims
-    vcfg['concept_rules'] = rules
+    vcfg['concept_bank'] = os.path.abspath(opts.concept_bank)
+    vcfg['concept_ann'] = os.path.abspath(opts.concept_ann)
     vcfg['concept_iters'] = opts.concept_iters
     vcfg['concept_lr'] = opts.concept_lr
 
     out_dir = os.path.join(opts.out_root, opts.feat, opts.variant, f'{task}_{opts.setting}_seed{opts.seed}')
-    os.makedirs(out_dir, exist_ok=True)
     if C.run_done(out_dir, opts.setting) and not opts.force:
         print(f'[skip] {out_dir}')
         return
+    if opts.force and os.path.isdir(out_dir):
+        shutil.rmtree(out_dir, ignore_errors=True)
+    os.makedirs(out_dir, exist_ok=True)
 
     flora_ov = dict(kg_mode='none', setting=opts.setting)
     args = C.build_args(task, opts.seed, out_dir, flora_overrides=flora_ov, extra=vcfg)
@@ -101,8 +103,8 @@ def main():
     ap.add_argument('--out-root', '--out_dir', dest='out_root',
                     default=DRIVE_OUT_CR if os.path.isdir('/content/drive/MyDrive')
                     else os.path.join(CMAP_DIR, 'runs'))
-    ap.add_argument('--concept-prims', default='kg/primitive_v2.json')
-    ap.add_argument('--concept-rules', default='kg/kg_rules_v2.json')
+    ap.add_argument('--concept-bank', default=os.path.join(CMAP_DIR, 'concepts', 'concept_bank_v1.json'))
+    ap.add_argument('--concept-ann', default=os.path.join(CMAP_DIR, 'concepts', 'ntu120_concept_annotations.json'))
     ap.add_argument('--concept-iters', type=int, default=500)
     ap.add_argument('--concept-lr', type=float, default=1e-3)
     ap.add_argument('--arb-alpha', '--arb_alpha', dest='arb_alpha', type=float, default=None)
@@ -136,8 +138,8 @@ def main():
                     '--single', '--feat', opts.feat, '--setting', opts.setting,
                     '--task', t, '--seed', str(s), '--variant', variant,
                     '--out-root', opts.out_root,
-                    '--concept-prims', opts.concept_prims,
-                    '--concept-rules', opts.concept_rules,
+                    '--concept-bank', opts.concept_bank,
+                    '--concept-ann', opts.concept_ann,
                     '--concept-iters', str(opts.concept_iters),
                     '--concept-lr', str(opts.concept_lr),
                 ]

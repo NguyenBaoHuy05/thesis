@@ -1,0 +1,1759 @@
+[
+  {
+    "class_id": 1,
+    "class_name": "Drink water",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "zone.mouth_nose_face",
+      "dyn.lift_raise_up",
+      "dyn.pull_retract_in",
+      "dyn.head_tilt_look",
+      "inter.single_object_hold",
+      "temp.reach_and_retract",
+      "intent.eating_drinking"
+    ]
+  },
+  {
+    "class_id": 2,
+    "class_name": "Eat meal/snack",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.mouth_nose_face",
+      "zone.front_workspace",
+      "dyn.lift_raise_up",
+      "dyn.rhythmic_oscillation",
+      "dyn.pull_retract_in",
+      "inter.single_object_hold",
+      "temp.cyclic_repetitive",
+      "intent.eating_drinking"
+    ]
+  },
+  {
+    "class_id": 3,
+    "class_name": "Brushing teeth",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.mouth_nose_face",
+      "dyn.rhythmic_oscillation",
+      "dyn.fine_wrist_finger",
+      "inter.single_object_hold",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 4,
+    "class_name": "Brushing hair",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.head_hair_ear",
+      "zone.overhead_high",
+      "dyn.rhythmic_oscillation",
+      "dyn.lower_descend_drop",
+      "inter.single_object_hold",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 5,
+    "class_name": "Drop",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "inter.object_release_launch",
+      "temp.single_impulsive",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 6,
+    "class_name": "Pickup",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.torso_bend_lean",
+      "topo.lower_body_legs",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "dyn.lift_raise_up",
+      "inter.single_object_hold",
+      "temp.reach_and_retract",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 7,
+    "class_name": "Throw",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.torso_twist",
+      "zone.overhead_high",
+      "zone.arm_reach_forward",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.single_object_hold",
+      "inter.object_release_launch",
+      "temp.single_impulsive",
+      "intent.sport_ball_play"
+    ]
+  },
+  {
+    "class_id": 8,
+    "class_name": "Sitting down",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.torso_bend_lean",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "temp.state_transition",
+      "intent.posture_change"
+    ]
+  },
+  {
+    "class_id": 9,
+    "class_name": "Standing up (from sitting position)",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "dyn.lift_raise_up",
+      "temp.state_transition",
+      "intent.posture_change"
+    ]
+  },
+  {
+    "class_id": 10,
+    "class_name": "Clapping",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.rhythmic_oscillation",
+      "dyn.together_closing",
+      "dyn.apart_opening",
+      "inter.hand_to_hand_contact",
+      "temp.cyclic_repetitive",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 11,
+    "class_name": "Reading",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.head_neck_primary",
+      "zone.front_workspace",
+      "dyn.static_posture_hold",
+      "dyn.head_tilt_look",
+      "inter.bimanual_object_work",
+      "temp.sustained_stationary",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 12,
+    "class_name": "Writing",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "topo.head_neck_primary",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.head_tilt_look",
+      "inter.single_object_hold",
+      "temp.continuous_flow",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 13,
+    "class_name": "Tear up paper",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.apart_opening",
+      "dyn.fine_wrist_finger",
+      "dyn.ballistic_strike",
+      "inter.bimanual_object_work",
+      "temp.single_impulsive",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 14,
+    "class_name": "Wear jacket",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.back_shoulder_rear",
+      "zone.chest_front_torso",
+      "dyn.pull_retract_in",
+      "dyn.push_extend_out",
+      "inter.garment_wear_put",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 15,
+    "class_name": "Take off jacket",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.back_shoulder_rear",
+      "zone.side_lateral_space",
+      "dyn.apart_opening",
+      "dyn.lower_descend_drop",
+      "inter.garment_remove_off",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 16,
+    "class_name": "Wear a shoe",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "topo.lower_body_legs",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "dyn.pull_retract_in",
+      "inter.garment_wear_put",
+      "inter.self_contact_touch",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 17,
+    "class_name": "Take off a shoe",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "topo.lower_body_legs",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "dyn.push_extend_out",
+      "inter.garment_remove_off",
+      "inter.self_contact_touch",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 18,
+    "class_name": "Wear on glasses",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.mouth_nose_face",
+      "zone.head_hair_ear",
+      "dyn.lift_raise_up",
+      "dyn.pull_retract_in",
+      "inter.garment_wear_put",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 19,
+    "class_name": "Take off glasses",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.mouth_nose_face",
+      "zone.head_hair_ear",
+      "dyn.push_extend_out",
+      "dyn.lower_descend_drop",
+      "inter.garment_remove_off",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 20,
+    "class_name": "Put on a hat/cap",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.head_hair_ear",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.lower_descend_drop",
+      "dyn.pull_retract_in",
+      "inter.garment_wear_put",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 21,
+    "class_name": "Take off a hat/cap",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.head_hair_ear",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.push_extend_out",
+      "dyn.lower_descend_drop",
+      "inter.garment_remove_off",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 22,
+    "class_name": "Cheer up",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.overhead_high",
+      "zone.side_lateral_space",
+      "dyn.lift_raise_up",
+      "dyn.rhythmic_oscillation",
+      "inter.symbolic_hand_sign",
+      "temp.cyclic_repetitive",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 23,
+    "class_name": "Hand waving",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.head_hair_ear",
+      "zone.overhead_high",
+      "zone.side_lateral_space",
+      "dyn.rhythmic_oscillation",
+      "dyn.lift_raise_up",
+      "inter.symbolic_hand_sign",
+      "temp.cyclic_repetitive",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 24,
+    "class_name": "Kicking something",
+    "concepts": [
+      "topo.lower_body_legs",
+      "zone.floor_foot_low",
+      "zone.arm_reach_forward",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "temp.single_impulsive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 25,
+    "class_name": "Reach into pocket",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.waist_hip_pocket",
+      "dyn.lower_descend_drop",
+      "dyn.pull_retract_in",
+      "inter.self_contact_touch",
+      "temp.reach_and_retract",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 26,
+    "class_name": "Hopping (one foot jumping)",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "dyn.airborne_jump",
+      "dyn.rhythmic_oscillation",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 27,
+    "class_name": "Jumping up",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "zone.overhead_high",
+      "dyn.airborne_jump",
+      "dyn.lift_raise_up",
+      "temp.single_impulsive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 28,
+    "class_name": "Make a phone call/Answer phone",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.head_hair_ear",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.device_screen_key",
+      "inter.single_object_hold",
+      "temp.sustained_stationary",
+      "intent.digital_tech_use"
+    ]
+  },
+  {
+    "class_id": 29,
+    "class_name": "Playing with phone/tablet",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "topo.head_neck_primary",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.head_tilt_look",
+      "inter.device_screen_key",
+      "inter.bimanual_object_work",
+      "temp.sustained_stationary",
+      "intent.digital_tech_use"
+    ]
+  },
+  {
+    "class_id": 30,
+    "class_name": "Typing on a keyboard",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "zone.waist_hip_pocket",
+      "dyn.fine_wrist_finger",
+      "dyn.rhythmic_oscillation",
+      "inter.device_screen_key",
+      "temp.cyclic_repetitive",
+      "intent.digital_tech_use"
+    ]
+  },
+  {
+    "class_id": 31,
+    "class_name": "Pointing to something with finger",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.arm_reach_forward",
+      "dyn.push_extend_out",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.reach_and_retract",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 32,
+    "class_name": "Taking a selfie",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.arm_reach_forward",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.push_extend_out",
+      "dyn.static_posture_hold",
+      "inter.device_screen_key",
+      "inter.single_object_hold",
+      "temp.sustained_stationary",
+      "intent.digital_tech_use"
+    ]
+  },
+  {
+    "class_id": 33,
+    "class_name": "Checking time (from watch)",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "zone.front_workspace",
+      "dyn.lift_raise_up",
+      "dyn.circular_twisting",
+      "dyn.head_tilt_look",
+      "temp.reach_and_retract",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 34,
+    "class_name": "Rubbing two hands together",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.rhythmic_oscillation",
+      "dyn.fine_wrist_finger",
+      "inter.hand_to_hand_contact",
+      "temp.cyclic_repetitive",
+      "intent.micro_fidget_play"
+    ]
+  },
+  {
+    "class_id": 35,
+    "class_name": "Nod head/bow",
+    "concepts": [
+      "topo.head_neck_primary",
+      "topo.torso_bend_lean",
+      "zone.chest_front_torso",
+      "dyn.lower_descend_drop",
+      "dyn.head_tilt_look",
+      "temp.reach_and_retract",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 36,
+    "class_name": "Shake head",
+    "concepts": [
+      "topo.head_neck_primary",
+      "zone.head_hair_ear",
+      "dyn.rhythmic_oscillation",
+      "dyn.circular_twisting",
+      "temp.cyclic_repetitive",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 37,
+    "class_name": "Wiping face",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.mouth_nose_face",
+      "dyn.rhythmic_oscillation",
+      "dyn.circular_twisting",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 38,
+    "class_name": "Salute",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.head_hair_ear",
+      "zone.side_lateral_space",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 39,
+    "class_name": "Putting the palms together",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.chest_front_torso",
+      "zone.front_workspace",
+      "dyn.together_closing",
+      "dyn.static_posture_hold",
+      "inter.hand_to_hand_contact",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 40,
+    "class_name": "Crossing hands in front (saying stop)",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "zone.chest_front_torso",
+      "dyn.together_closing",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 41,
+    "class_name": "Sneeze/cough",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "topo.torso_bend_lean",
+      "zone.mouth_nose_face",
+      "zone.neck_throat",
+      "dyn.pull_retract_in",
+      "dyn.ballistic_strike",
+      "inter.self_contact_touch",
+      "temp.single_impulsive",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 42,
+    "class_name": "Staggering",
+    "concepts": [
+      "topo.whole_body_coord",
+      "topo.lower_body_legs",
+      "zone.side_lateral_space",
+      "dyn.instability_sway",
+      "dyn.locomotion_walk",
+      "temp.continuous_flow",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 43,
+    "class_name": "Falling",
+    "concepts": [
+      "topo.whole_body_coord",
+      "topo.torso_bend_lean",
+      "zone.floor_foot_low",
+      "dyn.instability_sway",
+      "dyn.lower_descend_drop",
+      "dyn.ballistic_strike",
+      "temp.state_transition",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 44,
+    "class_name": "Touching head (headache)",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.head_neck_primary",
+      "zone.head_hair_ear",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 45,
+    "class_name": "Touching chest (stomachache/heart pain)",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "zone.chest_front_torso",
+      "dyn.pull_retract_in",
+      "dyn.static_posture_hold",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 46,
+    "class_name": "Touching back (backache)",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "zone.back_shoulder_rear",
+      "dyn.pull_retract_in",
+      "dyn.static_posture_hold",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 47,
+    "class_name": "Touching neck (neckache)",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "zone.neck_throat",
+      "dyn.pull_retract_in",
+      "dyn.rhythmic_oscillation",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 48,
+    "class_name": "Nausea or vomiting",
+    "concepts": [
+      "topo.torso_bend_lean",
+      "topo.head_neck_primary",
+      "zone.mouth_nose_face",
+      "zone.chest_front_torso",
+      "dyn.lower_descend_drop",
+      "dyn.head_tilt_look",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 49,
+    "class_name": "Using a fan (with hand or paper)",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.mouth_nose_face",
+      "zone.chest_front_torso",
+      "dyn.rhythmic_oscillation",
+      "dyn.fine_wrist_finger",
+      "inter.single_object_hold",
+      "temp.cyclic_repetitive",
+      "intent.micro_fidget_play"
+    ]
+  },
+  {
+    "class_id": 50,
+    "class_name": "Punching/Slapping other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "topo.torso_twist",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.interpersonal_aggressive",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 51,
+    "class_name": "Kicking other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.lower_body_legs",
+      "zone.interpersonal_gap",
+      "zone.floor_foot_low",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.interpersonal_aggressive",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 52,
+    "class_name": "Pushing other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.bilateral_symmetric",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.push_extend_out",
+      "dyn.ballistic_strike",
+      "inter.interpersonal_aggressive",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 53,
+    "class_name": "Patting on back of other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.back_shoulder_rear",
+      "dyn.rhythmic_oscillation",
+      "dyn.push_extend_out",
+      "inter.interpersonal_friendly",
+      "temp.cyclic_repetitive",
+      "intent.social_play_support"
+    ]
+  },
+  {
+    "class_id": 54,
+    "class_name": "Pointing finger at the other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.push_extend_out",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.reach_and_retract",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 55,
+    "class_name": "Hugging other person",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.bilateral_symmetric",
+      "zone.interpersonal_gap",
+      "zone.chest_front_torso",
+      "dyn.apart_opening",
+      "dyn.together_closing",
+      "dyn.pull_retract_in",
+      "inter.interpersonal_friendly",
+      "temp.sustained_stationary",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 56,
+    "class_name": "Giving something to other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.push_extend_out",
+      "inter.interpersonal_exchange",
+      "inter.object_release_launch",
+      "temp.reach_and_retract",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 57,
+    "class_name": "Touching other person's pocket",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.waist_hip_pocket",
+      "dyn.push_extend_out",
+      "dyn.pull_retract_in",
+      "inter.interpersonal_aggressive",
+      "temp.reach_and_retract",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 58,
+    "class_name": "Handshaking",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.front_workspace",
+      "dyn.push_extend_out",
+      "dyn.rhythmic_oscillation",
+      "inter.interpersonal_friendly",
+      "inter.hand_to_hand_contact",
+      "temp.cyclic_repetitive",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 59,
+    "class_name": "Walking towards each other",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.interpersonal_gap",
+      "dyn.locomotion_walk",
+      "dyn.together_closing",
+      "inter.interpersonal_proxemic",
+      "temp.continuous_flow",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 60,
+    "class_name": "Walking apart from each other",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.interpersonal_gap",
+      "dyn.locomotion_walk",
+      "dyn.apart_opening",
+      "inter.interpersonal_proxemic",
+      "temp.continuous_flow",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 61,
+    "class_name": "Putting on headphones",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.head_hair_ear",
+      "zone.side_lateral_space",
+      "dyn.lift_raise_up",
+      "dyn.together_closing",
+      "dyn.pull_retract_in",
+      "inter.garment_wear_put",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 62,
+    "class_name": "Taking off headphones",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.head_hair_ear",
+      "zone.side_lateral_space",
+      "dyn.apart_opening",
+      "dyn.lower_descend_drop",
+      "inter.garment_remove_off",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 63,
+    "class_name": "Shooting at the basket",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.whole_body_coord",
+      "zone.overhead_high",
+      "zone.arm_reach_forward",
+      "dyn.lift_raise_up",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.bimanual_object_work",
+      "inter.object_release_launch",
+      "temp.single_impulsive",
+      "intent.sport_ball_play"
+    ]
+  },
+  {
+    "class_id": 64,
+    "class_name": "Bouncing a ball",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.waist_hip_pocket",
+      "zone.floor_foot_low",
+      "dyn.rhythmic_oscillation",
+      "dyn.lower_descend_drop",
+      "inter.single_object_hold",
+      "temp.cyclic_repetitive",
+      "intent.sport_ball_play"
+    ]
+  },
+  {
+    "class_id": 65,
+    "class_name": "Tennis bat swing",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.torso_twist",
+      "topo.whole_body_coord",
+      "zone.side_lateral_space",
+      "zone.arm_reach_forward",
+      "dyn.ballistic_strike",
+      "dyn.circular_twisting",
+      "inter.single_object_hold",
+      "temp.single_impulsive",
+      "intent.sport_ball_play"
+    ]
+  },
+  {
+    "class_id": 66,
+    "class_name": "Juggling table tennis balls",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "dyn.rhythmic_oscillation",
+      "dyn.fine_wrist_finger",
+      "dyn.lift_raise_up",
+      "inter.single_object_hold",
+      "temp.cyclic_repetitive",
+      "intent.sport_ball_play"
+    ]
+  },
+  {
+    "class_id": 67,
+    "class_name": "Hushing",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.mouth_nose_face",
+      "zone.neck_throat",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 68,
+    "class_name": "Flicking hair",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "zone.head_hair_ear",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.self_contact_touch",
+      "temp.single_impulsive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 69,
+    "class_name": "Thumbs up",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 70,
+    "class_name": "Thumbs down",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "dyn.lower_descend_drop",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 71,
+    "class_name": "Making OK sign",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.together_closing",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 72,
+    "class_name": "Making victory sign",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "zone.head_hair_ear",
+      "dyn.fine_wrist_finger",
+      "dyn.apart_opening",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 73,
+    "class_name": "Stapling book",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.together_closing",
+      "dyn.fine_wrist_finger",
+      "inter.bimanual_object_work",
+      "temp.single_impulsive",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 74,
+    "class_name": "Counting money",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.rhythmic_oscillation",
+      "inter.bimanual_object_work",
+      "temp.cyclic_repetitive",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 75,
+    "class_name": "Cutting nails",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "topo.head_neck_primary",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.head_tilt_look",
+      "inter.hand_to_hand_contact",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 76,
+    "class_name": "Cutting paper (using scissors)",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.push_extend_out",
+      "dyn.rhythmic_oscillation",
+      "inter.bimanual_object_work",
+      "temp.continuous_flow",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 77,
+    "class_name": "Snapping fingers",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "dyn.fine_wrist_finger",
+      "dyn.ballistic_strike",
+      "inter.symbolic_hand_sign",
+      "temp.single_impulsive",
+      "intent.micro_fidget_play"
+    ]
+  },
+  {
+    "class_id": 78,
+    "class_name": "Opening bottle",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.circular_twisting",
+      "dyn.fine_wrist_finger",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 79,
+    "class_name": "Sniffing",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "zone.mouth_nose_face",
+      "dyn.pull_retract_in",
+      "dyn.head_tilt_look",
+      "dyn.static_posture_hold",
+      "inter.single_object_hold",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 80,
+    "class_name": "Squatting down",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.torso_bend_lean",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "dyn.static_posture_hold",
+      "temp.state_transition",
+      "intent.posture_change"
+    ]
+  },
+  {
+    "class_id": 81,
+    "class_name": "Tossing a coin",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.front_workspace",
+      "zone.overhead_high",
+      "dyn.fine_wrist_finger",
+      "dyn.lift_raise_up",
+      "dyn.ballistic_strike",
+      "inter.object_release_launch",
+      "temp.single_impulsive",
+      "intent.micro_fidget_play"
+    ]
+  },
+  {
+    "class_id": 82,
+    "class_name": "Folding paper",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.together_closing",
+      "dyn.fine_wrist_finger",
+      "inter.bimanual_object_work",
+      "temp.continuous_flow",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 83,
+    "class_name": "Balling up paper",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.together_closing",
+      "dyn.circular_twisting",
+      "dyn.fine_wrist_finger",
+      "inter.bimanual_object_work",
+      "inter.hand_to_hand_contact",
+      "temp.cyclic_repetitive",
+      "intent.paper_craft_office"
+    ]
+  },
+  {
+    "class_id": 84,
+    "class_name": "Playing with a magic cube",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.circular_twisting",
+      "dyn.fine_wrist_finger",
+      "dyn.rhythmic_oscillation",
+      "inter.bimanual_object_work",
+      "temp.cyclic_repetitive",
+      "intent.micro_fidget_play"
+    ]
+  },
+  {
+    "class_id": 85,
+    "class_name": "Applying cream on face",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.mouth_nose_face",
+      "zone.front_workspace",
+      "dyn.circular_twisting",
+      "dyn.rhythmic_oscillation",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 86,
+    "class_name": "Applying cream on hand back",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "dyn.circular_twisting",
+      "dyn.rhythmic_oscillation",
+      "inter.hand_to_hand_contact",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.personal_grooming"
+    ]
+  },
+  {
+    "class_id": 87,
+    "class_name": "Putting on a bag",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.back_shoulder_rear",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.pull_retract_in",
+      "inter.garment_wear_put",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 88,
+    "class_name": "Taking off a bag",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.back_shoulder_rear",
+      "zone.waist_hip_pocket",
+      "dyn.lower_descend_drop",
+      "dyn.push_extend_out",
+      "inter.garment_remove_off",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.dressing_accessories"
+    ]
+  },
+  {
+    "class_id": 89,
+    "class_name": "Putting something into a bag",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "zone.waist_hip_pocket",
+      "dyn.lower_descend_drop",
+      "dyn.together_closing",
+      "inter.bimanual_object_work",
+      "inter.object_release_launch",
+      "temp.state_transition",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 90,
+    "class_name": "Taking something out of a bag",
+    "concepts": [
+      "topo.bilateral_asymmetric",
+      "zone.front_workspace",
+      "zone.waist_hip_pocket",
+      "dyn.lift_raise_up",
+      "dyn.apart_opening",
+      "dyn.pull_retract_in",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 91,
+    "class_name": "Opening a box",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.front_workspace",
+      "dyn.apart_opening",
+      "dyn.lift_raise_up",
+      "inter.bimanual_object_work",
+      "temp.state_transition",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 92,
+    "class_name": "Moving heavy objects",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.floor_foot_low",
+      "dyn.lift_raise_up",
+      "dyn.locomotion_walk",
+      "inter.bimanual_object_work",
+      "temp.continuous_flow",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 93,
+    "class_name": "Shaking fist",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.head_hair_ear",
+      "zone.arm_reach_forward",
+      "dyn.rhythmic_oscillation",
+      "dyn.ballistic_strike",
+      "inter.symbolic_hand_sign",
+      "temp.cyclic_repetitive",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 94,
+    "class_name": "Throwing up a cap/hat",
+    "concepts": [
+      "topo.unilateral_hand",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.ballistic_strike",
+      "inter.single_object_hold",
+      "inter.object_release_launch",
+      "temp.single_impulsive",
+      "intent.greeting_polite"
+    ]
+  },
+  {
+    "class_id": 95,
+    "class_name": "Raising hands up",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.overhead_high",
+      "zone.side_lateral_space",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.symbolic_hand_sign",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 96,
+    "class_name": "Crossing arms",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.chest_front_torso",
+      "dyn.together_closing",
+      "dyn.pull_retract_in",
+      "dyn.static_posture_hold",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.expressive_gesture"
+    ]
+  },
+  {
+    "class_id": 97,
+    "class_name": "Making arm circles",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "zone.side_lateral_space",
+      "zone.overhead_high",
+      "dyn.circular_twisting",
+      "dyn.rhythmic_oscillation",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 98,
+    "class_name": "Swinging arms",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.side_lateral_space",
+      "dyn.rhythmic_oscillation",
+      "dyn.apart_opening",
+      "dyn.together_closing",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 99,
+    "class_name": "Running on the spot",
+    "concepts": [
+      "topo.whole_body_coord",
+      "topo.lower_body_legs",
+      "zone.floor_foot_low",
+      "dyn.rhythmic_oscillation",
+      "dyn.lift_raise_up",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 100,
+    "class_name": "Butt kicks (kick backward)",
+    "concepts": [
+      "topo.lower_body_legs",
+      "zone.back_shoulder_rear",
+      "zone.floor_foot_low",
+      "dyn.rhythmic_oscillation",
+      "dyn.pull_retract_in",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 101,
+    "class_name": "Cross toe touch",
+    "concepts": [
+      "topo.whole_body_coord",
+      "topo.torso_bend_lean",
+      "topo.torso_twist",
+      "zone.floor_foot_low",
+      "dyn.lower_descend_drop",
+      "dyn.rhythmic_oscillation",
+      "inter.self_contact_touch",
+      "temp.cyclic_repetitive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 102,
+    "class_name": "Side kick",
+    "concepts": [
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.side_lateral_space",
+      "dyn.ballistic_strike",
+      "dyn.lift_raise_up",
+      "temp.single_impulsive",
+      "intent.fitness_exercise"
+    ]
+  },
+  {
+    "class_id": 103,
+    "class_name": "Yawning",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "topo.torso_bend_lean",
+      "zone.mouth_nose_face",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "inter.self_contact_touch",
+      "temp.sustained_stationary",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 104,
+    "class_name": "Stretching oneself",
+    "concepts": [
+      "topo.bilateral_symmetric",
+      "topo.torso_bend_lean",
+      "topo.whole_body_coord",
+      "zone.overhead_high",
+      "zone.side_lateral_space",
+      "dyn.apart_opening",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "temp.sustained_stationary",
+      "intent.posture_change"
+    ]
+  },
+  {
+    "class_id": 105,
+    "class_name": "Blowing nose",
+    "concepts": [
+      "topo.unilateral_hand",
+      "topo.head_neck_primary",
+      "topo.torso_bend_lean",
+      "zone.mouth_nose_face",
+      "dyn.pull_retract_in",
+      "dyn.fine_wrist_finger",
+      "inter.self_contact_touch",
+      "inter.single_object_hold",
+      "temp.reach_and_retract",
+      "intent.health_pain_reflex"
+    ]
+  },
+  {
+    "class_id": 106,
+    "class_name": "Hitting other person with something",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.bilateral_symmetric",
+      "topo.torso_twist",
+      "zone.interpersonal_gap",
+      "zone.overhead_high",
+      "dyn.ballistic_strike",
+      "dyn.circular_twisting",
+      "inter.interpersonal_aggressive",
+      "inter.bimanual_object_work",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 107,
+    "class_name": "Wielding knife towards other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.rhythmic_oscillation",
+      "dyn.push_extend_out",
+      "inter.interpersonal_aggressive",
+      "inter.single_object_hold",
+      "temp.cyclic_repetitive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 108,
+    "class_name": "Knocking over other person (hit with body)",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.whole_body_coord",
+      "topo.torso_twist",
+      "zone.interpersonal_gap",
+      "zone.side_lateral_space",
+      "dyn.ballistic_strike",
+      "dyn.push_extend_out",
+      "inter.interpersonal_aggressive",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 109,
+    "class_name": "Grabbing other person's stuff",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.ballistic_strike",
+      "dyn.pull_retract_in",
+      "inter.interpersonal_aggressive",
+      "inter.interpersonal_exchange",
+      "temp.reach_and_retract",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 110,
+    "class_name": "Shooting at other person with a gun",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.bilateral_symmetric",
+      "zone.interpersonal_gap",
+      "zone.arm_reach_forward",
+      "dyn.push_extend_out",
+      "dyn.static_posture_hold",
+      "dyn.fine_wrist_finger",
+      "inter.interpersonal_aggressive",
+      "inter.bimanual_object_work",
+      "temp.sustained_stationary",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 111,
+    "class_name": "Stepping on foot",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.lower_body_legs",
+      "zone.interpersonal_gap",
+      "zone.floor_foot_low",
+      "dyn.lift_raise_up",
+      "dyn.lower_descend_drop",
+      "dyn.ballistic_strike",
+      "inter.interpersonal_aggressive",
+      "temp.single_impulsive",
+      "intent.conflict_aggression"
+    ]
+  },
+  {
+    "class_id": 112,
+    "class_name": "High-five",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.overhead_high",
+      "dyn.lift_raise_up",
+      "dyn.ballistic_strike",
+      "dyn.together_closing",
+      "inter.interpersonal_friendly",
+      "inter.hand_to_hand_contact",
+      "temp.single_impulsive",
+      "intent.social_play_support"
+    ]
+  },
+  {
+    "class_id": 113,
+    "class_name": "Cheers and drink",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.mouth_nose_face",
+      "dyn.push_extend_out",
+      "dyn.pull_retract_in",
+      "dyn.lift_raise_up",
+      "inter.interpersonal_friendly",
+      "inter.single_object_hold",
+      "temp.reach_and_retract",
+      "intent.social_play_support",
+      "intent.eating_drinking"
+    ]
+  },
+  {
+    "class_id": 114,
+    "class_name": "Carrying something with other person",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.bilateral_symmetric",
+      "topo.whole_body_coord",
+      "zone.interpersonal_gap",
+      "zone.floor_foot_low",
+      "dyn.lift_raise_up",
+      "dyn.locomotion_walk",
+      "inter.interpersonal_exchange",
+      "inter.bimanual_object_work",
+      "temp.continuous_flow",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 115,
+    "class_name": "Taking a photo of other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.bilateral_symmetric",
+      "zone.interpersonal_gap",
+      "zone.front_workspace",
+      "zone.head_hair_ear",
+      "dyn.lift_raise_up",
+      "dyn.static_posture_hold",
+      "dyn.fine_wrist_finger",
+      "inter.device_screen_key",
+      "inter.bimanual_object_work",
+      "temp.sustained_stationary",
+      "intent.digital_tech_use"
+    ]
+  },
+  {
+    "class_id": 116,
+    "class_name": "Following other person",
+    "concepts": [
+      "topo.two_person_directed",
+      "topo.lower_body_legs",
+      "topo.whole_body_coord",
+      "zone.interpersonal_gap",
+      "dyn.locomotion_walk",
+      "inter.interpersonal_proxemic",
+      "temp.continuous_flow",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 117,
+    "class_name": "Whispering in other person's ear",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.torso_bend_lean",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.head_hair_ear",
+      "zone.mouth_nose_face",
+      "dyn.together_closing",
+      "dyn.static_posture_hold",
+      "inter.interpersonal_proxemic",
+      "temp.sustained_stationary",
+      "intent.social_play_support"
+    ]
+  },
+  {
+    "class_id": 118,
+    "class_name": "Exchanging things with other person",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.bilateral_asymmetric",
+      "zone.interpersonal_gap",
+      "zone.front_workspace",
+      "dyn.push_extend_out",
+      "dyn.pull_retract_in",
+      "inter.interpersonal_exchange",
+      "temp.reach_and_retract",
+      "intent.object_container"
+    ]
+  },
+  {
+    "class_id": 119,
+    "class_name": "Supporting somebody with hand",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.whole_body_coord",
+      "topo.lower_body_legs",
+      "zone.interpersonal_gap",
+      "zone.side_lateral_space",
+      "dyn.locomotion_walk",
+      "inter.interpersonal_friendly",
+      "temp.continuous_flow",
+      "intent.social_play_support",
+      "intent.spatial_navigation"
+    ]
+  },
+  {
+    "class_id": 120,
+    "class_name": "Finger-guessing game (rock-paper-scissors)",
+    "concepts": [
+      "topo.two_person_mutual",
+      "topo.unilateral_hand",
+      "zone.interpersonal_gap",
+      "zone.front_workspace",
+      "dyn.rhythmic_oscillation",
+      "dyn.fine_wrist_finger",
+      "inter.symbolic_hand_sign",
+      "temp.cyclic_repetitive",
+      "intent.social_play_support"
+    ]
+  }
+]
