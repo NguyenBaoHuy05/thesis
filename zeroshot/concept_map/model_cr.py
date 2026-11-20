@@ -47,7 +47,7 @@ def _preserve_rng_state():
 class ConceptEncoder(nn.Module):
     """MLP mapping frozen 256-D skeleton features to sub-action concept latent z_c."""
 
-    def __init__(self, ske_dim, concept_dim=256, hidden_dim=512, dropout=0.2):
+    def __init__(self, ske_dim, concept_dim=256, hidden_dim=512, dropout=0.3):
         super().__init__()
         self.net = nn.Sequential(
             nn.LayerNorm(ske_dim),
@@ -57,6 +57,7 @@ class ConceptEncoder(nn.Module):
             nn.Linear(hidden_dim, concept_dim),
             nn.LayerNorm(concept_dim),
             nn.GELU(),
+            nn.Dropout(dropout * 0.5),
         )
 
     def forward(self, ske):
@@ -64,10 +65,10 @@ class ConceptEncoder(nn.Module):
 
 
 class GroupFactorizedCLIPConceptHead(nn.Module):
-    """Centered CLIP concept head with shared global projection + G body-part group projections."""
+    """Centered CLIP concept head with shared global projection + low-rank axis adapters."""
 
     def __init__(self, concept_dim, prim_emb, prim_groups, num_groups,
-                 center_clip=True, use_groups=True):
+                 center_clip=True, use_groups=True, group_rank=32):
         super().__init__()
         self.center_clip = bool(center_clip)
         self.use_groups = bool(use_groups)
@@ -82,30 +83,34 @@ class GroupFactorizedCLIPConceptHead(nn.Module):
 
         # Shared global projection transfers alignment to rare / unseen-only concepts
         self.global_proj = nn.Linear(concept_dim, clip_dim)
-        # Group-specific projections allow simultaneous activation across distinct body parts
+        # Low-rank group-specific residual adapters avoid memorizing seen classes
         if self.use_groups:
-            self.group_projs = nn.ModuleList([
-                nn.Linear(concept_dim, clip_dim) for _ in range(self.num_groups)
+            self.group_down = nn.ModuleList([
+                nn.Linear(concept_dim, group_rank) for _ in range(self.num_groups)
             ])
-            for gp in self.group_projs:
-                nn.init.normal_(gp.weight, std=0.01)
-                nn.init.constant_(gp.bias, 0.0)
+            self.group_up = nn.ModuleList([
+                nn.Linear(group_rank, clip_dim, bias=False) for _ in range(self.num_groups)
+            ])
+            for gu in self.group_up:
+                nn.init.normal_(gu.weight, std=0.01)
         else:
-            self.group_projs = None
+            self.group_down = None
+            self.group_up = None
 
-        self.logit_scale = nn.Parameter(torch.tensor(math.log(12.0)))
+        self.logit_scale = nn.Parameter(torch.tensor(math.log(10.0)))
         self.bias = nn.Parameter(torch.tensor(-1.5))
 
     def compute_similarity(self, z_c):
         """Return (B, P) cosine similarities between group-projected z_c and centered prim_emb."""
         q_glob = self.global_proj(z_c)  # (B, 768)
-        if not self.use_groups or self.group_projs is None:
+        if not self.use_groups or self.group_down is None:
             q = F.normalize(q_glob, dim=-1)
             return q @ self.prim_emb.t()
 
         # Stack G group-specific queries: (B, G, 768)
         q_groups = torch.stack(
-            [F.normalize(q_glob + gp(z_c), dim=-1) for gp in self.group_projs],
+            [F.normalize(q_glob + gu(F.gelu(gd(z_c))), dim=-1)
+             for gd, gu in zip(self.group_down, self.group_up)],
             dim=1,
         )
         # Gather the group query corresponding to each primitive p: (B, P, 768)
@@ -116,7 +121,7 @@ class GroupFactorizedCLIPConceptHead(nn.Module):
 
     def forward(self, z_c):
         sim = self.compute_similarity(z_c)
-        scale = self.logit_scale.exp().clamp(max=50.0)
+        scale = self.logit_scale.exp().clamp(max=15.0)
         logits = scale * sim + self.bias
         return logits, sim
 
@@ -196,10 +201,13 @@ class ConceptArbitratedMappingNet(MappingNet):
         seen_idx = torch.as_tensor(seen_classes, device=label_idx.device, dtype=torch.long)
         global_cls = seen_idx[label_idx]
         targets = self.class_concepts[global_cls]
+        # Slight label smoothing prevents seen-class memorization and keeps logits calibrated
+        eps = 0.05
+        targets_smooth = targets * (1.0 - eps) + (1.0 - targets) * (0.5 * eps)
 
         # 1) Hard Masked Pos-Weighted BCE on seen-covered primitives
         bce_mat = F.binary_cross_entropy_with_logits(
-            logits, targets, pos_weight=self.pos_weight, reduction='none'
+            logits, targets_smooth, pos_weight=self.pos_weight, reduction='none'
         )
         mask_cov = self.seen_prim_mask.unsqueeze(0)
         denom_cov = (mask_cov.sum() * logits.shape[0]).clamp(min=1.0)
@@ -218,12 +226,13 @@ class ConceptArbitratedMappingNet(MappingNet):
 
     @torch.no_grad()
     def infer_concepts(self, skeleton_data):
-        """Return (probs, sim, z_sim) where z_sim is training-standardized concept activation."""
+        """Return (probs, sim, z_sim) where z_sim is smoothly bounded training-standardized activation."""
         ske_256 = self._get_ske_256(skeleton_data)
         z_c = self.concept_encoder(ske_256)
         logits, sim = self.concept_head(z_c)
         probs = torch.sigmoid(logits)
-        z_sim = (sim - self.sim_mean) / (self.sim_std + 1e-6)
+        raw_z = (sim - self.sim_mean) / (self.sim_std + 1e-6)
+        z_sim = 2.0 * torch.tanh(raw_z / 2.0)
         return probs, sim, z_sim
 
     @torch.no_grad()
@@ -268,19 +277,24 @@ class ConceptArbitratedMappingNet(MappingNet):
         excl_k = req.unsqueeze(1) * (1.0 - req.unsqueeze(0))
         excl_m = req.unsqueeze(0) * (1.0 - req.unsqueeze(1))
 
+        # Downweight unseen-only primitives (no supervised training signal) so noisy rare tags cannot dominate
+        rel = torch.where(
+            self.seen_prim_mask > 0,
+            torch.ones_like(self.seen_prim_mask),
+            torch.full_like(self.seen_prim_mask, 0.15),
+        ).view(1, 1, -1)
+
         # Boost weight when the other class explicitly forbids the primitive
         boost_k = 1.0 + (self.arb_forbid_boost - 1.0) * forb.unsqueeze(0)
         boost_m = 1.0 + (self.arb_forbid_boost - 1.0) * forb.unsqueeze(1)
 
-        w_k = excl_k * idf * boost_k
-        w_m = excl_m * idf * boost_m
+        w_k = excl_k * idf * rel * boost_k
+        w_m = excl_m * idf * rel * boost_m
 
-        # Normalize each side over its exclusive distinguishing primitives (0 if identical rules)
-        sum_k = w_k.sum(dim=-1, keepdim=True)
-        sum_m = w_m.sum(dim=-1, keepdim=True)
-        norm_k = torch.where(sum_k > 1e-6, w_k / sum_k.clamp(min=1e-6), torch.zeros_like(w_k))
-        norm_m = torch.where(sum_m > 1e-6, w_m / sum_m.clamp(min=1e-6), torch.zeros_like(w_m))
-        return norm_k - norm_m  # (C, C, P)
+        # Symmetric normalization over total distinguishing weight (prevents 1 noisy exclusive primitive = 1.0)
+        sum_total = w_k.sum(dim=-1, keepdim=True) + w_m.sum(dim=-1, keepdim=True)
+        diff = w_k - w_m
+        return torch.where(sum_total > 1e-6, diff / sum_total.clamp(min=1e-6), torch.zeros_like(diff))  # (C, C, P)
 
     @torch.no_grad()
     def differential_topk_arbitrate(self, mse_fm, z_sim, diff_mat, topk=5, alpha=0.08, gate_tau=None):

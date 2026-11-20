@@ -87,7 +87,7 @@ class ConceptArbitratedTrainer(Trainer):
             concept_ids = {id(p) for p in concept_params}
             flora_params = [p for p in self.mapping_model.parameters() if id(p) not in concept_ids]
             concept_lr = float(getattr(self.args, 'concept_lr', 1e-3))
-            self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=1e-2)
+            self.optimizer_concept = optim.AdamW(concept_params, lr=concept_lr, weight_decay=5e-2)
 
         self.optimizer_mapping = optim.AdamW(
             flora_params, lr=self.args.lr, weight_decay=self.args.weight_decay
@@ -156,9 +156,18 @@ class ConceptArbitratedTrainer(Trainer):
         m = self.mapping_model
         m.concept_encoder.train()
         m.concept_head.train()
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer_concept, T_max=max(1, n_iters), eta_min=1e-5
+        )
+        # Use an isolated iterator so Flora's self.train_loader_iter stream for Phase 2 is untouched
+        concept_iter = iter(self.data_loader['train'])
         avg_loss = 0.0
         for it in range(1, n_iters + 1):
-            gt_motion, label_idx, _, _, _ = next(self.train_loader_iter)
+            try:
+                gt_motion, label_idx, _, _, _ = next(concept_iter)
+            except StopIteration:
+                concept_iter = iter(self.data_loader['train'])
+                gt_motion, label_idx, _, _, _ = next(concept_iter)
             gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
             label_idx = label_idx.to(self.device, non_blocking=True)
             targets = self.train_target_lookup[label_idx]
@@ -167,6 +176,7 @@ class ConceptArbitratedTrainer(Trainer):
             self.optimizer_concept.zero_grad()
             loss.backward()
             self.optimizer_concept.step()
+            scheduler.step()
             avg_loss += loss.item()
             if it % 100 == 0 or it == n_iters:
                 self.logger.info(f'Stage 0 GF-Concept. Iter {it}/{n_iters} : Loss. {avg_loss / min(100, it):.5f}')
