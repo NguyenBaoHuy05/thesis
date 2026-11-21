@@ -31,12 +31,12 @@ import nesy_common as C
 DRIVE_OUT_CR = '/content/drive/MyDrive/BaoHuy/zeroshot/concept_map_step1'
 
 VARIANTS = {
-    'gf_arb':        dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
-    'gf_novae':      dict(center_clip=1, use_groups=1, use_vae_latent=0, lambda_vae_c=0.0,  lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
-    'gf_nogate':     dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.0),
-    'gf_soft':       dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.2, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
-    'gf_no_group':   dict(center_clip=1, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
-    'gf_uncentered': dict(center_clip=0, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15),
+    'gf_arb':        dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15, gzsl_gamma=0.25),
+    'gf_novae':      dict(center_clip=1, use_groups=1, use_vae_latent=0, lambda_vae_c=0.0,  lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15, gzsl_gamma=0.25),
+    'gf_nogate':     dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.0,  gzsl_gamma=0.25),
+    'gf_soft':       dict(center_clip=1, use_groups=1, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.2, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15, gzsl_gamma=0.25),
+    'gf_no_group':   dict(center_clip=1, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15, gzsl_gamma=0.25),
+    'gf_uncentered': dict(center_clip=0, use_groups=0, use_vae_latent=1, lambda_vae_c=0.15, lambda_soft=0.0, arb_topk=5, arb_alpha=0.05, arb_gate_tau=0.15, gzsl_gamma=0.25),
 }
 
 GF_EVAL_RE = re.compile(

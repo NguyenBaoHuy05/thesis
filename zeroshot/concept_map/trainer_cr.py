@@ -314,7 +314,7 @@ class ConceptArbitratedTrainer(Trainer):
         m.train()
 
     GZSL_CAL_SWEEP = (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2)
-    GZSL_GAMMA_SWEEP = (0.0, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0)
+    GZSL_GAMMA_SWEEP = (0.0, 0.10, 0.15, 0.20, 0.25, 0.30, 0.40, 0.50)
 
     @staticmethod
     def _gzsl_shu(preds, labels, seen_mask):
@@ -325,8 +325,8 @@ class ConceptArbitratedTrainer(Trainer):
         return s, u, h
 
     def test_gzsl(self, nb_iter):
-        """GZSL with concept arbitration; logs the default calibration_factor (used for 'Best GZSL')
-        plus a sweep over calibration_factor from a single set of forward passes."""
+        """GZSL with zero-centered concept domain decision (fixed calibration_factor & fixed gamma0)
+        plus diagnostic sweeps over gamma (at fixed default cal) and (cal, gamma)."""
         m = self.mapping_model
         m.eval()
         mse_l, z_l, y_l = [], [], []
@@ -344,7 +344,7 @@ class ConceptArbitratedTrainer(Trainer):
             seen_mask = torch.isin(labels, seen_t)
 
             cal0 = float(self.args.calibration_factor)
-            gamma0 = float(getattr(self.args, 'gzsl_gamma', 0.0))
+            gamma0 = float(getattr(self.args, 'gzsl_gamma', 0.25))
             cands = m.gzsl_candidates(mse_all, z_sim, self.seen_classes, self.unseen_classes)
             preds = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal0,
                                   gamma=gamma0, cands=cands)
@@ -354,29 +354,23 @@ class ConceptArbitratedTrainer(Trainer):
             if h > self.best_accuracy[3]:
                 self.best_accuracy[1], self.best_accuracy[2], self.best_accuracy[3] = s, u, h
 
+            # Diagnostic sweep over gamma at the FIXED default calibration_factor (cal0), plus best cal in grid
             best_here = None
-            for cal in self.GZSL_CAL_SWEEP:
-                p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal, cands=cands)
-                s_c, u_c, h_c = self._gzsl_shu(p, labels, seen_mask)
-                self.logger.info(
-                    f"Iter {nb_iter}: [cal={cal:.2f}] GZSL S={s_c:.2f}% U={u_c:.2f}% H={h_c:.2f}%")
-                if best_here is None or h_c > best_here[0]:
-                    best_here = (h_c, s_c, u_c, cal, 0.0)
-            # Concept-aided domain decision: sweep gamma, report the best calibration_factor for each
             for gamma in self.GZSL_GAMMA_SWEEP:
-                if gamma == 0.0:
-                    continue
-                best_g = None
+                p_fixed = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal0,
+                                        gamma=gamma, cands=cands)
+                s_f, u_f, h_f = self._gzsl_shu(p_fixed, labels, seen_mask)
+                best_g = (h_f, s_f, u_f, cal0, gamma)
                 for cal in self.GZSL_CAL_SWEEP:
                     p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal,
                                       gamma=gamma, cands=cands)
                     s_c, u_c, h_c = self._gzsl_shu(p, labels, seen_mask)
-                    if best_g is None or h_c > best_g[0]:
+                    if h_c > best_g[0]:
                         best_g = (h_c, s_c, u_c, cal, gamma)
                 self.logger.info(
-                    f"Iter {nb_iter}: [gamma={gamma:.2f}] best cal={best_g[3]:.2f} "
-                    f"GZSL S={best_g[1]:.2f}% U={best_g[2]:.2f}% H={best_g[0]:.2f}%")
-                if best_g[0] > best_here[0]:
+                    f"Iter {nb_iter}: [gamma={gamma:.2f} @cal={cal0:.2f}] S={s_f:.2f}% U={u_f:.2f}% H={h_f:.2f}% "
+                    f"| [best cal={best_g[3]:.2f}] S={best_g[1]:.2f}% U={best_g[2]:.2f}% H={best_g[0]:.2f}%")
+                if best_here is None or best_g[0] > best_here[0]:
                     best_here = best_g
             prev = getattr(self, 'best_sweep', None)
             if prev is None or best_here[0] > prev[0]:

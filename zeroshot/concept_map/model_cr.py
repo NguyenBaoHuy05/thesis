@@ -487,8 +487,9 @@ class ConceptArbitratedMappingNet(MappingNet):
     @torch.no_grad()
     def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
         mse_all, z_sim = self.gzsl_scores(skeleton_data, seen_classes, unseen_classes, attuned_semantics)
+        gamma0 = float(getattr(self.args, 'gzsl_gamma', 0.25))
         preds = self.gzsl_decide(mse_all, z_sim, seen_classes, unseen_classes,
-                                 float(self.args.calibration_factor))
+                                 float(self.args.calibration_factor), gamma=gamma0)
         return {'predictions_idx': preds}
 
     @torch.no_grad()
@@ -520,21 +521,25 @@ class ConceptArbitratedMappingNet(MappingNet):
             topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
         log_ratio = torch.log(mse_seen.min(dim=1).values.clamp(min=1e-12)
                               / mse_unseen.min(dim=1).values.clamp(min=1e-12))
-        # concept evidence for the unseen domain: best unseen-class match minus best seen-class match
-        c_margin = (self.concept_class_scores(z_sim, unseen_classes).max(dim=1).values
-                    - self.concept_class_scores(z_sim, seen_classes).max(dim=1).values)
+        # Zero-centered concept evidence for the unseen domain:
+        # subtracting the mean removes the extreme-value bias of |S| >> |U| so calibration_factor stays fixed.
+        raw_margin = (self.concept_class_scores(z_sim, unseen_classes).max(dim=1).values
+                      - self.concept_class_scores(z_sim, seen_classes).max(dim=1).values)
+        c_margin = raw_margin - raw_margin.mean()
         return {'pred_seen': pred_seen, 'pred_unseen': pred_unseen,
                 'log_ratio': log_ratio, 'c_margin': c_margin}
 
     @torch.no_grad()
     def gzsl_decide(self, mse_all, z_sim, seen_classes, unseen_classes, calibration_factor,
-                    alpha=None, gamma=0.0, cands=None):
-        """Concept-aided domain decision followed by concept arbitration inside the chosen domain.
+                    alpha=None, gamma=None, cands=None):
+        """Zero-centered concept-aided domain decision followed by concept arbitration inside the chosen domain.
 
         go_unseen  <=>  log(min_seen_mse / min_unseen_mse) - log(calibration_factor) + gamma * c_margin > 0
-        gamma = 0 is exactly Flora's rule (ratio > calibration_factor); alpha <= 0 disables arbitration.
+        gamma = 0 is Flora's domain rule (ratio > calibration_factor); alpha <= 0 disables arbitration.
         """
         import math
+        if gamma is None:
+            gamma = float(getattr(self.args, 'gzsl_gamma', 0.25))
         c = cands if cands is not None else self.gzsl_candidates(
             mse_all, z_sim, seen_classes, unseen_classes, alpha)
         go_unseen = (c['log_ratio'] - math.log(calibration_factor) + gamma * c['c_margin']) > 0
