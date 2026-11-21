@@ -313,6 +313,64 @@ class ConceptArbitratedTrainer(Trainer):
             self.logger.info(f'Iter {nb_iter}: [a={a:.2f}] ZSL Accuracy: {acc_a:.2f}%')
         m.train()
 
+    GZSL_CAL_SWEEP = (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2)
+
+    @staticmethod
+    def _gzsl_shu(preds, labels, seen_mask):
+        def acc(mask):
+            return 100.0 * (preds[mask] == labels[mask]).float().mean().item() if mask.any() else 0.0
+        s, u = acc(seen_mask), acc(~seen_mask)
+        h = 2 * s * u / (s + u) if (s + u) > 0 else 0.0
+        return s, u, h
+
+    def test_gzsl(self, nb_iter):
+        """GZSL with concept arbitration; logs the default calibration_factor (used for 'Best GZSL')
+        plus a sweep over calibration_factor from a single set of forward passes."""
+        m = self.mapping_model
+        m.eval()
+        mse_l, z_l, y_l = [], [], []
+        with torch.no_grad():
+            sem = self.current_attuned_semantics()
+            for gt_motion, label_idx, _, _, _ in self.gzsl_loader:
+                gt_motion = gt_motion.to(self.device, dtype=torch.float32, non_blocking=True)
+                label_idx = label_idx.to(self.device, non_blocking=True)
+                mse_all, z_sim = m.gzsl_scores(gt_motion, self.seen_classes, self.unseen_classes, sem)
+                mse_l.append(mse_all)
+                z_l.append(z_sim)
+                y_l.append(label_idx)
+            mse_all, z_sim, labels = torch.cat(mse_l), torch.cat(z_l), torch.cat(y_l)
+            seen_t = torch.as_tensor(self.seen_classes, device=labels.device, dtype=torch.long)
+            seen_mask = torch.isin(labels, seen_t)
+
+            cal0 = float(self.args.calibration_factor)
+            preds = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal0)
+            s, u, h = self._gzsl_shu(preds, labels, seen_mask)
+            self.logger.info(
+                f"Iter {nb_iter}: Seen Accuracy: {s:.2f}% \t Unseen Accuracy: {u:.2f}% \t Harmonic Mean: {h:.2f}%")
+            if h > self.best_accuracy[3]:
+                self.best_accuracy[1], self.best_accuracy[2], self.best_accuracy[3] = s, u, h
+
+            best_here = None
+            for cal in self.GZSL_CAL_SWEEP:
+                p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal)
+                s_c, u_c, h_c = self._gzsl_shu(p, labels, seen_mask)
+                self.logger.info(
+                    f"Iter {nb_iter}: [cal={cal:.2f}] GZSL S={s_c:.2f}% U={u_c:.2f}% H={h_c:.2f}%")
+                if best_here is None or h_c > best_here[0]:
+                    best_here = (h_c, s_c, u_c, cal)
+            prev = getattr(self, 'best_sweep', None)
+            if prev is None or best_here[0] > prev[0]:
+                self.best_sweep = best_here
+        m.train()
+
+    def print_best_accuracy(self):
+        super().print_best_accuracy()
+        bs = getattr(self, 'best_sweep', None)
+        if bs is not None:
+            self.logger.info(
+                f'Best GZSL (calibration sweep, tuned on test): S={bs[1]:.2f}% U={bs[2]:.2f}% '
+                f'H={bs[0]:.2f}% at calibration_factor={bs[3]:.2f}')
+
     def train(self):
         # 1) Train Flora Phase 1 first so Flora RNG stream matches vanilla Flora!
         self.train_learning_phase()

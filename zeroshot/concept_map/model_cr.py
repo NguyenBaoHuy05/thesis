@@ -476,18 +476,30 @@ class ConceptArbitratedMappingNet(MappingNet):
         return cache[key]
 
     @torch.no_grad()
-    def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
-        """Flora's seen/unseen domain decision, then concept arbitration inside the chosen domain."""
-        alpha = float(getattr(self.args, 'arb_alpha_gzsl', self.arb_alpha))
-        if alpha <= 0.0:
-            return super().predict_gzsl(skeleton_data, seen_classes, unseen_classes, attuned_semantics)
-
-        dev = self.class_concepts.device
+    def gzsl_scores(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
+        """(mse_all (B, N_total), z_sim (B, P)) -- computed once, reusable for any calibration_factor."""
         n_total = len(seen_classes) + len(unseen_classes)
-        all_cls = list(range(n_total))
-        mse_all, mu_ske_p = self.compute_fm_mse(skeleton_data, all_cls, attuned_semantics, return_mu=True)
+        mse_all, mu_ske_p = self.compute_fm_mse(
+            skeleton_data, list(range(n_total)), attuned_semantics, return_mu=True)
         _, _, z_sim = self.infer_concepts(skeleton_data, mu_ske_p=mu_ske_p)
+        return mse_all, z_sim
 
+    @torch.no_grad()
+    def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
+        mse_all, z_sim = self.gzsl_scores(skeleton_data, seen_classes, unseen_classes, attuned_semantics)
+        preds = self.gzsl_decide(mse_all, z_sim, seen_classes, unseen_classes,
+                                 float(self.args.calibration_factor))
+        return {'predictions_idx': preds}
+
+    @torch.no_grad()
+    def gzsl_decide(self, mse_all, z_sim, seen_classes, unseen_classes, calibration_factor, alpha=None):
+        """Flora's seen/unseen domain decision, then concept arbitration inside the chosen domain.
+
+        alpha <= 0 reduces to plain Flora (argmin inside the chosen domain).
+        """
+        if alpha is None:
+            alpha = float(getattr(self.args, 'arb_alpha_gzsl', self.arb_alpha))
+        dev = self.class_concepts.device
         seen_t = torch.as_tensor(seen_classes, device=dev, dtype=torch.long)
         unseen_t = torch.as_tensor(unseen_classes, device=dev, dtype=torch.long)
         mse_seen, mse_unseen = mse_all[:, seen_t], mse_all[:, unseen_t]
@@ -495,7 +507,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         # Identical domain decision to Flora (calibration_factor on min-MSE ratio)
         ratio = mse_seen.min(dim=1).values / mse_unseen.min(dim=1).values
         # As in Flora: ratio > calibration_factor => seen classes are penalised => sample goes to the UNSEEN domain
-        go_unseen = ratio > self.args.calibration_factor  # (B,)
+        go_unseen = ratio > calibration_factor  # (B,)
 
         pred_seen = seen_t[self.differential_topk_arbitrate(
             mse_seen, z_sim, self._cached_diff_matrix(seen_classes),
@@ -503,7 +515,7 @@ class ConceptArbitratedMappingNet(MappingNet):
         pred_unseen = unseen_t[self.differential_topk_arbitrate(
             mse_unseen, z_sim, self._cached_diff_matrix(unseen_classes),
             topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
-        return {'predictions_idx': torch.where(go_unseen, pred_unseen, pred_seen)}
+        return torch.where(go_unseen, pred_unseen, pred_seen)
 
 
 # Backward-compatible alias
