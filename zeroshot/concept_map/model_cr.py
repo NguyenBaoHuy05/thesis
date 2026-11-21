@@ -465,6 +465,46 @@ class ConceptArbitratedMappingNet(MappingNet):
         )
         return {'predictions_idx': preds, 'mse_fm': mse_fm, 'z_sim': z_sim}
 
+    @torch.no_grad()
+    def _cached_diff_matrix(self, classes):
+        key = tuple(int(c) for c in classes)
+        cache = getattr(self, '_diff_cache', None)
+        if cache is None:
+            cache = self._diff_cache = {}
+        if key not in cache:
+            cache[key] = self.build_pairwise_diff_matrix(list(key))
+        return cache[key]
+
+    @torch.no_grad()
+    def predict_gzsl(self, skeleton_data, seen_classes, unseen_classes, attuned_semantics):
+        """Flora's seen/unseen domain decision, then concept arbitration inside the chosen domain."""
+        alpha = float(getattr(self.args, 'arb_alpha_gzsl', self.arb_alpha))
+        if alpha <= 0.0:
+            return super().predict_gzsl(skeleton_data, seen_classes, unseen_classes, attuned_semantics)
+
+        dev = self.class_concepts.device
+        n_total = len(seen_classes) + len(unseen_classes)
+        all_cls = list(range(n_total))
+        mse_all, mu_ske_p = self.compute_fm_mse(skeleton_data, all_cls, attuned_semantics, return_mu=True)
+        _, _, z_sim = self.infer_concepts(skeleton_data, mu_ske_p=mu_ske_p)
+
+        seen_t = torch.as_tensor(seen_classes, device=dev, dtype=torch.long)
+        unseen_t = torch.as_tensor(unseen_classes, device=dev, dtype=torch.long)
+        mse_seen, mse_unseen = mse_all[:, seen_t], mse_all[:, unseen_t]
+
+        # Identical domain decision to Flora (calibration_factor on min-MSE ratio)
+        ratio = mse_seen.min(dim=1).values / mse_unseen.min(dim=1).values
+        # As in Flora: ratio > calibration_factor => seen classes are penalised => sample goes to the UNSEEN domain
+        go_unseen = ratio > self.args.calibration_factor  # (B,)
+
+        pred_seen = seen_t[self.differential_topk_arbitrate(
+            mse_seen, z_sim, self._cached_diff_matrix(seen_classes),
+            topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
+        pred_unseen = unseen_t[self.differential_topk_arbitrate(
+            mse_unseen, z_sim, self._cached_diff_matrix(unseen_classes),
+            topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
+        return {'predictions_idx': torch.where(go_unseen, pred_unseen, pred_seen)}
+
 
 # Backward-compatible alias
 ConceptResidualMappingNet = ConceptArbitratedMappingNet
