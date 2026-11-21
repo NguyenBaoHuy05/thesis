@@ -492,11 +492,19 @@ class ConceptArbitratedMappingNet(MappingNet):
         return {'predictions_idx': preds}
 
     @torch.no_grad()
-    def gzsl_decide(self, mse_all, z_sim, seen_classes, unseen_classes, calibration_factor, alpha=None):
-        """Flora's seen/unseen domain decision, then concept arbitration inside the chosen domain.
+    def concept_class_scores(self, z_sim, classes):
+        """(B, len(classes)) IDF-weighted concept match of each sample to each class (requires minus 0.3*forbids)."""
+        idx = torch.as_tensor(classes, device=z_sim.device, dtype=torch.long)
+        idf = self.idf_weight.view(1, -1)
+        req = self.class_concepts[idx] * idf
+        req = req / req.sum(dim=1, keepdim=True).clamp(min=1e-6)
+        forb = self.class_forbids[idx] * idf
+        forb = forb / forb.sum(dim=1, keepdim=True).clamp(min=1e-6)
+        return z_sim @ req.t() - 0.3 * (z_sim @ forb.t())
 
-        alpha <= 0 reduces to plain Flora (argmin inside the chosen domain).
-        """
+    @torch.no_grad()
+    def gzsl_candidates(self, mse_all, z_sim, seen_classes, unseen_classes, alpha=None):
+        """Everything that does not depend on the domain threshold; computed once per eval."""
         if alpha is None:
             alpha = float(getattr(self.args, 'arb_alpha_gzsl', self.arb_alpha))
         dev = self.class_concepts.device
@@ -504,18 +512,33 @@ class ConceptArbitratedMappingNet(MappingNet):
         unseen_t = torch.as_tensor(unseen_classes, device=dev, dtype=torch.long)
         mse_seen, mse_unseen = mse_all[:, seen_t], mse_all[:, unseen_t]
 
-        # Identical domain decision to Flora (calibration_factor on min-MSE ratio)
-        ratio = mse_seen.min(dim=1).values / mse_unseen.min(dim=1).values
-        # As in Flora: ratio > calibration_factor => seen classes are penalised => sample goes to the UNSEEN domain
-        go_unseen = ratio > calibration_factor  # (B,)
-
         pred_seen = seen_t[self.differential_topk_arbitrate(
             mse_seen, z_sim, self._cached_diff_matrix(seen_classes),
             topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
         pred_unseen = unseen_t[self.differential_topk_arbitrate(
             mse_unseen, z_sim, self._cached_diff_matrix(unseen_classes),
             topk=self.arb_topk, alpha=alpha, gate_tau=self.arb_gate_tau)]
-        return torch.where(go_unseen, pred_unseen, pred_seen)
+        log_ratio = torch.log(mse_seen.min(dim=1).values.clamp(min=1e-12)
+                              / mse_unseen.min(dim=1).values.clamp(min=1e-12))
+        # concept evidence for the unseen domain: best unseen-class match minus best seen-class match
+        c_margin = (self.concept_class_scores(z_sim, unseen_classes).max(dim=1).values
+                    - self.concept_class_scores(z_sim, seen_classes).max(dim=1).values)
+        return {'pred_seen': pred_seen, 'pred_unseen': pred_unseen,
+                'log_ratio': log_ratio, 'c_margin': c_margin}
+
+    @torch.no_grad()
+    def gzsl_decide(self, mse_all, z_sim, seen_classes, unseen_classes, calibration_factor,
+                    alpha=None, gamma=0.0, cands=None):
+        """Concept-aided domain decision followed by concept arbitration inside the chosen domain.
+
+        go_unseen  <=>  log(min_seen_mse / min_unseen_mse) - log(calibration_factor) + gamma * c_margin > 0
+        gamma = 0 is exactly Flora's rule (ratio > calibration_factor); alpha <= 0 disables arbitration.
+        """
+        import math
+        c = cands if cands is not None else self.gzsl_candidates(
+            mse_all, z_sim, seen_classes, unseen_classes, alpha)
+        go_unseen = (c['log_ratio'] - math.log(calibration_factor) + gamma * c['c_margin']) > 0
+        return torch.where(go_unseen, c['pred_unseen'], c['pred_seen'])
 
 
 # Backward-compatible alias

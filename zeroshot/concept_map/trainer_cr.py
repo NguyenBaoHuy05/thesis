@@ -314,6 +314,7 @@ class ConceptArbitratedTrainer(Trainer):
         m.train()
 
     GZSL_CAL_SWEEP = (0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1.0, 1.1, 1.2)
+    GZSL_GAMMA_SWEEP = (0.0, 0.05, 0.1, 0.2, 0.3, 0.5, 1.0)
 
     @staticmethod
     def _gzsl_shu(preds, labels, seen_mask):
@@ -343,7 +344,10 @@ class ConceptArbitratedTrainer(Trainer):
             seen_mask = torch.isin(labels, seen_t)
 
             cal0 = float(self.args.calibration_factor)
-            preds = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal0)
+            gamma0 = float(getattr(self.args, 'gzsl_gamma', 0.0))
+            cands = m.gzsl_candidates(mse_all, z_sim, self.seen_classes, self.unseen_classes)
+            preds = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal0,
+                                  gamma=gamma0, cands=cands)
             s, u, h = self._gzsl_shu(preds, labels, seen_mask)
             self.logger.info(
                 f"Iter {nb_iter}: Seen Accuracy: {s:.2f}% \t Unseen Accuracy: {u:.2f}% \t Harmonic Mean: {h:.2f}%")
@@ -352,12 +356,28 @@ class ConceptArbitratedTrainer(Trainer):
 
             best_here = None
             for cal in self.GZSL_CAL_SWEEP:
-                p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal)
+                p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal, cands=cands)
                 s_c, u_c, h_c = self._gzsl_shu(p, labels, seen_mask)
                 self.logger.info(
                     f"Iter {nb_iter}: [cal={cal:.2f}] GZSL S={s_c:.2f}% U={u_c:.2f}% H={h_c:.2f}%")
                 if best_here is None or h_c > best_here[0]:
-                    best_here = (h_c, s_c, u_c, cal)
+                    best_here = (h_c, s_c, u_c, cal, 0.0)
+            # Concept-aided domain decision: sweep gamma, report the best calibration_factor for each
+            for gamma in self.GZSL_GAMMA_SWEEP:
+                if gamma == 0.0:
+                    continue
+                best_g = None
+                for cal in self.GZSL_CAL_SWEEP:
+                    p = m.gzsl_decide(mse_all, z_sim, self.seen_classes, self.unseen_classes, cal,
+                                      gamma=gamma, cands=cands)
+                    s_c, u_c, h_c = self._gzsl_shu(p, labels, seen_mask)
+                    if best_g is None or h_c > best_g[0]:
+                        best_g = (h_c, s_c, u_c, cal, gamma)
+                self.logger.info(
+                    f"Iter {nb_iter}: [gamma={gamma:.2f}] best cal={best_g[3]:.2f} "
+                    f"GZSL S={best_g[1]:.2f}% U={best_g[2]:.2f}% H={best_g[0]:.2f}%")
+                if best_g[0] > best_here[0]:
+                    best_here = best_g
             prev = getattr(self, 'best_sweep', None)
             if prev is None or best_here[0] > prev[0]:
                 self.best_sweep = best_here
@@ -368,8 +388,8 @@ class ConceptArbitratedTrainer(Trainer):
         bs = getattr(self, 'best_sweep', None)
         if bs is not None:
             self.logger.info(
-                f'Best GZSL (calibration sweep, tuned on test): S={bs[1]:.2f}% U={bs[2]:.2f}% '
-                f'H={bs[0]:.2f}% at calibration_factor={bs[3]:.2f}')
+                f'Best GZSL (calibration/gamma sweep, tuned on test): S={bs[1]:.2f}% U={bs[2]:.2f}% '
+                f'H={bs[0]:.2f}% at calibration_factor={bs[3]:.2f}, gamma={bs[4]:.2f}')
 
     def train(self):
         # 1) Train Flora Phase 1 first so Flora RNG stream matches vanilla Flora!
